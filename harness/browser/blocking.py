@@ -88,9 +88,14 @@ def install(page: Page, engine: adblock.Engine | None = None) -> BlockStats:
     def handler(route: Route) -> None:
         request = route.request
         resource_type = request.resource_type
+        # First navigation has an empty (or about:blank) frame URL; adblock-rust
+        # then treats it as cross-origin and can match unrelated filters.
+        source_url = request.frame.url
+        if not source_url.startswith(("http://", "https://")):
+            source_url = request.url
         if resource_type in BLOCKED_TYPES:
             reason = resource_type
-        elif _engine_match(engine, request.url, request.frame.url, resource_type):
+        elif _engine_match(engine, request.url, source_url, resource_type):
             reason = "filter"
         else:
             stats.allowed += 1
