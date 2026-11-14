@@ -121,6 +121,7 @@ def test_registry_shape():
         "back",
         "search",
         "open_result",
+        "research",
     }
     assert registry.GROUPS["web"] == [
         "goto",

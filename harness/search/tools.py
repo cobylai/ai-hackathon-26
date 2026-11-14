@@ -11,7 +11,7 @@ from harness import config
 from harness.browser import state
 from harness.browser import tools as browser_tools
 from harness.browser.text import page_text, paginate
-from harness.search import engine
+from harness.search import engine, loop
 from harness.search.google import Result
 
 MAX_RESULTS = 10
@@ -112,3 +112,13 @@ def open_result(n: int) -> str:
     head = f"OK {item.domain} | result {n} | page 1/{total}"
     hint = "[more: call read(page=2)]" if total > 1 else "[end]"
     return _cap(f"{head}\n{chunk}", hint)
+
+
+def research(question: str) -> str:
+    """Answer a question from the web: search, read, take notes, retry."""
+    outcome = loop.research(question)
+    word = "OK"
+    if not outcome.notes and engine.last_status in ("BLOCKED", "LOGIN", "ERR"):
+        word = engine.last_status
+    head = f"{word} research | {outcome.rounds} rounds | {outcome.pages} pages"
+    return _cap(f"{head}\n{outcome.answer}", "[end]")

@@ -70,12 +70,18 @@ TOOLS: dict[str, Tool] = {
         {"n": int},
         search_tools.open_result,
     ),
+    "research": Tool(
+        "research",
+        "Answer a question from the web with sources.",
+        {"question": str},
+        search_tools.research,
+    ),
 }
 
 GROUPS: dict[str, list[str]] = {
     "web": ["goto", "read", "elements", "click", "type", "back"],
     # Kept apart from "web" so a model sees at most three tools at a time.
-    "search": ["search", "open_result"],
+    "search": ["search", "open_result", "research"],
     "email": [],
     "computer": [],
 }

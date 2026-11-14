@@ -110,7 +110,7 @@ def test_empty_search_says_so(stool, monkeypatch):
 
 
 def test_registry_exposes_the_search_group(stool, monkeypatch, site):
-    assert registry.GROUPS["search"] == ["search", "open_result"]
+    assert registry.GROUPS["search"] == ["search", "open_result", "research"]
     entry = registry.TOOLS["search"]
     assert entry.args == {"query": str}
     assert entry.desc and "\n" not in entry.desc and len(entry.desc) <= 100
