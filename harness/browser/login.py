@@ -49,6 +49,10 @@ def login(url: str, profile_dir: Path | None = None) -> int:
     cmd = [
         chromium_path(),
         f"--user-data-dir={profile}",
+        # Same keychain mode as Playwright's hidden session, so cookies saved
+        # here decrypt there and macOS never asks for the real keychain.
+        "--use-mock-keychain",
+        "--password-store=basic",
         "--no-first-run",
         "--no-default-browser-check",
         url,
