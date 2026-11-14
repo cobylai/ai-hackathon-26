@@ -17,3 +17,9 @@
 - GROUPS["computer"] = [app_open, file_find, file_open] in registry; updated browser's test_registry_shape for the new seam.
 - file_open(n) policy-checks the path (confirm words in file names trigger CONFIRM); every call logs to actions.log.
 - 15 tests with mocked subprocess pass; manual run opened TextEdit and found a real file via Spotlight.
+
+## C5 (2026-11-14)
+- ui.py: numbered controls of the front window; pure walk() on (role, label, children) tuples + thin pyobjc fetchers.
+- Front app = NSWorkspace name + CGWindowList pid (AXFocusedApplication fails outright on macOS 27); richest window wins.
+- ui policy-checks the front app: Chrome frontmost -> ERR not allowed, no controls leak.
+- Surprise: windows on another Space vanish from AXWindows (0 controls); a fresh document on the active Space listed 17 controls.
