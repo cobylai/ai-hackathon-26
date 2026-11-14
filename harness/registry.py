@@ -70,10 +70,16 @@ TOOLS: dict[str, Tool] = {
         {"n": int, "page": int},
         email_tools.email_read,
     ),
+    "email_asks": Tool(
+        "email_asks",
+        "Questions and dated lines from a sender's recent threads.",
+        {"sender": str, "days": int},
+        email_tools.email_asks,
+    ),
 }
 
 GROUPS: dict[str, list[str]] = {
     "web": ["goto", "read", "elements", "click", "type", "back"],
-    "email": ["email_search", "email_read"],
+    "email": ["email_search", "email_read", "email_asks"],
     "computer": [],
 }

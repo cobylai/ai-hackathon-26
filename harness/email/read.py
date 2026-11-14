@@ -88,13 +88,34 @@ def _body(message) -> str | None:
         return ""
 
 
+def open_thread(page: Page, thread_id: str) -> bool:
+    """Load a thread with a full page load.
+
+    A thread URL is a hash change, so Gmail swaps the URL first and keeps the
+    previous thread's messages on screen for a while; waiting for those would
+    read the wrong mail. Reloading the same URL always renders that thread.
+    """
+    page.goto(THREAD_URL.format(thread_id=thread_id), wait_until="domcontentloaded", timeout=60000)
+    try:
+        page.reload(wait_until="domcontentloaded", timeout=60000)
+    except Exception:
+        pass
+    return _wait_messages(page, timeout_ms=20000)
+
+
+def _any_body(page: Page) -> bool:
+    items = selectors.all_in(page, "thread_message")
+    return any(selectors.locator(items.nth(i), "message_body").count() for i in range(items.count()))
+
+
 def _wait_messages(page: Page, timeout_ms: int = 20000) -> bool:
+    """Wait for a message container *and* a rendered body (they arrive apart)."""
     waited = 0
     while waited < timeout_ms:
-        if selectors.all_in(page, "thread_message").count():
+        if selectors.all_in(page, "thread_message").count() and _any_body(page):
             return True
-        page.wait_for_timeout(500)
-        waited += 500
+        page.wait_for_timeout(400)
+        waited += 400
     return bool(selectors.all_in(page, "thread_message").count())
 
 
@@ -102,7 +123,7 @@ def _expand(page: Page, message) -> None:
     """Click a folded message's header so its body is rendered."""
     try:
         selectors.locator(message, "message_sender").click()
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(600)
     except Exception:
         pass
 
@@ -117,6 +138,9 @@ def read_messages(page: Page) -> list[tuple[str, str, str]]:
         if body is None:
             _expand(page, message)
             body = _body(message)
+            if body is None:
+                page.wait_for_timeout(500)
+                body = _body(message)
             if body is None:
                 body = ""
         found.append((_sender(message), _date(message), clean_body(body)))
@@ -148,16 +172,8 @@ def read(n: int, page_no: int = 1) -> str:
         return LOGIN_LINE
 
     row = rows[index - 1]
-    page.goto(THREAD_URL.format(thread_id=row.thread_id), wait_until="domcontentloaded", timeout=60000)
-    if not _wait_messages(page, timeout_ms=5000):
-        # Gmail sometimes ignores a hash change that follows another one; a
-        # full load of the same URL always opens the thread.
-        try:
-            page.reload(wait_until="domcontentloaded", timeout=60000)
-        except Exception:
-            pass
-        if not _wait_messages(page, timeout_ms=20000):
-            return "ERR mail.google.com | thread did not open | try email_search again"
+    if not open_thread(page, row.thread_id):
+        return "ERR mail.google.com | thread did not open | try email_search again"
 
     messages = read_messages(page)
     count = len(messages)

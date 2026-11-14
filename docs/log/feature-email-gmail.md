@@ -11,3 +11,5 @@
 - E4 live: `"ECE 4760" newer_than:30d` gives 25 results; the cap shows 7 rows plus the hint.
 - E5: `email_read(n, page)` opens `#all/<id>` (reloading once when Gmail ignores the hash change), clicks folded messages open, strips quote blocks and `-- ` signatures, reverses to newest first, wraps each message in `<email from date>` and pages with B4's `paginate`.
 - E5 live: a one-message thread reads cleanly; the folded-message path is covered by the fixture only, because the mailbox had no multi-message thread in reach.
+- E6: `extract()` is pure and flags questions plus sentences with a weekday, month+day, clock time, or due/by/deadline/can you/could you/please; `email_asks` searches, reads the top 3 threads and tags each line with its thread number.
+- E6 live: 2 asks from the last 14 days. Fixed two read bugs found here: a message body renders after its container, and a thread hash change leaves the previous thread on screen, so `open_thread` now reloads.
