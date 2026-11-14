@@ -51,6 +51,12 @@ def login(url: str, profile_dir: Path | None = None) -> int:
         f"--user-data-dir={profile}",
         "--no-first-run",
         "--no-default-browser-check",
+        # Same cookie key store as the hidden session (Playwright defaults to
+        # these two). Without them the visible window encrypts cookies with the
+        # macOS keychain key, which the hidden session cannot read, so Chrome
+        # drops the signed-in cookies on its first headless launch.
+        "--use-mock-keychain",
+        "--password-store=basic",
         url,
     ]
     return subprocess.run(cmd).returncode
