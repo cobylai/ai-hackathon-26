@@ -20,6 +20,10 @@ CHALLENGE_SELECTORS = (
     "iframe[src*='turnstile']",
 )
 
+# Cloudflare interstitial titles. Matched on the title only, and before the
+# HTTP status check, because these pages come back as 403 or 503.
+BLOCKED_TITLES = ("just a moment", "attention required")
+
 PASSWORD_SELECTOR = "input[type='password']:visible"
 
 
@@ -32,6 +36,13 @@ def _status(page: Page) -> int | None:
     except Exception:
         return None
     return int(value) if value else None
+
+
+def _title_blocked(page: Page) -> bool:
+    try:
+        return page.title().strip().lower().startswith(BLOCKED_TITLES)
+    except Exception:
+        return False
 
 
 def _looks_blocked(page: Page) -> bool:
@@ -78,6 +89,8 @@ def classify(
         status = _status(page)
     if status is None and url.startswith(("about:", "chrome-error:", "")):
         return "ERR"
+    if _title_blocked(page):
+        return "BLOCKED"
     if status is not None and status >= 500:
         return "ERR"
     if _looks_blocked(page):

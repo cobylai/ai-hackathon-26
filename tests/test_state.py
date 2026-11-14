@@ -49,3 +49,14 @@ def test_navigation_failure_is_err(session):
     except Exception:
         pass
     assert classify(session.page, failed=True) == "ERR"
+
+
+def test_cloudflare_title_is_blocked_even_on_503(session, site):
+    session.page.goto(site.url("hello.html"))
+    session.page.set_content("<html><head><title>Just a moment...</title></head><body>wait</body></html>")
+    assert classify(session.page, status=503) == "BLOCKED"
+
+
+def test_article_mentioning_moment_is_ok(session, site):
+    session.page.goto(site.url("article.html"))
+    assert classify(session.page) == "OK"
