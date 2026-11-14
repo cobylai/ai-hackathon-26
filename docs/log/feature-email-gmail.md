@@ -6,3 +6,6 @@
 - E2 notes: Gmail keeps hidden duplicate rows and cells, hence `first_visible()`; `draft_saved_label` only exists after a save, hence `wait_for()`; Reply buttons live outside the message container.
 
 - E3: `build()` assembles from:/quoted phrase/newer_than:/is:unread/has:attachment in a fixed order; `search_url()` percent-encodes it and an empty query maps to the inbox. 22 table cases.
+- E4: `email_search` opens the `#search/` URL, waits for a settled list (Gmail keeps the old rows for a moment after the hash change), and prints up to ten `n. sender | subject | date | snippet` rows; snippet 80, cap 1500 with a hint. Order kept in `search.last_rows()` for E5.
+- E4 also lands `status.signed_in()` (E1's code, because every email tool checks it first) and `GROUPS["email"]`.
+- E4 live: `"ECE 4760" newer_than:30d` gives 25 results; the cap shows 7 rows plus the hint.

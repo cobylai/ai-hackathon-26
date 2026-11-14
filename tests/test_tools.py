@@ -112,7 +112,9 @@ def test_cli_prints_status_and_text(tmp_path, site):
 
 
 def test_registry_shape():
-    assert set(registry.TOOLS) == {"goto", "read", "elements", "click", "type", "back"}
+    assert {"goto", "read", "elements", "click", "type", "back"} <= set(registry.TOOLS)
+    for group, names in registry.GROUPS.items():
+        assert set(names) <= set(registry.TOOLS), group
     assert registry.GROUPS["web"] == [
         "goto",
         "read",

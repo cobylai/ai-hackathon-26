@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from harness.browser import tools as browser_tools
+from harness.email import tools as email_tools
 
 
 @dataclass(frozen=True)
@@ -57,10 +58,16 @@ TOOLS: dict[str, Tool] = {
         {},
         browser_tools.back,
     ),
+    "email_search": Tool(
+        "email_search",
+        "Search Gmail; returns numbered rows.",
+        {"sender": str, "text": str, "days": int},
+        email_tools.email_search,
+    ),
 }
 
 GROUPS: dict[str, list[str]] = {
     "web": ["goto", "read", "elements", "click", "type", "back"],
-    "email": [],
+    "email": ["email_search"],
     "computer": [],
 }
