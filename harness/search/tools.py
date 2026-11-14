@@ -11,7 +11,7 @@ from harness import config
 from harness.browser import state
 from harness.browser import tools as browser_tools
 from harness.browser.text import page_text, paginate
-from harness.search import engine, loop
+from harness.search import cache, engine, loop
 from harness.search.google import Result
 
 MAX_RESULTS = 10
@@ -76,7 +76,14 @@ def search(query: str) -> str:
 
 
 def open_page(url: str) -> tuple[str, str]:
-    """Open a URL in the shared browser; return (status word, full page text)."""
+    """Open a URL in the shared browser; return (status word, full page text).
+
+    A page read in the last 24 hours comes back from the SQLite cache instead.
+    """
+    cached = cache.get(url)
+    if cached is not None:
+        return "OK", cached
+
     page = browser_tools._page()
     try:
         response = page.goto(url, wait_until="domcontentloaded", timeout=20_000)
@@ -87,9 +94,11 @@ def open_page(url: str) -> tuple[str, str]:
     if word != "OK":
         return word, ""
     try:
-        return "OK", page_text(page.content())
+        text = page_text(page.content())
     except Exception:
         return "ERR", ""
+    cache.put(url, text)
+    return "OK", text
 
 
 def open_result(n: int) -> str:
