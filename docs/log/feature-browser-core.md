@@ -7,3 +7,5 @@
 - B4: `page_text()` runs trafilatura with an lxml body-text fallback; `paginate()` cuts at paragraph > sentence > word boundaries and chunks join back byte-for-byte. Article fixture spans 3 pages.
 - B5: `elements.js` tags visible links/buttons/fields with `data-hn`; labels fall back text > aria-label > placeholder > name > value. `list_elements` caps at 40 lines; click/type use the tag.
 - B6: `classify()` returns ERR first (nav failure, 5xx, then 4xx), then BLOCKED (five phrases or reCAPTCHA/hCaptcha/Turnstile iframe), then LOGIN (visible password field), else OK. Status comes from navigation timing.
+- B7: six tools in `tools.py` all return `OK/BLOCKED/LOGIN/ERR ...` strings capped at 1500 chars; `registry.TOOLS`/`GROUPS["web"]` expose them, `python -m harness <cmd>` works one-shot.
+- Note: CLI runs in a fresh process per command, so `read`/`elements` only see the page loaded by the same process; the agent keeps one session.
