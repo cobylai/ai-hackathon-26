@@ -6,3 +6,4 @@
 - B3 fix: first navigation passes an empty frame URL to adblock-rust, which then matches stray document filters; fall back to the request URL as source. Tests now build engines from a temp dir so downloads do not change results.
 - B4: `page_text()` runs trafilatura with an lxml body-text fallback; `paginate()` cuts at paragraph > sentence > word boundaries and chunks join back byte-for-byte. Article fixture spans 3 pages.
 - B5: `elements.js` tags visible links/buttons/fields with `data-hn`; labels fall back text > aria-label > placeholder > name > value. `list_elements` caps at 40 lines; click/type use the tag.
+- B6: `classify()` returns ERR first (nav failure, 5xx, then 4xx), then BLOCKED (five phrases or reCAPTCHA/hCaptcha/Turnstile iframe), then LOGIN (visible password field), else OK. Status comes from navigation timing.
