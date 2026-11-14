@@ -11,3 +11,5 @@
 - Note: CLI runs in a fresh process per command, so `read`/`elements` only see the page loaded by the same process; the agent keeps one session.
 - B3b: `fetch_ubol.py` installs uBOL 2026.1110.1816 under `~/.harness/extensions/ubol` (47 MB unpacked); `extensions.launch_args()` feeds two flags into `Session.start()`. Off by default (`USE_UBOL = False`).
 - B3b finding: uBOL does load headless and blocks network ads (doubleclick -> ERR_BLOCKED_BY_CLIENT), but its default Basic mode does no cosmetic filtering. Complete mode hides EasyList selectors; the literal `div.ad-banner` is in no list and stays visible, so that part of the check cannot pass. See docs/plan/notes-ubol.md.
+- B10: `scripts/bench.py` measured cold start 0.55 s median, warm local `goto`+`read` 0.04 s median (max 0.16 s, target 2 s), 635 MB RSS across 7 Chromium processes, `.venv` 263 MB + Chromium 622 MB on disk.
+- B10 note: whole Playwright cache is 1.3 GB because WebKit and the headless shell are installed too; ~/.harness is 56 MB, 47 MB of it the opt-in uBOL copy. Numbers in docs/plan/notes-bench.md.
