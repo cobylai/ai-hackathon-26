@@ -28,3 +28,8 @@
 - permissions.py: accessibility_ok() via AXIsProcessTrusted; ui.py now imports it (no duplicated message).
 - Mocked tests cover true/false/no-pyobjc paths and the ui refusal path.
 - Real check: accessibility_ok() == True on this host; no prompt needed from the user.
+
+## C6 (2026-11-14)
+- ui_click(n) = AXPress, ui_type(n, text) = set AXValue with focused-keystroke fallback; both policy-check the control label ("Delete" -> CONFIRM) and return the new window title.
+- Empty text areas now listed as "(empty text area)" so they are typeable; live scenario: ui -> 18 controls, ui_type(1, "The quick brown fox...") -> OK, read back `1. textarea "The quick brown fox..."`; ui_click on "align left" OK twice.
+- 13 mocked action tests pass; one full-suite run showed 9 transient Playwright fixture errors, rerun clean (111 passed).
