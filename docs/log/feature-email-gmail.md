@@ -9,3 +9,5 @@
 - E4: `email_search` opens the `#search/` URL, waits for a settled list (Gmail keeps the old rows for a moment after the hash change), and prints up to ten `n. sender | subject | date | snippet` rows; snippet 80, cap 1500 with a hint. Order kept in `search.last_rows()` for E5.
 - E4 also lands `status.signed_in()` (E1's code, because every email tool checks it first) and `GROUPS["email"]`.
 - E4 live: `"ECE 4760" newer_than:30d` gives 25 results; the cap shows 7 rows plus the hint.
+- E5: `email_read(n, page)` opens `#all/<id>` (reloading once when Gmail ignores the hash change), clicks folded messages open, strips quote blocks and `-- ` signatures, reverses to newest first, wraps each message in `<email from date>` and pages with B4's `paginate`.
+- E5 live: a one-message thread reads cleanly; the folded-message path is covered by the fixture only, because the mailbox had no multi-message thread in reach.

@@ -64,10 +64,16 @@ TOOLS: dict[str, Tool] = {
         {"sender": str, "text": str, "days": int},
         email_tools.email_search,
     ),
+    "email_read": Tool(
+        "email_read",
+        "Read thread N from the last search, newest message first.",
+        {"n": int, "page": int},
+        email_tools.email_read,
+    ),
 }
 
 GROUPS: dict[str, list[str]] = {
     "web": ["goto", "read", "elements", "click", "type", "back"],
-    "email": ["email_search"],
+    "email": ["email_search", "email_read"],
     "computer": [],
 }

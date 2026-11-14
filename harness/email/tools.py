@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from harness.email import read as read_mod
 from harness.email import search as search_mod
 
 
@@ -12,3 +13,8 @@ def email_search(sender: str = "", text: str = "", days: int = 0) -> str:
         text=text or None,
         days=days or None,
     )
+
+
+def email_read(n: int, page: int = 1) -> str:
+    """Read thread n from the last search; newest message first."""
+    return read_mod.read(n, page)
