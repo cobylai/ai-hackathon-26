@@ -14,3 +14,5 @@
 - E6: `extract()` is pure and flags questions plus sentences with a weekday, month+day, clock time, or due/by/deadline/can you/could you/please; `email_asks` searches, reads the top 3 threads and tags each line with its thread number.
 - E6 live: 2 asks from the last 14 days. Fixed two read bugs found here: a message body renders after its container, and a thread hash change leaves the previous thread on screen, so `open_thread` now reloads.
 - E7: `email_draft(to, subject, body)` clicks Compose, fills the three fields, waits for Gmail's "Draft saved" label, then Save & close; `OK draft saved` or `ERR <reason>`. `tests/test_no_send.py` fails on any Send label, selector, function or tool name.
+- E8: `email_reply_draft(n, body)` opens thread n, clicks the last visible Reply, fills the inline box, waits for "Draft saved" and closes. Code shared with E7's `draft.py`; test covers the fixture thread.
+- E7/E8 are waiting for the HUMAN check: one real draft in Drafts and one reply draft in its thread, nothing sent.
