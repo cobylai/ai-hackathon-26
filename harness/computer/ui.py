@@ -14,7 +14,7 @@ a number back to the control.
 from __future__ import annotations
 
 from harness import config
-from harness.computer import policy
+from harness.computer import permissions, policy
 from harness.computer.tools import _cap
 
 MAX_DEPTH = 8
@@ -33,11 +33,6 @@ KEEP_ROLES = {
     "AXPopUpButton": "popupbutton",
     "AXComboBox": "combobox",
 }
-
-AX_NEEDED = (
-    "ERR accessibility permission needed: "
-    "System Settings > Privacy & Security > Accessibility"
-)
 
 # Number -> control the model was shown. Elements hold the live AX ref.
 _last: list[dict] = []
@@ -150,11 +145,9 @@ def list_controls(filter: str = "") -> str:
     if policy.stopped():
         return policy.STOPPED_MESSAGE
 
-    import ApplicationServices as AX
-
-    if not AX.AXIsProcessTrusted():
+    if not permissions.accessibility_ok():
         _last = []
-        return AX_NEEDED
+        return permissions.NEEDED
 
     front = _front_app()
     if front is None:

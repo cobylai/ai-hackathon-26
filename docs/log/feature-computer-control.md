@@ -23,3 +23,8 @@
 - Front app = NSWorkspace name + CGWindowList pid (AXFocusedApplication fails outright on macOS 27); richest window wins.
 - ui policy-checks the front app: Chrome frontmost -> ERR not allowed, no controls leak.
 - Surprise: windows on another Space vanish from AXWindows (0 controls); a fresh document on the active Space listed 17 controls.
+
+## C2 (2026-11-14)
+- permissions.py: accessibility_ok() via AXIsProcessTrusted; ui.py now imports it (no duplicated message).
+- Mocked tests cover true/false/no-pyobjc paths and the ui refusal path.
+- Real check: accessibility_ok() == True on this host; no prompt needed from the user.
