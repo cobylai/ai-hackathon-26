@@ -13,3 +13,4 @@
 - E5 live: a one-message thread reads cleanly; the folded-message path is covered by the fixture only, because the mailbox had no multi-message thread in reach.
 - E6: `extract()` is pure and flags questions plus sentences with a weekday, month+day, clock time, or due/by/deadline/can you/could you/please; `email_asks` searches, reads the top 3 threads and tags each line with its thread number.
 - E6 live: 2 asks from the last 14 days. Fixed two read bugs found here: a message body renders after its container, and a thread hash change leaves the previous thread on screen, so `open_thread` now reloads.
+- E7: `email_draft(to, subject, body)` clicks Compose, fills the three fields, waits for Gmail's "Draft saved" label, then Save & close; `OK draft saved` or `ERR <reason>`. `tests/test_no_send.py` fails on any Send label, selector, function or tool name.

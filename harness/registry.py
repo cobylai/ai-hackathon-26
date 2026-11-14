@@ -76,10 +76,28 @@ TOOLS: dict[str, Tool] = {
         {"sender": str, "days": int},
         email_tools.email_asks,
     ),
+    "email_draft": Tool(
+        "email_draft",
+        "Save a new draft; never sends.",
+        {"to": str, "subject": str, "body": str},
+        email_tools.email_draft,
+    ),
+    "email_reply_draft": Tool(
+        "email_reply_draft",
+        "Save a reply draft in thread N; never sends.",
+        {"n": int, "body": str},
+        email_tools.email_reply_draft,
+    ),
 }
 
 GROUPS: dict[str, list[str]] = {
     "web": ["goto", "read", "elements", "click", "type", "back"],
-    "email": ["email_search", "email_read", "email_asks"],
+    "email": [
+        "email_search",
+        "email_read",
+        "email_asks",
+        "email_draft",
+        "email_reply_draft",
+    ],
     "computer": [],
 }
