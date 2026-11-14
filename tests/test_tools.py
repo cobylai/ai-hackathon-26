@@ -112,7 +112,10 @@ def test_cli_prints_status_and_text(tmp_path, site):
 
 
 def test_registry_shape():
-    assert set(registry.TOOLS) == {"goto", "read", "elements", "click", "type", "back"}
+    assert set(registry.TOOLS) == {
+        "goto", "read", "elements", "click", "type", "back",  # web
+        "app_open", "file_find", "file_open",  # computer
+    }
     assert registry.GROUPS["web"] == [
         "goto",
         "read",
@@ -121,6 +124,7 @@ def test_registry_shape():
         "type",
         "back",
     ]
+    assert registry.GROUPS["computer"] == ["app_open", "file_find", "file_open"]
     for name, tool in registry.TOOLS.items():
         assert tool.name == name
         assert tool.desc and "\n" not in tool.desc

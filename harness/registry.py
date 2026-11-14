@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from harness.browser import tools as browser_tools
+from harness.computer import tools as computer_tools
 
 
 @dataclass(frozen=True)
@@ -59,8 +60,31 @@ TOOLS: dict[str, Tool] = {
     ),
 }
 
+COMPUTER_TOOLS: dict[str, Tool] = {
+    "app_open": Tool(
+        "app_open",
+        "Open a Mac app by name.",
+        {"name": str},
+        computer_tools.app_open,
+    ),
+    "file_find": Tool(
+        "file_find",
+        "Find files by name in the home folder; returns numbered paths.",
+        {"query": str},
+        computer_tools.file_find,
+    ),
+    "file_open": Tool(
+        "file_open",
+        "Open file N from the last file_find list.",
+        {"n": int},
+        computer_tools.file_open,
+    ),
+}
+
+TOOLS.update(COMPUTER_TOOLS)
+
 GROUPS: dict[str, list[str]] = {
     "web": ["goto", "read", "elements", "click", "type", "back"],
     "email": [],
-    "computer": [],
+    "computer": list(COMPUTER_TOOLS),
 }

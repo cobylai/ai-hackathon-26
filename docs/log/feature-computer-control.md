@@ -11,3 +11,9 @@
 - policy.py: ~/.harness/policy.json (allow/block/confirm_words), check() -> ALLOW/CONFIRM/DENY, actions.log, STOP file.
 - Block list always beats allow_apps; confirm words matched on word boundaries ("Sender" is not "send").
 - 33 table-driven tests pass, all against a tmp home; real ~/.harness untouched.
+
+## C4 (2026-11-14)
+- direct.py (open -a / mdfind -name -onlyin ~ / open, list argv only) + tools.py wrappers with status lines and cap.
+- GROUPS["computer"] = [app_open, file_find, file_open] in registry; updated browser's test_registry_shape for the new seam.
+- file_open(n) policy-checks the path (confirm words in file names trigger CONFIRM); every call logs to actions.log.
+- 15 tests with mocked subprocess pass; manual run opened TextEdit and found a real file via Spotlight.
