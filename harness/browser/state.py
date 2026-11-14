@@ -24,6 +24,13 @@ CHALLENGE_SELECTORS = (
 # HTTP status check, because these pages come back as 403 or 503.
 BLOCKED_TITLES = ("just a moment", "attention required")
 
+# Sign-in pages whose first step has no password field yet.
+LOGIN_URL_PREFIXES = (
+    "https://accounts.google.com/",
+    "https://login.microsoftonline.com/",
+    "https://login.live.com/",
+)
+
 PASSWORD_SELECTOR = "input[type='password']:visible"
 
 
@@ -97,6 +104,6 @@ def classify(
         return "BLOCKED"
     if status is not None and status >= 400:
         return "ERR"
-    if _has_password_field(page):
+    if _has_password_field(page) or url.startswith(LOGIN_URL_PREFIXES):
         return "LOGIN"
     return "OK"

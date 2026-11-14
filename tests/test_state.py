@@ -60,3 +60,12 @@ def test_cloudflare_title_is_blocked_even_on_503(session, site):
 def test_article_mentioning_moment_is_ok(session, site):
     session.page.goto(site.url("article.html"))
     assert classify(session.page) == "OK"
+
+
+def test_google_sign_in_url_is_login(session, site):
+    session.page.goto(site.url("hello.html"))
+    session.page.route("https://accounts.google.com/**", lambda r: r.fulfill(
+        status=200, content_type="text/html",
+        body="<html><head><title>Gmail</title></head><body>Sign in</body></html>"))
+    session.page.goto("https://accounts.google.com/signin")
+    assert classify(session.page) == "LOGIN"
