@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Re: Lab safety training - test@example.edu - Cornell Mail</title>
+<style>
+  body { font: 14px system-ui, sans-serif; margin: 0; }
+  .adn { border-bottom: 1px solid #eee; padding: 8px 16px; }
+  .gs { cursor: pointer; }
+  .gmail_attr { color: #777; font-size: 12px; }
+  blockquote { margin-left: 8px; padding-left: 8px; border-left: 2px solid #ddd; color: #555; }
+  #reply-panel { display: none; margin: 16px; border: 1px solid #bbb; padding: 8px; }
+  #reply-panel [role=textbox] { min-height: 90px; border: 1px solid #ddd; margin: 4px 0; }
+</style>
+</head>
+<body>
+<!-- Made-up mail. Structure mirrors a Gmail thread; the text is fiction. -->
+<div role="main" aria-label="Conversation">
+  <h2>Re: Lab safety training</h2>
+
+  <div class="adn ads" role="listitem">
+    <div class="gs">
+      <span class="gD" email="alex.chen@example.edu" name="Alex Chen">Alex Chen</span>
+      <span class="g3" title="Thu, Nov 12, 2026, 4:30 PM">Nov 12</span>
+    </div>
+    <div class="a3s aiL">
+      <div dir="ltr">Can you review the lab safety checklist before Thursday?</div>
+    </div>
+  </div>
+  <div class="amr"><div class="nr wR"><div class="amn">
+    <span class="ams bkH" role="link" tabindex="0">Reply</span>
+    <span class="ams bkG" role="link" tabindex="0">Forward</span>
+  </div></div></div>
+
+  <div class="adn ads" role="listitem" data-collapsed="1">
+    <div class="gs">
+      <span class="gD" email="priya.raman@example.edu" name="Priya Raman">Priya Raman</span>
+      <span class="g3" title="Thu, Nov 12, 2026, 5:02 PM">Nov 12</span>
+    </div>
+    <template>
+      <div class="a3s aiL">
+        <div dir="ltr">Sure, I'll take a look tonight and send notes.</div>
+        <div>--&nbsp;<br>Priya Raman<br>Undergraduate TA</div>
+        <div class="gmail_quote">
+          <div class="gmail_attr">On Thu, Nov 12, 2026 at 4:30 PM Alex Chen &lt;alex.chen@example.edu&gt; wrote:</div>
+          <blockquote class="gmail_quote">Can you review the lab safety checklist before Thursday?</blockquote>
+        </div>
+      </div>
+    </template>
+  </div>
+  <div class="amr"><div class="nr wR"><div class="amn">
+    <span class="ams bkH" role="link" tabindex="0">Reply</span>
+    <span class="ams bkG" role="link" tabindex="0">Forward</span>
+  </div></div></div>
+
+  <div class="adn ads" role="listitem">
+    <div class="gs">
+      <span class="gD" email="alex.chen@example.edu" name="Alex Chen">Alex Chen</span>
+      <span class="g3" title="Sat, Nov 14, 2026, 9:12 AM">9:12 AM</span>
+    </div>
+    <div class="a3s aiL">
+      <div dir="ltr">Thanks. Could you also bring the sign-in sheet? The room opens at 1:45.</div>
+      <div class="gmail_quote">
+        <div class="gmail_attr">On Thu, Nov 12, 2026 at 5:02 PM Priya Raman &lt;priya.raman@example.edu&gt; wrote:</div>
+        <blockquote class="gmail_quote">Sure, I'll take a look tonight and send notes.</blockquote>
+      </div>
+    </div>
+  </div>
+  <div class="amr"><div class="nr wR"><div class="amn">
+    <span class="ams bkH" role="link" tabindex="0">Reply</span>
+    <span class="ams bkG" role="link" tabindex="0">Forward</span>
+  </div></div></div>
+</div>
+
+<div id="reply-panel" role="region" aria-label="Reply">
+  <h2 class="a3E zu" id="reply-status"></h2>
+  <div class="Am aiL Al editable" role="textbox" contenteditable="true" aria-label="Message Body"></div>
+  <button aria-label="Save &amp; close" id="reply-close">Save &amp; close</button>
+</div>
+
+<script>
+  document.querySelectorAll('.adn[data-collapsed]').forEach(function (message) {
+    message.addEventListener('click', function () {
+      if (message.querySelector('.a3s')) { return; }
+      var body = message.querySelector('template');
+      if (body) { message.appendChild(body.content.cloneNode(true)); }
+    });
+  });
+
+  var panel = document.getElementById('reply-panel');
+  var statusEl = document.getElementById('reply-status');
+  var body = panel.querySelector('[role=textbox]');
+
+  document.querySelectorAll('.bkH').forEach(function (button) {
+    button.addEventListener('click', function () {
+      panel.style.display = 'block';
+      body.focus();
+    });
+  });
+
+  body.addEventListener('input', function () {
+    statusEl.textContent = body.innerText.trim() ? 'Draft saved' : '';
+  });
+
+  document.getElementById('reply-close').addEventListener('click', function () {
+    panel.style.display = 'none';
+    statusEl.textContent = '';
+  });
+</script>
+</body>
+</html>
