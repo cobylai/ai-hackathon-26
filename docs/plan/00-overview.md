@@ -67,12 +67,12 @@ Tooling: Python 3.12+, `uv` for the environment, `pytest` for tests. Tests must 
 |---|---|---|
 | Browser driving | Playwright (bundled Chromium); browser-use for the numbered-element idea | Skip browser-use's agent loop and prompts, which are sized for large cloud models. Keep only the numbered list. |
 | Page text | trafilatura (main-text extraction) | Add paging and a hard character cap. |
-| Ad blocking | Brave's `adblock` filter engine with EasyList, applied at the network layer | Classic uBlock Origin can no longer be loaded: Chromium removed the old extension format (Manifest V2) in 2026. uBlock Origin Lite is a later option. |
+| Ad blocking | Brave's `adblock` filter engine with EasyList, applied at the network layer | Classic uBlock Origin can no longer be loaded: Chromium removed the old extension format (Manifest V2) in 2026. We add uBlock Origin Lite (Manifest V3) as a second, optional layer on top (task B3b). |
 | Search | SearXNG's result-page parsers; local research loops such as GPT Researcher | Rank page chunks with BM25 so the model reads 2 chunks, not a whole page. |
 | Email | gmail.js (maps Gmail's page structure) | Page structure instead of fixed window coordinates. Drafts only; no send function exists in the code. |
 | Computer control | Hermes Agent (MIT) and trycua's cua-driver; macOS accessibility API | Same numbered-text pattern as the browser, on the accessibility tree. App allowlist and confirmations. |
 
-Not verified yet, each checked by a SPIKE task in the feature doc: how Hermes wires computer use (reported to call cua-driver over MCP, C1); whether Google still accepts a first sign-in in a bundled Chromium profile (B8, E1; fallback is Outlook web); and how often plain Playwright hits bot walls compared with the `patchright` fork (B9).
+Not verified yet, each checked by a SPIKE task in the feature doc: how Hermes wires computer use (reported to call cua-driver over MCP, C1); whether Google still accepts a first sign-in in a bundled Chromium profile (B8, E1; fallback is Outlook web); whether uBlock Origin Lite loads in headless Chromium (B3b); and how often plain Playwright hits bot walls compared with the `patchright` fork (B9).
 
 ## Name ideas
 

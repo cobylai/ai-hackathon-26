@@ -11,7 +11,7 @@ A Chromium that ships with the install, runs with no visible window, has its own
 - **Engine:** Playwright for Python with its bundled Chromium (`playwright install chromium`). No compile from source.
 - **Profile:** one persistent profile at `~/.harness/profile`, so sign-ins survive restarts. Never point at the user's Chrome profile.
 - **Hidden:** headless (`--headless=new`, full Chromium, not the cut-down headless shell, which sites detect more easily).
-- **Ad blocking:** at the network layer with `page.route`, using Brave's `adblock` Python package and EasyList. Images, fonts and media are also dropped, since the model only reads text. This is faster than an extension and works headless.
+- **Ad blocking, two layers:** (1) network layer with `page.route`, using Brave's `adblock` Python package and EasyList. Images, fonts and media are also dropped, since the model only reads text. This is the default and always on. (2) uBlock Origin Lite loaded as an unpacked Manifest V3 extension (B3b), which adds cosmetic filtering and scriptlets the network layer cannot do. Optional, off by default until B3b shows it loads headless.
 - **Bot walls:** the tool detects "are you a robot" pages and returns `BLOCKED`. It does not try to solve them. The caller moves to the next result. `patchright` (a drop-in Playwright fork with fewer automation tells) is an optional switch tried in B9.
 - **One browser process** stays alive for the session; tools reuse one tab unless told otherwise.
 
@@ -45,6 +45,13 @@ Status line format: `OK <domain> | <title, max 60 chars> | page 1/4`.
 - **Files:** `harness/browser/blocking.py`, `scripts/fetch_filters.py`, `tests/test_blocking.py`, `tests/pages/ads.html`
 - **Steps:** `fetch_filters.py` downloads EasyList and EasyPrivacy to `~/.harness/filters/`. `blocking.py` builds an `adblock.Engine` from those files (empty engine if missing) and installs a `page.route("**/*")` handler that aborts requests when the engine matches or when the resource type is `image`, `media` or `font`. Count blocked requests.
 - **Done when:** on `ads.html` (which references `doubleclick.net/x.js` and a local image), the test sees both aborted and the page text still loads.
+
+### B3b. uBlock Origin Lite (extension layer, SPIKE then code)
+- **Files:** `scripts/fetch_ubol.py`, `harness/browser/extensions.py`, `harness/browser/session.py` (small edit), `tests/test_extensions.py`, `docs/plan/notes-ubol.md`
+- **Steps:** `fetch_ubol.py` downloads the latest `uBOLite_*.chromium.zip` from the uBlock Origin Lite releases page on GitHub (`uBlockOrigin/uBOL-home`) and unzips it to `~/.harness/extensions/ubol/`. `extensions.py` returns the launch args `--disable-extensions-except=<dir>` and `--load-extension=<dir>` when that folder exists and `config.USE_UBOL` is true. `Session.start()` adds those args. Extensions only load in full Chromium with `--headless=new`, not in the headless shell, so keep that flag.
+- **Test:** serve `ads.html` with a cosmetic ad element (a `div.ad-banner`). With UBOL on, the element is hidden or removed. With it off, it is visible.
+- **Done when:** the test passes both ways, and `notes-ubol.md` says whether it loaded headless, the page-load time with and without it, and a one-line recommendation (on by default or opt-in). If it will not load headless, write that and leave `USE_UBOL = False`.
+- **Do not:** commit the downloaded extension files. Add `~/.harness` paths only, nothing inside the repo.
 
 ### B4. Page text reader
 - **Files:** `harness/browser/text.py`, `tests/test_text.py`, `tests/pages/article.html`
@@ -85,6 +92,5 @@ Status line format: `OK <domain> | <title, max 60 chars> | page 1/4`.
 
 ## Later, not now
 
-- Loading uBlock Origin Lite as an extension.
 - Copying selected sign-ins from the user's Chrome (opt-in, per site).
 - More than one tab.
