@@ -7,6 +7,7 @@ from pathlib import Path
 from playwright.sync_api import BrowserContext, Page, Playwright, sync_playwright
 
 from harness import config
+from harness.browser.extensions import launch_args
 
 
 class Session:
@@ -30,7 +31,7 @@ class Session:
             # in new headless mode; extensions only load there too (B3b).
             channel="chromium",
             headless=True,
-            args=["--headless=new"],
+            args=["--headless=new", *launch_args()],
         )
         pages = self._context.pages
         self._page = pages[0] if pages else self._context.new_page()

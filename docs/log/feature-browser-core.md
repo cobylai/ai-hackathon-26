@@ -9,3 +9,5 @@
 - B6: `classify()` returns ERR first (nav failure, 5xx, then 4xx), then BLOCKED (five phrases or reCAPTCHA/hCaptcha/Turnstile iframe), then LOGIN (visible password field), else OK. Status comes from navigation timing.
 - B7: six tools in `tools.py` all return `OK/BLOCKED/LOGIN/ERR ...` strings capped at 1500 chars; `registry.TOOLS`/`GROUPS["web"]` expose them, `python -m harness <cmd>` works one-shot.
 - Note: CLI runs in a fresh process per command, so `read`/`elements` only see the page loaded by the same process; the agent keeps one session.
+- B3b: `fetch_ubol.py` installs uBOL 2026.1110.1816 under `~/.harness/extensions/ubol` (47 MB unpacked); `extensions.launch_args()` feeds two flags into `Session.start()`. Off by default (`USE_UBOL = False`).
+- B3b finding: uBOL does load headless and blocks network ads (doubleclick -> ERR_BLOCKED_BY_CLIENT), but its default Basic mode does no cosmetic filtering. Complete mode hides EasyList selectors; the literal `div.ad-banner` is in no list and stays visible, so that part of the check cannot pass. See docs/plan/notes-ubol.md.
