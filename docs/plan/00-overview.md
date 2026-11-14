@@ -72,7 +72,7 @@ Tooling: Python 3.12+, `uv` for the environment, `pytest` for tests. Tests must 
 | Email | gmail.js (maps Gmail's page structure) | Page structure instead of fixed window coordinates. Drafts only; no send function exists in the code. |
 | Computer control | Hermes Agent (MIT) and trycua's cua-driver; macOS accessibility API | Same numbered-text pattern as the browser, on the accessibility tree. App allowlist and confirmations. |
 
-Not verified yet, checked by a SPIKE task in the feature doc: how Hermes wires computer use (reported to call cua-driver over MCP), and whether Google still accepts a first sign-in in a bundled Chromium profile.
+Not verified yet, each checked by a SPIKE task in the feature doc: how Hermes wires computer use (reported to call cua-driver over MCP, C1); whether Google still accepts a first sign-in in a bundled Chromium profile (B8, E1; fallback is Outlook web); and how often plain Playwright hits bot walls compared with the `patchright` fork (B9).
 
 ## Name ideas
 
