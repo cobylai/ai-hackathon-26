@@ -1,0 +1,118 @@
+"""Safety policy for computer control: allowlist, blocklist, confirms, log, stop.
+
+State lives in ``~/.harness/`` (overridable for tests):
+
+- ``policy.json``  -- ``allow_apps``, ``block_apps``, ``confirm_words``
+- ``actions.log``  -- one line per checked action
+- ``STOP``         -- if present, every computer tool returns ``ERR stopped by user``
+
+``block_apps`` always wins over ``allow_apps``; editing ``policy.json`` cannot
+unblock a blocked app.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+
+from harness import config
+
+ALLOW = "ALLOW"
+CONFIRM = "CONFIRM"
+DENY = "DENY"
+
+STOPPED_MESSAGE = "ERR stopped by user"
+
+DEFAULT_POLICY = {
+    "allow_apps": ["Finder", "TextEdit", "Notes", "Calendar", "Preview", "Calculator"],
+    "block_apps": [
+        "System Settings",
+        "System Preferences",
+        "Keychain Access",
+        "Terminal",
+        "iTerm",
+        "1Password",
+        "Bitwarden",
+        "Dashlane",
+        "Chase",
+        "Bank of America",
+        "Wells Fargo",
+    ],
+    "confirm_words": ["delete", "remove", "send", "pay", "buy", "erase", "empty trash"],
+}
+
+
+def _home(home: Path | None) -> Path:
+    return Path(home) if home is not None else config.HOME_DIR
+
+
+def load_policy(home: Path | None = None) -> dict:
+    """Read policy.json, writing defaults first if it does not exist."""
+    root = _home(home)
+    path = root / "policy.json"
+    if not path.exists():
+        root.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(DEFAULT_POLICY, indent=2) + "\n")
+        return dict(DEFAULT_POLICY)
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return dict(DEFAULT_POLICY)
+    merged = dict(DEFAULT_POLICY)
+    for key in DEFAULT_POLICY:
+        if isinstance(data.get(key), list) and all(isinstance(x, str) for x in data[key]):
+            merged[key] = data[key]
+    return merged
+
+
+def stopped(home: Path | None = None) -> bool:
+    """True when the user has dropped the STOP file."""
+    return (_home(home) / "STOP").exists()
+
+
+def _norm(names: list[str]) -> set[str]:
+    return {n.strip().lower() for n in names}
+
+
+def _has_confirm_word(text: str, words: list[str]) -> bool:
+    text = text.lower()
+    return any(re.search(rf"\b{re.escape(w)}\b", text) for w in words)
+
+
+def check(app: str, action: str, label: str = "", home: Path | None = None) -> str:
+    """Decide ALLOW, CONFIRM or DENY for an action, and log the decision.
+
+    Order: block list first (cannot be overridden), then confirm words in the
+    action or label, then the allow list. Anything not allowed is denied.
+    """
+    policy = load_policy(home)
+    blocked = _norm(policy["block_apps"])
+    allowed = _norm(policy["allow_apps"])
+    name = app.strip().lower()
+
+    if name in blocked:
+        verdict = DENY
+    elif _has_confirm_word(f"{action} {label}", policy["confirm_words"]):
+        verdict = CONFIRM
+    elif name in allowed:
+        verdict = ALLOW
+    else:
+        verdict = DENY
+
+    log_action(app, action, label, verdict, home)
+    return verdict
+
+
+def log_action(
+    app: str, action: str, label: str, verdict: str, home: Path | None = None
+) -> None:
+    """Append one line to actions.log: time, verdict, app, action, label."""
+    root = _home(home)
+    root.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    fields = [stamp, verdict, app, action, label]
+    line = "\t".join(" ".join(f.split()) for f in fields)
+    with (root / "actions.log").open("a") as fh:
+        fh.write(line + "\n")

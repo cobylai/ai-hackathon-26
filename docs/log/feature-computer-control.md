@@ -6,3 +6,8 @@
 - Decision: thin pyobjc layer (macOS-only, text-only, ~30-line AX walk works; cua-driver adds 50 MB binary + daemon + its own TCC identity).
 - Gotchas recorded in notes: pid via CGWindowList (NSRunningApplication returns -1 on macOS 27); skip palette windows.
 - Added pyobjc-framework-ApplicationServices as a dev dependency for the spike; C5 promotes it if needed.
+
+## C3 (2026-11-14)
+- policy.py: ~/.harness/policy.json (allow/block/confirm_words), check() -> ALLOW/CONFIRM/DENY, actions.log, STOP file.
+- Block list always beats allow_apps; confirm words matched on word boundaries ("Sender" is not "send").
+- 33 table-driven tests pass, all against a tmp home; real ~/.harness untouched.
