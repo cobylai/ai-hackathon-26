@@ -5,3 +5,4 @@
 - E2: one selector map (role/aria first, class fallback) plus `selfcheck`, which walks inbox, first thread and a blank compose; every name matched live. Two hand-made fixtures load in `tests/test_selectors.py`.
 - E2 notes: Gmail keeps hidden duplicate rows and cells, hence `first_visible()`; `draft_saved_label` only exists after a save, hence `wait_for()`; Reply buttons live outside the message container.
 
+- E3: `build()` assembles from:/quoted phrase/newer_than:/is:unread/has:attachment in a fixed order; `search_url()` percent-encodes it and an empty query maps to the inbox. 22 table cases.
