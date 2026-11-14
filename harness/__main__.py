@@ -31,11 +31,18 @@ def _parser() -> argparse.ArgumentParser:
     typed.add_argument("--enter", action="store_true", help="press Enter after typing")
 
     sub.add_parser("back", help="go back one page")
+
+    login = sub.add_parser("login", help="sign in once in a visible window")
+    login.add_argument("url")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "login":
+        from harness.browser.login import login
+
+        return login(args.url)
     kwargs: dict[str, object] = {}
     if args.command == "goto":
         kwargs = {"url": args.url}
