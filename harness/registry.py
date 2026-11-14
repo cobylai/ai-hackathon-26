@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from harness.browser import tools as browser_tools
+from harness.search import tools as search_tools
 
 
 @dataclass(frozen=True)
@@ -57,10 +58,24 @@ TOOLS: dict[str, Tool] = {
         {},
         browser_tools.back,
     ),
+    "search": Tool(
+        "search",
+        "Search the web and list results as numbers.",
+        {"query": str},
+        search_tools.search,
+    ),
+    "open_result": Tool(
+        "open_result",
+        "Open numbered result N from the last search.",
+        {"n": int},
+        search_tools.open_result,
+    ),
 }
 
 GROUPS: dict[str, list[str]] = {
     "web": ["goto", "read", "elements", "click", "type", "back"],
+    # Kept apart from "web" so a model sees at most three tools at a time.
+    "search": ["search", "open_result"],
     "email": [],
     "computer": [],
 }
