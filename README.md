@@ -4,7 +4,7 @@ Flux is a Mac assistant for students that answers from your own mail, coursework
 
 By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 
-> The demo answers from **sample mail and sample coursework** (made-up senders and courses written into real Gmail and Canvas page markup) and a made-up "Flux demo" calendar. No real inbox is shown.
+> **Two states that never mix.** The video runs in **demo mode** on sample mail and sample coursework (made-up senders and courses written into real Gmail and Canvas page markup) and a made-up "Flux demo" calendar; no real inbox is shown. **Live mode**, the default, answers from what came in through the real paths: Sync mail from Gmail, your own calendar and Reminders, web answers you saved. `scripts/flux-mode demo` / `scripts/flux-mode live --calendar "<name>"` switches; the window's status line and the menu say **Demo data** or **Your data**. See [docs/live-demo.md](docs/live-demo.md).
 
 ## How it meets the rules
 
@@ -20,7 +20,7 @@ By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 
 - **Due:** "what's due this week / tomorrow / Friday" lists mail and Canvas deadlines together, each with its source.
 - **People:** "what did Felix ask me", "who is Hugo"; misheard names ("Elena" → Lena) and "what did everyone ask me" are handled in code.
-- **Calendar:** "what's on my calendar tomorrow", "when is my next meeting", "am I free Monday" (Apple Calendar, one calendar named "Flux demo").
+- **Calendar:** "what's on my calendar tomorrow", "when is my next meeting", "am I free Monday" (Apple Calendar: one calendar, the one you name in live mode, "Flux demo" in demo mode).
 - **Catch me up:** today's calendar, deadlines for the next three days and recent asks, in one answer.
 - **Memory:** "remember that my lab is Tuesdays at 2", "what do you know about me", "forget that".
 - **Discovery:** up to 10 yes/no questions about you built from the bank and calendar; only a yes is kept.
@@ -66,8 +66,8 @@ hf download argmaxinc/whisperkit-coreml --include "openai_whisper-large-v3-v2024
 cd voice/swift && swift build -c release && cd ../..
 ```
 
-- **Calendar:** in Calendar.app, File > New Calendar under "On My Mac", named **Flux demo**, with a few made-up one-off events (the demo adds a "Lab" event Wed 1:30–3:30pm for the busy case).
-- **Demo bank** (sample mail, then sample coursework; set DAY to the day you record, Bonsai running): see "Demo bank" in [docs/integration.md](docs/integration.md) and [docs/canvas.md](docs/canvas.md).
+- **Your data (live mode, the default):** `scripts/flux-mode live --calendar "<your calendar>"`, sign the hidden browser in to Gmail once (`uv run python -m harness login https://mail.google.com`), then Sync mail from the menu (or `uv run python scripts/sync_email.py 7`). Checklist: [docs/live-demo.md](docs/live-demo.md).
+- **Demo data (demo mode):** `uv run python scripts/demo/demo_reset.py --today <day> --full` builds the sample bank (`~/flux-demo-bank`), writes the "Flux demo" calendar week and turns demo mode on (Bonsai running). Every demo generator, fixture and the reset live in `scripts/demo/`; the app never imports them. Run sheet: [docs/demo-runsheet.md](docs/demo-runsheet.md).
 
 ## Run
 
@@ -75,8 +75,8 @@ cd voice/swift && swift build -c release && cd ../..
 scripts/serve_bonsai.sh 4B                                   # Bonsai 2 4B on 127.0.0.1:8080 (leave running)
 export ARGMAX_API_KEY=ax_...                                 # for voice; typing works without it
 
-FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.web   # chat window at localhost:8765
-FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason       # terminal chat loop (empty line = talk)
+uv run python -m reason.web    # chat window at localhost:8765 (bank, calendar and reminders follow the mode)
+uv run python -m reason        # terminal chat loop (empty line = talk)
 ```
 
 **Mac app:**
@@ -91,7 +91,7 @@ The app is signed with a Developer ID (hardened runtime); notarization is pendin
 **Tests** (no model server, no network):
 
 ```bash
-for d in reason bank sufficiency applecal canvas; do uv run python -m unittest discover $d/tests; done
+for d in reason bank sufficiency applecal canvas discover; do uv run python -m unittest discover $d/tests; done
 uv run pytest -q                                              # harness
 FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check   # every playbook example, network blocked
 ```
@@ -113,7 +113,8 @@ FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check   # every 
 - **Names by voice:** Whisper can misspell a name ("Coby" → "Kobe"); the answer is then "I have nothing from Kobe." Easy names work: Felix, Hugo, Ivy, Jonah, Greta, Omar, Lena, Milo.
 - **Bank summaries lose details:** "What are the team name options for the hackathon?" misses, because the summary dropped the options.
 - **Web search** depends on Bing and Wikipedia's public search answering the hidden browser (Google and DuckDuckGo bot-wall it; no bot check is bypassed). Only web questions run and checked beforehand are used in the demo. One known wrong web answer is on record (Cornell's founding year).
-- **Calendar:** one calendar; repeating events show only once.
+- **Calendar:** one calendar (reading every calendar on a busy Mac took over a minute); repeating events show only once.
+- **No live Canvas sync:** coursework in the demo comes from saved Canvas pages rewritten into sample assignments; nothing files real Canvas pages into the live bank yet.
 - **Free/busy and drafts** need the meeting email's day and time to be readable; otherwise the suggestion is a plain "Draft a reply". Apple Mail opens only messages in the test account.
 - **Mac app:** Developer ID signed, notarization pending (until then, right-click → Open the first time). Each Mac needs its own Argmax key.
 - **Final partner test round** ([docs/PARTNER-TESTING-FINAL.md](docs/PARTNER-TESTING-FINAL.md)), including Wi-Fi off by voice, has no results in the repo yet.
