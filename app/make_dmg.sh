@@ -2,6 +2,7 @@
 # Build app/dist/Muse.dmg for another Mac, signed and notarized:
 #   app/make_dmg.sh                    # needs the "Muse-notarize" notarytool profile
 #   MUSE_NOTARIZE=0 app/make_dmg.sh    # signed, not notarized (testing)
+#   MUSE_REPO_URL=https://… app/make_dmg.sh   # where setup.sh clones the code from (else: "ask whoever gave you Muse")
 # Order: build + sign Muse.app (app/build.sh, Developer ID, hardened runtime) -> notarize + staple
 # the app -> DMG with the drag window (dmgbuild via uvx) -> sign -> notarize + staple the DMG -> check.
 # Contents: Muse.app (no repo path baked in), INSTALL.html, setup.sh, Applications link. No models,
@@ -43,7 +44,18 @@ mkdir -p "$STAGE" "$ART"
 
 step "Build and sign Muse.app"
 MUSE_APP_OUT="$STAGE" MUSE_NO_REPO=1 MUSE_SIGN="$DEVID" "$HERE/build.sh"
-cp "$HERE/dmg/INSTALL.html" "$HERE/dmg/setup.sh" "$STAGE/"
+# The code's location is one setting; no personal names in the shipped text.
+REPO_URL="${MUSE_REPO_URL:-}"
+if [ -n "$REPO_URL" ]; then
+  REPO_LINE="Get it from <a href=\"$REPO_URL\">$REPO_URL</a>. If it's private, ask whoever gave you Muse for access."
+else
+  REPO_URL="&lt;repo URL&gt;"; REPO_LINE="Ask whoever gave you Muse where to get it (the repo URL)."
+fi
+python3 - "$HERE/dmg/INSTALL.html" "$STAGE/INSTALL.html" "$REPO_URL" "$REPO_LINE" <<'PY'
+import sys; src, dst, url, line = sys.argv[1:]
+open(dst, "w").write(open(src).read().replace("@REPO_LINE@", line).replace("@REPO_URL@", url))
+PY
+sed "s|@REPO_URL@|${MUSE_REPO_URL:-not set}|" "$HERE/dmg/setup.sh" > "$STAGE/setup.sh"
 chmod +x "$STAGE/setup.sh"
 
 if [ "$NOTARIZE" = 1 ]; then

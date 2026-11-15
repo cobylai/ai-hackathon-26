@@ -11,7 +11,8 @@
 set -euo pipefail
 
 DIR="${MUSE_DIR:-$HOME/ai-hackathon-26}"
-REPO_URL="https://github.com/cobylai/ai-hackathon-26.git"
+# Where the Muse code lives. app/make_dmg.sh fills this in from MUSE_REPO_URL; MUSE_REPO_URL overrides it.
+REPO_URL="${MUSE_REPO_URL:-@REPO_URL@}"
 MLX="$DIR/samples/bonsai-models/mlx"
 BONSAI="$MLX/models/bonsai2-4b-mlx"
 WHISPER_ROOT="$HOME/Documents/huggingface/models/argmaxinc/whisperkit-coreml"
@@ -41,8 +42,11 @@ else
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
-step "2. The Muse code — $REPO_URL (private: you need access)"
+step "2. The Muse code — $REPO_URL"
 if [ -d "$DIR/.git" ]; then skip "$DIR"
+elif [[ "$REPO_URL" != http* && "$REPO_URL" != git@* ]]; then
+  echo "   This copy of setup.sh doesn't say where the code lives. Ask whoever gave you Muse,"
+  echo "   then run:  MUSE_REPO_URL=<url> bash setup.sh"; exit 1
 else
   ask "Clone it into $DIR?" || exit 1
   run git clone "$REPO_URL" "$DIR"
