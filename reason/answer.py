@@ -34,7 +34,7 @@ GATHER_SECONDS = 60
 
 # Wording and prompts come from playbooks/<route>.md. STEPS is how many numbered steps
 # each playbook lists; the code below runs them in that order (a test checks the count).
-STEPS = {"followup": 5, "discover": 6, "act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 6, "bank": 4, "web": 6, "chat": 3, "open": 4, "schedule": 5, "setup": 5, "suggest": 5, "compose": 5}
+STEPS = {"followup": 5, "discover": 6, "act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 6, "bank": 4, "web": 6, "chat": 3, "open": 4, "schedule": 5, "setup": 5, "suggest": 5, "compose": 5, "send": 5}
 PERSON_SYSTEM = playbook.prompt("person", "person_system")
 PERSON_PROMPT = playbook.prompt("person", "person_prompt")
 PERSON_HINT = playbook.prompt("person", "person_hint")
@@ -53,6 +53,9 @@ class Answer:
     # (reason/compose.py): {"id", "to", "to_name", "subject", "body", "used", "kind"}.
     suggestions: list[dict] = field(default_factory=list)
     draft: dict | None = None
+    # A send preview (reason/send.py, playbooks/send.md): {"token", "to", "subject", "body", ...}.
+    # The window shows it with a Send button; nothing is sent without that click.
+    send: dict | None = None
 
 
 # ---- formatting -------------------------------------------------------------
@@ -357,8 +360,12 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
 
     import discover  # a held discovery question takes its yes / no / skip first
     from . import act, catchup, chat, compose, me, suggest  # drafts and actions first: they name senders
+    from . import send  # playbooks/send.md: "send it" only ever shows a preview
     follow, asked = None, q  # asked: as the user said it, for the saved turn
-    if session is not None and not discover.waiting() and not act.waiting() and not compose.waiting():
+    sending = send.handle(q)
+    if sending is not None:
+        follow = ("answer", sending)
+    elif session is not None and not discover.waiting() and not act.waiting() and not compose.waiting():
         from .session import resolve  # playbooks/followup.md: code only, no model call
         follow = resolve(q, session, today, root)
         if follow and follow[0] == "question":

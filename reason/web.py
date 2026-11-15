@@ -7,7 +7,7 @@ Single-threaded on purpose: the web route drives one Playwright browser, which m
 stay on one thread.
 
     GET  /        the page
-    GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None}
+    GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None, "send": bool}
     GET  /bank    [{"date", "sender", "subject", "summary", "ask", "deadlines", "folder", "id"}], newest first
     POST /ask     {"question": str, "speak": bool} -> {"text", "route", "sources", "seconds", "pending"}
                   speak: read the answer aloud with the Mac's `say` (the Speak switch in the bar)
@@ -22,6 +22,11 @@ stay on one thread.
     POST /suggest/<id>/dismiss  it won't be suggested again in this chat
     POST /draft/<id>/write      {"gist"} -> {"draft"} with a new body (Bonsai)
     POST /draft/open            {"to", "subject", "body"} -> {"text"}: `open mailto:...`, never sends
+    POST /send/prepare          {"draft_id", "to", "subject", "body"} -> {"send": preview, "text"} or {"text"};
+                                only with FLUX_ALLOW_SEND=1 (playbooks/send.md); never sends
+    POST /send/cancel           {"token"} -> {"text"}: the preview's Cancel; the token is dropped
+    POST /send/confirm          the preview's Send button ONLY: header X-Flux-Send-Click, {"token", "to",
+                                "subject", "body"} -> {"text"}; the one call of harness.email.send.send_draft
 The Discover button in the bar sends "discover" to /ask (playbooks/discover.md).
 Follow-ups ("and tomorrow?", "the first one", "open it") lean on the last answer of the
 open chat: one current Session (reason/session.py) for the server, since the window serves
@@ -46,7 +51,10 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import discover
 from bank import store
 
+from harness.email import send as sendgate
+
 from . import act, compose, suggest
+from . import send as sendroute
 from .answer import answer as _answer, online as _online
 from . import chats
 from .session import Session
@@ -203,6 +211,11 @@ PAGE = """<!doctype html>
   .draft .note { flex: 1 1 160px; font-size: 12px; color: var(--text3); }
   .draft .used { font-size: 12px; color: var(--text3); }
   .draft.closed { padding: 8px 12px; color: var(--text2); }
+  /* The send preview (playbooks/send.md): read-only, Send must be clicked */
+  .sendbox { border-color: var(--accent); }
+  .sendbox .k { font-size: 12px; color: var(--text3); }
+  .sendbox .v { white-space: pre-wrap; color: var(--text); }
+  .sendbox pre { margin: 0; font: inherit; white-space: pre-wrap; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; }
 
   .empty { padding-top: 12vh; }
   .empty p { margin: 0 0 12px; color: var(--text2); font-size: 13px; }
@@ -291,6 +304,7 @@ PAGE = """<!doctype html>
 const $ = (id) => document.getElementById(id);
 const log = $('log'), q = $('q'), send = $('send'), talk = $('talk'), statusEl = $('status'), groupsEl = $('groups');
 const NL = String.fromCharCode(10);
+let sendOn = false;  // /status "send": FLUX_ALLOW_SEND=1 on the server; off by default
 const MIC = '<svg width="12" height="16" viewBox="0 0 12 16"><rect x="3.25" y=".75" width="5.5" height="9.5" rx="2.75" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1 7.5a5 5 0 0 0 10 0M6 12.5V15" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
 const CHEV = '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
 // From the playbooks' Examples tables (due.md, calendar.md, person.md).
@@ -417,6 +431,9 @@ function showAnswer(t, r) {
     const what = (kept.shift() || 'Flux is waiting for a yes.').trim();
     render(a, kept.join(NL)); if (!a.childNodes.length) a.remove();
     confirmRow(t, what);
+  } else if (r.send) {
+    render(a, kept.join(NL));
+    sendBox(t, r.send, null);
   } else if (r.draft) {
     render(a, (kept[0] || '').trim());  // the head; the box holds To, Subject and body
     draftBox(t, r.draft, null);
@@ -478,6 +495,17 @@ function draftBox(parent, d, before) {
   const row = el('div', 'row'), note = el('span', 'note', 'Nothing is sent.');
   const discard = el('button', 'btn', 'Discard'), open = el('button', 'btn primary', 'Open in Mail');
   discard.type = open.type = 'button';
+  if (sendOn && d.id) {
+    const prep = el('button', 'btn', 'Send…'); prep.type = 'button'; prep.title = 'Show exactly what will be sent';
+    prep.onclick = async () => {
+      prep.disabled = true;
+      let r; try { r = await postJSON('/send/prepare', { draft_id: d.id, to: to.value, subject: subj.value, body: body.value }); }
+      catch (e) { r = { text: "Couldn't reach Flux." }; }
+      prep.disabled = false; note.textContent = (r.text || '').trim();
+      if (r.send) sendBox(parent, r.send, c.nextSibling);
+    };
+    row.appendChild(prep);
+  }
   discard.onclick = () => { c.textContent = ''; c.className = 'draft closed'; c.appendChild(el('span', '', 'Discarded.')); q.focus(); };
   open.onclick = async () => {
     open.disabled = true;
@@ -486,6 +514,37 @@ function draftBox(parent, d, before) {
     open.disabled = false; note.textContent = (r.text || '').trim();
   };
   row.appendChild(note); row.appendChild(discard); row.appendChild(open); c.appendChild(row);
+  parent.insertBefore(c, before && before.parentNode === parent ? before : null);
+  return c;
+}
+
+// The send preview: exact To / Subject / body, read-only. Only a click on Send sends (no typed or
+// spoken yes); the request carries the click header the server requires (playbooks/send.md).
+function sendBox(parent, p, before) {
+  const c = el('div', 'draft sendbox');
+  c.appendChild(el('div', 'k', 'Exactly what will be sent (one click, good for 5 minutes):'));
+  const line = (k, v) => { const l = el('label'); l.appendChild(el('span', '', k)); l.appendChild(el('span', 'v', v)); c.appendChild(l); };
+  line('To', p.to); line('Subject', p.subject);
+  c.appendChild(el('pre', '', p.body));
+  const row = el('div', 'row'), note = el('span', 'note', 'Not sent yet.');
+  const cancel = el('button', 'btn', 'Cancel'), go = el('button', 'btn primary', 'Send');
+  cancel.type = go.type = 'button';
+  cancel.onclick = () => {  // deny: the server drops the token too
+    postJSON('/send/cancel', { token: p.token }).catch(() => {});
+    c.textContent = ''; c.className = 'draft closed'; c.appendChild(el('span', '', 'Not sent.')); q.focus();
+  };
+  go.onclick = async (ev) => {
+    if (!ev.isTrusted) return;  // a real click only
+    go.disabled = cancel.disabled = true; note.textContent = 'Sending…';
+    let r;
+    try {
+      r = await (await fetch('/send/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Flux-Send-Click': 'clicked' },
+        body: JSON.stringify({ token: p.token, to: p.to, subject: p.subject, body: p.body }) })).json();
+    } catch (e) { r = { text: "Couldn't reach Flux. Check Sent before trying again." }; }
+    note.textContent = (r.text || '').trim();
+    go.remove(); cancel.remove();  // one decision per preview; a new send needs a new preview
+  };
+  row.appendChild(note); row.appendChild(cancel); row.appendChild(go); c.appendChild(row);
   parent.insertBefore(c, before && before.parentNode === parent ? before : null);
   return c;
 }
@@ -533,6 +592,7 @@ async function refresh() {
     statusEl.innerHTML = '<span class="dot"></span>';
     statusEl.appendChild(document.createTextNode((r.online ? 'Online' : 'Offline') + ' · ' + r.items + (r.items === 1 ? ' item' : ' items') + ' in the bank'));
     voiceOk = !!r.voice;
+    sendOn = !!r.send;
     if (!recording && !talk.classList.contains('working')) {
       talk.disabled = !voiceOk;
       talk.title = voiceOk ? 'Hold to talk' : 'Voice is unavailable: ' + (r.voice_why || 'not set up');
@@ -829,7 +889,8 @@ def default_sync(budget_s: float = 120.0) -> str:
 
 def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None,
                  entries_fn=None, speaker=None, session=None, chats_root=None, mail_fn=None, open_fn=None,
-                 draft_fn=None, run_fn=None, nudge_fn=None, now_fn=None, nudges_path=None, sync_fn=None):
+                 draft_fn=None, run_fn=None, nudge_fn=None, now_fn=None, nudges_path=None, sync_fn=None,
+                 send_fn=None):
     entries_fn = entries_fn or store.all_entries
     cur = {"s": session or Session()}  # the open chat (single user); swapped on new / open
     answer_fn = answer_fn or (lambda q, today=None: _answer(q, today=today, session=cur["s"]))
@@ -838,6 +899,8 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
         act.reset()       # a held yes/no belongs to the chat it was asked in
         discover.reset()
         compose.reset()   # so does a held "Who is this to?"
+        compose.forget_last()  # "send it" never reaches another chat's draft
+        sendgate.forget_all()  # nor its send previews
         cur["s"] = s
     online_fn = online_fn or _online
     last_sync = {"text": None, "at": None}
@@ -886,7 +949,7 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 self._send(200, PAGE, "text/html; charset=utf-8")
             elif self.path == "/status":
                 self._json({"online": online_fn(), "items": count_fn(), "voice": talk is not None,
-                            "voice_why": voice_why})
+                            "voice_why": voice_why, "send": sendgate.enabled()})
             elif self.path == "/sync/status":
                 self._json(last_sync)
             elif self.path == "/bank":
@@ -926,6 +989,8 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 return self._chats_post(self.path.split("/")[2:])
             if self.path.startswith(("/suggest/", "/draft/")):
                 return self._draft_post(self.path.split("/")[1:])
+            if self.path in ("/send/prepare", "/send/confirm", "/send/cancel"):
+                return self._send_post()
             if self.path in ("/listen/start", "/listen/stop"):
                 if talk is None:
                     return self._json({"error": f"voice is unavailable ({voice_why})"})
@@ -950,7 +1015,8 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 self._json({"text": a.text, "route": a.route, "sources": a.sources,
                             "seconds": a.seconds, "pending": held or (a.route == "act" and act.waiting()),
                             "choices": DISCOVER_CHOICES if held else None,
-                            "suggestions": suggest.public(a.suggestions), "draft": a.draft})
+                            "suggestions": suggest.public(a.suggestions), "draft": a.draft,
+                            "send": getattr(a, "send", None)})
             except Exception as e:  # show it in the window; keep serving
                 self._json({"text": f"Error: {type(e).__name__}: {e}", "route": "error",
                             "sources": [], "seconds": 0.0})
@@ -989,6 +1055,32 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
             except Exception as e:  # model down, calendar slow, ...: say it in the box
                 return self._json({"text": say("compose", "cannot_write", why=f"{type(e).__name__}: {e}")})
             return self._send(404, "not found", "text/plain")
+
+        def _send_post(self):
+            """playbooks/send.md. prepare only previews; confirm is the one send_draft call,
+            and only with the approval built from the Send button's click request."""
+            from .playbook import say
+            body = self._body()
+            if self.path == "/send/prepare":
+                return self._json(sendroute.prepare(str(body.get("draft_id") or ""), str(body.get("to") or ""),
+                                                    str(body.get("subject") or ""), str(body.get("body") or "")))
+            if self.path == "/send/cancel":
+                sendgate.cancel(str(body.get("token") or ""))
+                return self._json({"text": say("send", "cancelled")})
+            port = self.server.server_address[1]
+            origins = tuple(f"http://{h}:{port}" for h in ("localhost", "127.0.0.1"))
+            try:
+                approval = sendgate.UserApproval.from_click(self.command, self.path, self.headers, origins)
+                result = sendgate.send_draft(body.get("token"), body.get("to"), body.get("subject"),
+                                             body.get("body"), approval=approval, driver=send_fn)
+            except sendgate.SendRefused as e:
+                text = say("send", "off") if e.gate == "flag" else say("send", "refused", why=e.why)
+                return self._json({"text": text, "sent": False})
+            except Exception as e:  # the log could not be written, the browser died, ...
+                return self._json({"text": say("send", "refused", why=f"{type(e).__name__}: {e}"), "sent": False})
+            if result == sendgate.SENT:
+                return self._json({"text": say("send", "sent", to=str(body.get("to") or "")), "sent": True})
+            return self._json({"text": say("send", "unknown", why=result), "sent": None})
 
         def _chats_post(self, parts):
             if parts == ["new"]:

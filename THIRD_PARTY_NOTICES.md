@@ -1,13 +1,45 @@
 # Third-party notices
 
-## OpenJarvis task scheduler (Apache License 2.0)
+Code in this repository that came from other projects. Each entry gives the source, the
+exact commit, the license, and what was taken. Add new entries below; do not remove old ones.
+
+## OpenJarvis
+
+- Source: https://github.com/open-jarvis/OpenJarvis
+- File: `src/openjarvis/security/scanner.py`
+- Commit: `77bff2548ad155ffd29a4d2e0d9c56c1eaaa754b`
+- License: Apache License 2.0 (full text below, and in `third_party/openjarvis/LICENSE`)
+- Copied into: `third_party/openjarvis/scanner.py`
+- What was taken: the `SecretScanner.PATTERNS` table verbatim (API keys, tokens, private
+  keys, password and connection strings), and the critical `PIIScanner` patterns (US SSN,
+  Visa / Mastercard / Amex card numbers).
+- Changes: the original scans through a Rust extension; this copy scans in pure Python with
+  `re`. The email, phone and IPv4 PII patterns were dropped (ordinary mail trips them).
+  `ThreatLevel` and the scan result were reduced to a small enum and a list of findings.
+  Used by `harness/email/send.py` to refuse sending a Subject or body that holds a secret.
+
+## OpenJarvis task scheduler
 
 - Source: https://github.com/open-jarvis/OpenJarvis, files src/openjarvis/scheduler/scheduler.py and store.py
 - Commit: 77bff2548ad155ffd29a4d2e0d9c56c1eaaa754b
 - Vendored in: third_party/openjarvis_scheduler/ (file headers keep the origin; edits: import path, and a task runs an optional callable instead of JarvisSystem.ask)
 - Full license text: third_party/openjarvis_scheduler/LICENSE (copied below)
+- License: Apache License 2.0 (same text as below)
 
-```
+## Referenced, not copied
+
+- OpenHuman (https://github.com/tinyhumansai/openhuman, GPL-3.0, commit
+  `f52ec22161503edbf04ebb42e50ec31b141a8523`): `app/src/components/notifications/GateApprovalCard.tsx`
+  was read as a design reference for the approval card (a paused request id, one decision per
+  card, the buttons cleared after deciding, Deny drops the request). No OpenHuman code was copied,
+  so Flux carries no GPL obligation from it.
+- LangGraph's interrupt / resume pattern (MIT) was followed as a design: `prepare_send` pauses and
+  returns a preview, `send_draft` resumes only with an explicit approval. LangGraph is not a
+  dependency and none of its code is included.
+
+## Apache License 2.0 (OpenJarvis)
+
+```text
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/

@@ -59,7 +59,8 @@ class Web(unittest.TestCase):
 
     def test_status(self):
         self.assertEqual(json.loads(self.get("/status")),
-                         {"online": False, "items": 17, "voice": False, "voice_why": None})
+                         {"online": False, "items": 17, "voice": False, "voice_why": None,
+                          "send": False})  # sending is off by default (playbooks/send.md)
 
     def test_bank_list(self):
         rows = json.loads(self.get("/bank"))
