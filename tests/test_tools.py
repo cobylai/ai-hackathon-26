@@ -95,9 +95,16 @@ def test_navigation_failure(btools):
 def test_cli_prints_status_and_text(tmp_path, site):
     env = os.environ.copy()
     env["HOME"] = str(tmp_path)
-    env["PLAYWRIGHT_BROWSERS_PATH"] = str(
-        Path(os.path.expanduser("~")) / "Library" / "Caches" / "ms-playwright"
-    )
+    # HOME is redirected, so point the subprocess at the real browser cache;
+    # it lives under Library/Caches on macOS and .cache on Linux (CI).
+    real_home = Path(os.path.expanduser("~"))
+    for cache in (
+        real_home / "Library" / "Caches" / "ms-playwright",
+        real_home / ".cache" / "ms-playwright",
+    ):
+        if cache.exists():
+            env["PLAYWRIGHT_BROWSERS_PATH"] = str(cache)
+            break
     proc = subprocess.run(
         [sys.executable, "-m", "harness", "goto", site.url("hello.html")],
         cwd=ROOT,
