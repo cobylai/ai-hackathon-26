@@ -10,7 +10,9 @@ from harness.registry import TOOLS
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="harness", description="Hidden browser tools")
+    parser = argparse.ArgumentParser(
+        prog="harness", description="Short text tools for a small model"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     goto = sub.add_parser("goto", help="open a URL")
@@ -31,6 +33,12 @@ def _parser() -> argparse.ArgumentParser:
     typed.add_argument("--enter", action="store_true", help="press Enter after typing")
 
     sub.add_parser("back", help="go back one page")
+
+    search = sub.add_parser("search", help="search the web and number the results")
+    search.add_argument("query")
+
+    research = sub.add_parser("research", help="answer a question from the web")
+    research.add_argument("question")
 
     login = sub.add_parser("login", help="sign in once in a visible window")
     login.add_argument("url")
@@ -56,6 +64,10 @@ def main(argv: list[str] | None = None) -> int:
         kwargs = {"n": args.n, "text": args.text, "enter": 1 if args.enter else 0}
     elif args.command == "back":
         kwargs = {}
+    elif args.command == "search":
+        kwargs = {"query": args.query}
+    elif args.command == "research":
+        kwargs = {"question": args.question}
 
     try:
         result = TOOLS[args.command].run(**kwargs)
