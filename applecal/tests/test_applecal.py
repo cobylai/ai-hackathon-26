@@ -70,6 +70,15 @@ class Events(unittest.TestCase):
             self.assertEqual(len(applecal.events(date(2026, 11, 16), date(2026, 11, 16))), 1)
         self.assertEqual(run.call_count, 1)
 
+    def test_warm_fills_cache_and_ignores_errors(self):
+        with mock.patch.dict("os.environ", {"MUSE_CALENDAR_CACHE": "60"}), _run(OUT) as run:
+            applecal.warm().join(5)
+            applecal.events(date(2026, 11, 15), date(2026, 11, 15))
+        self.assertEqual(run.call_count, 1)
+        applecal._CACHE.clear()
+        with _run(stderr="no calendar named X", code=1):
+            applecal.warm("X").join(5)  # no exception
+
     def test_calendar_name_env(self):
         with mock.patch.dict("os.environ", {"MUSE_CALENDAR": "Hearth"}):
             self.assertEqual(applecal.calendar_name(), "Hearth")
