@@ -119,12 +119,62 @@ bot check; the loop skipped it and answered from the others.
 4. **Two pages per round** (`6a5ae4c`). Each round now opens at most two pages. Median model calls per question is unchanged (11.5, the same as Run 1's productive six) because every question now reaches three rounds, but the per-round cost is bounded lower: the worst question needed 15 calls and 28.2 s (Run 1: 14 calls, 35.5 s).
 5. **Real token counts** (`a207a97`). `ask` leaves the server's `prompt_tokens`/`completion_tokens` in `llm.last_usage`, and the eval reports them instead of chars/4.
 
+## Run 4: after the input cuts, partial (2026-11-15)
+
+Changes since Run 3: 70-character snippets in the pick listing, shorter instructions in all four
+prompts, no `enough` call on the final round, `rewrite` sees only the current round's notes, plus an
+engine column and a notes-aware grader. Two attempts:
+
+1. **Fresh profile** (`HARNESS_PROFILE_DIR=~/.harness/profile-eval`, used because another process
+   held the default): **0/12**. Google walled from the first query and DuckDuckGo's challenge
+   followed, so no page opened at all. A cold Chromium profile is walled immediately.
+2. **Default profile**, as soon as it was free: q01 to q05 reached the web, q06 to q09 were walled,
+   and the browser was closed under us on q10 (`TargetClosedError`, most likely memory pressure from
+   other agents' test suites running on the same machine).
+
+| # | kind | pass | rounds | pages | blocked | input chars | seconds |
+|---|---|---|---|---|---|---|---|
+| q01 | weather | NO | 3 | 3 | 1 | 7827 | 68.3 |
+| q02 | date | yes | 3 | 3 | 0 | 7274 | 28.1 |
+| q03 | date | yes | 3 | 4 | 0 | 8028 | 43.1 |
+| q04 | definition | yes | 2 | 4 | 0 | 7830 | 28.9 |
+| q05 | definition | yes | 3 | 2 | 0 | 4505 | 24.2 |
+| q06-q09 | recent/howto | NO | 2-3 | 0 | 0 | 585-623 | 5.6-10.5 |
+| q10 | howto | ERROR | - | - | - | - | - |
+
+**4 of the 5 questions that reached the web passed.** q01 failed on content: the notes only covered
+Sunday, not the whole weekend.
+
+Input, Run 3 versus Run 4, on the four questions that reached the web in both:
+
+| # | Run 3 chars | Run 4 chars |
+|---|---|---|
+| q02 | 13,399 | 7,274 |
+| q03 | 10,583 | 8,028 |
+| q04 | 7,368 | 7,830 |
+| q05 | 12,689 | 4,505 |
+| median | 11,991 | 7,552 (-37%) |
+
+Median across q01 to q05 in Run 4 is **7,827 chars**, under the 8,000 target (Run 3: 9,900). q04 is
+the one that grew (+6%): the opening-chunk rule adds a second chunk to read on that page.
+
+Four walls and one crash mean Run 4 cannot settle the pass rate; Run 3 remains the last complete
+run. What it does show is that the input cuts work, and that the walls, not the loop, decide the
+pass rate in a given hour.
+
+Also fixed while running this:
+
+- the grader now needs notes as well as the expected substring, so an echo of the question cannot pass (a first Run 4 attempt "passed" q01 while the model server was down);
+- the model server had moved from port 1234 to 1235 during the day, a `LLM_BASE_URL` change only;
+- the eval writes its JSON after every question and records an ERROR row, so a dead browser keeps the finished rows;
+- `HARNESS_PROFILE_DIR` lets a second harness process use its own profile while another holds the default.
+
 ## Still open
 
-- **Input is still 24% over the 8,000-char target.** The note calls dominate: up to 4 chunks per round at ~600 chars plus prompt text. Options: one chunk per page once the opening chunk has scored, a smaller results listing, or accept the real-token metric (median 2,842) as the budget instead of characters.
+- **Input looks fixed but is not yet confirmed on a full run.** Run 4's comparable subset is 37% lower (median 7,552 chars) and its q01-q05 median is 7,827, under the target; a clean 12-question run is needed to say so outright.
 - **The char target should probably become a token target**, now that exact tokens exist; 8,000 chars was only ever a stand-in for about 2,000 tokens.
-- **Record which engine answered each query.** Run 1 walled Google after ~25 searches, Run 3 saw none, so "pass rate" depends on Google's mood; an engine column (google/ddg) would say which.
 - **Three rounds is the common case** (10 of 12). The second page per round is cheap, but a stop rule such as "enough after a round that added two notes" might cut a round without losing answers.
+- **Walls decide the score.** Same code, same questions: 12/12 in Run 3, 0/12 on a cold profile, 4/5 before the walls in Run 4. Until the engine mix is controlled, any pass rate is a statement about the hour it ran in.
 
 Measurement: input chars = `len(llm.SYSTEM) + len(prompt)` for every `ask` call, which is
 what the model is sent, not counting the browser's page text that never reached it.
