@@ -42,7 +42,7 @@ MUSE_BANK_DIR=~/muse-bank uv run python -m reason --today 2026-11-14
 
 3. **Everything else.**
    - `bank.search(question, limit=5)`. The entries are written as numbered note blocks and passed to `sufficiency.judge` once. If it's enough, the route is `bank`, and the source is the block that holds the judge's quote.
-   - If it's not enough and the network is up (one TCP connect to www.bing.com:443, 2 s timeout), the route is `web`. That runs `gather(question, harness.search.engine.search, harness.search.tools.open_page, max_seconds=60)`. On success the answer is filed with `bank.ingest(..., source=url, kind="page")`. harness is imported only here, so offline answers never load Playwright.
+   - If it's not enough and the network is up (one TCP connect to www.bing.com:443, 2 s timeout), the route is `web`. That runs `gather(question, sufficiency.websearch.search, harness.search.tools.open_page, max_seconds=60)`. websearch tries the partner's `engine.search` first, then Bing. On success the answer is filed with `bank.ingest(..., source=url, kind="page")`. harness is imported only here, so offline answers never load Playwright.
    - If it's not enough and the network is down, the route is `offline`: "I don't have that saved, and the Mac is offline, so I can't look it up."
    - If gather finds nothing, the route is `not_found`, with gather's message.
 
@@ -62,6 +62,8 @@ Bank: the 16 `bank/eval/fixtures` ingested into a scratch `MUSE_BANK_DIR` outsid
 | blocked | is the gym open on Thanksgiving | offline | (same message) | 0.01 |
 | online | When did the Berlin Wall fall? | web | 9 November 1989, "Date \| 9 November 1989". Source: en.m.wikipedia.org/wiki/Fall_of_the_Berlin_Wall. Saved to your notes. | 10.76 |
 | blocked | When did the Berlin Wall fall? (asked again) | bank | 9 November 1989. Source: en.m.wikipedia.org/wiki/Fall_of_the_Berlin_Wall | 1.23 |
+| online | Who wrote the novel Frankenstein? (after merging integration 4af9140, `websearch.search`) | web | Mary Shelley, "Author \| Mary Shelley". Source: en.m.wikipedia.org/wiki/Frankenstein. Saved to your notes. | 9.87 |
+| blocked | Who wrote the novel Frankenstein? (asked again) | bank | (answered from the bank) | 0.72 |
 | — | `python -m reason`: what did aisha ask me to do | person | Aisha asked you to take the slides for the group project. Source: Aisha Rahman, Nov 13 | 1.0 |
 
 The web seconds include gather (the partner's engine.search and open_page) and the ingest call.
@@ -89,7 +91,7 @@ uv run python -m unittest discover -s reason/tests -t .
 
 - **Wi-Fi was not actually turned off.** The stand-in is the per-process `socket.connect` block, with Bonsai on localhost. The partner's browser was not started in the offline runs.
 - **Real email:** only the synthetic fixtures were used; no Gmail sync went into this bank.
-- **One web question per filing method.** Only Berlin (after the change) and Cornell (before it) ran. gather's pointer-page weak spot applies here unchanged.
+- **Few web questions:** Berlin (harness engine.search, ed93e1c), Frankenstein (sufficiency.websearch, 4af9140), and Cornell before the filing change. gather's pointer-page weak spot applies here unchanged.
 - **The online check is DNS plus one connect to www.bing.com.** A captive portal would count as online, and then gather fails into `not_found`, not `offline`.
 - **Person route:**
   - a sender whose only name word is in the stoplist (a lone "Will", all lowercase) is never matched

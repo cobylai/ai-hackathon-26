@@ -176,7 +176,7 @@ answer(question, today=None) -> Answer
 - **Due:** the question says due/deadline. Code picks the date range, calls `bank.due` and writes the list. No model call.
 - **Person:** a question word is a sender's name. `bank.by_person` runs, then Bonsai answers from those entries only.
 - **Else:** `bank.search` then `sufficiency.judge`.
-  - If that isn't enough and the Mac is online, `gather` runs with `harness.search.engine.search` and `tools.open_page`, and the answer is filed with `bank.ingest(kind="page", source=url)`.
+  - If that isn't enough and the Mac is online, `gather` runs with `sufficiency.websearch.search` (partner search, then Bing) and `tools.open_page`, and the answer is filed with `bank.ingest(kind="page", source=url)`.
   - If offline, the answer says plainly that it isn't saved and the Mac is offline.
 - Chat loop: `python -m reason [--today YYYY-MM-DD]`. Voice should call `answer()` directly.
 

@@ -175,8 +175,9 @@ def _bank(question: str, today: date, root):
 def _web(question: str, today: date, root, search_fn=None, open_fn=None, ingest_fn=None) -> Answer:
     from sufficiency import gather
     if search_fn is None or open_fn is None:
-        from harness.search import engine, tools  # loads Playwright; web route only
-        search_fn = search_fn or engine.search
+        from harness.search import tools  # loads Playwright; web route only
+        from sufficiency import websearch  # partner's engine.search, then Bing
+        search_fn = search_fn or websearch.search
         open_fn = open_fn or tools.open_page
     ingest_fn = ingest_fn or bank.ingest
     r = gather(question, search_fn, open_fn, today=today, max_seconds=GATHER_SECONDS)
