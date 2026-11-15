@@ -37,3 +37,8 @@
 ## C7 (2026-11-14)
 - scripts/eval_computer.py runs 5 TextEdit-only jobs (open, list, type, read back, read-only find); all passed, ~1.6 s total, 1901 chars to model, zero confirmations.
 - Table in docs/plan/notes-computer-eval.md; created document closed without saving.
+
+## Registry seam (2026-11-15)
+- GROUPS["computer"] now exposes all six tools (ui, ui_click, ui_type added); desc budget 277 chars, well under the 400-token rule.
+- pyobjc-framework-ApplicationServices promoted from dev to a darwin-only runtime dependency.
+- Flaky browser tests: a timed-out pytest left orphaned Chromium processes holding the profile lock; after killing them the suite is green again (111 passed).
