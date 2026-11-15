@@ -28,7 +28,7 @@ let env = ProcessInfo.processInfo.environment
 func setting(_ name: String) -> String? { env["FLUX_" + name] ?? env["MUSE_" + name] }
 // Where the repo is: `defaults write local.ai-hackathon-26.flux FluxRepo <path>`, then FLUX_REPO,
 // then the path baked in at build time (empty in the DMG build), then ~/ai-hackathon-26.
-let repo: String = [UserDefaults.standard.string(forKey: "FluxRepo"), UserDefaults.standard.string(forKey: "MuseRepo"), setting("REPO"),
+var repo: String = [UserDefaults.standard.string(forKey: "FluxRepo"), UserDefaults.standard.string(forKey: "MuseRepo"), setting("REPO"),
                     Bundle.main.object(forInfoDictionaryKey: "FluxRepo") as? String]
     .compactMap { $0 }.first { !$0.isEmpty } ?? (NSHomeDirectory() + "/ai-hackathon-26")
 let bankDir: String = setting("BANK_DIR") ?? (NSHomeDirectory() + "/flux-demo-bank")
@@ -37,7 +37,9 @@ let syncBankDir: String = setting("SYNC_BANK_DIR") ?? (NSHomeDirectory() + "/flu
 let calendarName: String = setting("CALENDAR") ?? "Flux demo"
 let modelFolder: String = env["ARGMAX_MODEL_FOLDER"].flatMap { $0.isEmpty ? nil : $0 } ?? (NSHomeDirectory() +
     "/Documents/huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-large-v3-v20240930_626MB")
-let voiceBin: String = setting("VOICE_BIN") ?? (repo + "/voice/swift/.build/release/argmax-voice")
+var voiceBin: String { setting("VOICE_BIN") ?? (repo + "/voice/swift/.build/release/argmax-voice") }
+/// Where the code is cloned from: set at build time (FLUX_REPO_URL); empty means Set Up asks.
+var repoURL: String = (Bundle.main.object(forInfoDictionaryKey: "FluxRepoURL") as? String) ?? ""
 let logDir = NSHomeDirectory() + "/Library/Logs/Flux"
 
 // ---- Keychain (login keychain, generic password) ----
@@ -410,7 +412,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         let calProblem = calendarProblem()
 
         if !FileManager.default.fileExists(atPath: repo + "/scripts/serve_bonsai.sh") {
-            return say("Flux code not found at \(repo).\nRun setup.sh from the Flux disk image, or point Flux at your copy:\n  defaults write local.ai-hackathon-26.flux FluxRepo /path/to/ai-hackathon-26\nthen reopen Flux.")
+            return say("Flux code not found at \(repo).\nChoose Set Up Flux… in the menu bar to install it, or point Flux at your copy:\n  defaults write local.ai-hackathon-26.flux FluxRepo /path/to/ai-hackathon-26\nthen reopen Flux.")
         }
         let started = Date()
         var extra: [String: String] = [:]
@@ -551,9 +553,11 @@ func run(_ path: String, _ args: [String], timeout: TimeInterval, env extra: [St
     return (p.terminationStatus, String(data: data, encoding: .utf8) ?? "")
 }
 
-// ---- First-run setup: one permission per screen (after Jot's Accessibility window) ----
+// ---- First-run setup: four calm screens (Welcome, Install, Argmax key, Permissions) ----
 let privacyURL = URL(string: "https://cobydev.com/flux/privacy")!
 let settingsBase = "x-apple.systempreferences:com.apple.preference.security?"
+let home = NSHomeDirectory()
+let shellPath = "export PATH=\"$HOME/.local/bin:/opt/homebrew/bin:$PATH\"; "
 
 /// Automation status for one app, without asking. nil = can't tell (app not running).
 func automationGranted(_ bundleID: String, ask: Bool = false) -> Bool? {
@@ -572,104 +576,97 @@ func launchHidden(_ bundleID: String) {
     NSWorkspace.shared.openApplication(at: url, configuration: cfg, completionHandler: nil)
 }
 
-/// The app's own icon, draggable into the Accessibility list (Jot's DraggableAppIconView).
-final class DragIcon: NSView, NSDraggingSource {
-    override init(frame: NSRect) { super.init(frame: frame) }
-    required init?(coder: NSCoder) { fatalError() }
-    override func draw(_ r: NSRect) { NSApp.applicationIconImage.draw(in: bounds) }
-    override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
-    func draggingSession(_ s: NSDraggingSession, sourceOperationMaskFor c: NSDraggingContext) -> NSDragOperation { .copy }
-    override func mouseDown(with e: NSEvent) {
-        let item = NSDraggingItem(pasteboardWriter: Bundle.main.bundleURL as NSURL)
-        item.setDraggingFrame(bounds, contents: NSApp.applicationIconImage)
-        beginDraggingSession(with: [item], event: e, source: self)
-    }
+func exists(_ p: String) -> Bool { FileManager.default.fileExists(atPath: p) }
+func which(_ tool: String) -> Bool {
+    ["\(home)/.local/bin/\(tool)", "/opt/homebrew/bin/\(tool)", "/usr/local/bin/\(tool)"].contains { exists($0) }
 }
 
-struct Step {
-    let title: String, body: String, button: String?
-    var pane: String? = nil
-    var granted: () -> Bool? = { nil }       // nil: nothing to check (Continue is always on)
-    var act: (Setup) -> Void = { _ in }
-    var onShow: () -> Void = {}
+/// One part Flux needs, installed on its own.
+struct Part {
+    let name: String, size: String?, link: String
+    let done: () -> Bool
+    let commands: () -> [String]      // shell lines, run in the code folder; shown under Details
+}
+
+func parts() -> [Part] {
+    let mlx = repo + "/samples/bonsai-models/mlx"
+    let bonsai = mlx + "/models/bonsai2-4b-mlx"
+    let whisperRoot = home + "/Documents/huggingface/models/argmaxinc/whisperkit-coreml"
+    return [
+        Part(name: "Flux code", size: nil, link: repoURL.isEmpty ? "" : repoURL,
+             done: { exists(repo + "/scripts/serve_bonsai.sh") },
+             commands: { ["git clone \(repoURL) \"\(repo)\""] }),
+        Part(name: "Python tools", size: "about 300 MB", link: "https://docs.astral.sh/uv/",
+             done: { which("uv") && exists(repo + "/.venv/bin/python")
+                     && ((try? FileManager.default.contentsOfDirectory(atPath: home + "/Library/Caches/ms-playwright")) ?? []).contains { $0.hasPrefix("chromium-") } },
+             commands: { (which("uv") ? [] : ["curl -LsSf https://astral.sh/uv/install.sh | sh"])
+                         + ["uv sync", "uv run playwright install chromium"] }),
+        Part(name: "Bonsai 2 4B", size: "about 1 GB", link: "https://huggingface.co/prism-ml/Ternary-Bonsai-2-4B-mlx-2bit",
+             done: { exists(bonsai + "/model.safetensors") },
+             commands: { (exists(mlx + "/.venv/bin/python") ? [] : [
+                            "uv venv --python 3.12 \"\(mlx)/.venv\"",
+                            "uv pip install --python \"\(mlx)/.venv/bin/python\" -r \"\(mlx)/requirements.txt\""])
+                         + ["\"\(mlx)/.venv/bin/hf\" download prism-ml/Ternary-Bonsai-2-4B-mlx-2bit --local-dir \"\(bonsai)\""] }),
+        Part(name: "Speech model", size: "about 630 MB", link: "https://huggingface.co/argmaxinc/whisperkit-coreml",
+             done: { exists(modelFolder) },
+             commands: { ["uvx --from huggingface_hub hf download argmaxinc/whisperkit-coreml --include \"openai_whisper-large-v3-v20240930_626MB/*\" --local-dir \"\(whisperRoot)\""] }),
+        Part(name: "Voice program", size: nil, link: "https://app.argmaxinc.com",
+             done: { FileManager.default.isExecutableFile(atPath: voiceBin) },
+             commands: { (registryReady() ? [] : [
+                            "swift package-registry set --global --scope argmaxinc https://api.argmaxinc.com/v1/sdk",
+                            "swift package-registry login https://api.argmaxinc.com/v1/sdk/login --token \"$ARGMAX_TOKEN\""])
+                         + ["cd voice/swift && swift build -c release"] }),
+    ]
+}
+
+func registryReady() -> Bool {
+    ((try? String(contentsOfFile: home + "/.swiftpm/configuration/registries.json", encoding: .utf8)) ?? "").contains("argmaxinc")
+}
+
+/// One row of a checklist: status dot, name, a quiet note, an optional button.
+final class Row: NSStackView {
+    let dot = NSTextField(labelWithString: "○"), name = NSTextField(labelWithString: ""), note = NSTextField(labelWithString: "")
+    var button: NSButton?
+    init(_ title: String, note n: String = "", button b: NSButton? = nil) {
+        super.init(frame: .zero)
+        orientation = .horizontal; spacing = 8; alignment = .firstBaseline
+        dot.font = .systemFont(ofSize: 13); name.stringValue = title; name.font = .systemFont(ofSize: 13)
+        note.stringValue = n; note.font = .systemFont(ofSize: 11); note.textColor = .tertiaryLabelColor
+        let spacer = NSView(); spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        for v in [dot, name, note, spacer] { addArrangedSubview(v) }
+        if let b { b.bezelStyle = .rounded; b.controlSize = .small; addArrangedSubview(b); button = b }
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    func set(_ ok: Bool?, failed: Bool = false) {
+        let (s, c): (String, NSColor) = failed ? ("●", .systemRed) : ok == true ? ("●", .systemGreen) : ("○", .secondaryLabelColor)
+        dot.stringValue = s; dot.textColor = c
+    }
 }
 
 final class Setup: NSObject, NSWindowDelegate {
     var win: NSWindow!
-    let icon = NSImageView(), titleL = NSTextField(labelWithString: ""), bodyL = NSTextField(wrappingLabelWithString: "")
-    let slot = NSView(), actionB = NSButton(), statusL = NSTextField(labelWithString: ""), countL = NSTextField(labelWithString: "")
-    let backB = NSButton(), skipB = NSButton(), nextB = NSButton()
+    let icon = NSImageView(), titleL = NSTextField(labelWithString: ""), lineL = NSTextField(wrappingLabelWithString: "")
+    let body = NSStackView(), mainB = NSButton(), statusL = NSTextField(labelWithString: "")
+    let backB = NSButton(), nextB = NSButton(), countL = NSTextField(labelWithString: "")
     let keyField = NSSecureTextField()
-    var steps: [Step] = []
-    var i = 0
+    let details = NSTextView(), detailsScroll = NSScrollView(), detailsB = NSButton()
+    var installRows: [Row] = [], permRows: [(Row, () -> Bool?)] = []
+    var screen = 0, installing = false, failedPart: String?
     var timer: Timer?
     var onDone: () -> Void = {}
+    let log = logDir + "/setup.log"
 
     static func needed() -> Bool {
         !UserDefaults.standard.bool(forKey: "SetupDone") || Keychain.read() == nil || !AXIsProcessTrusted()
-            || AVCaptureDevice.authorizationStatus(for: .audio) != .authorized
-    }
-
-    func automationStep(_ name: String, _ bundleID: String, _ why: String) -> Step {
-        Step(title: name, body: why + " Flux asks \(name) through AppleScript; macOS asks you once.",
-             button: "Allow \(name)…", pane: settingsBase + "Privacy_Automation",
-             granted: { automationGranted(bundleID) },
-             act: { s in
-                 launchHidden(bundleID)
-                 DispatchQueue.global().async {
-                     Thread.sleep(forTimeInterval: 1.0)   // let it finish launching
-                     let ok = automationGranted(bundleID, ask: true)
-                     if ok == false { DispatchQueue.main.async { s.openPane() } }
-                 }
-             },
-             onShow: { launchHidden(bundleID) })
-    }
-
-    func build() {
-        steps = [
-            Step(title: "Welcome to Flux",
-                 body: "Flux answers from your mail, calendar and notes, on this Mac. The language model (Bonsai) and speech to text (Argmax) run here, and your mail bank stays in your home folder.\n\nWhat leaves this Mac: a web search when the bank has no answer and you're online, a mail sync when you choose Sync mail or Discover, and Argmax's licence check when voice starts. Nothing else.\n\nThe next screens ask for one permission each.",
-                 button: "How Flux handles your data", act: { _ in NSWorkspace.shared.open(privacyURL) }),
-            Step(title: "Argmax key",
-                 body: "Voice needs your own Argmax key (ax_…, from app.argmaxinc.com). Flux keeps it in your login Keychain as \"\(keychainService)\" and gives it only to its voice program. Each Mac needs its own key.",
-                 button: "Save key", granted: { Keychain.read()?.hasPrefix("ax_") ?? false },
-                 act: { s in
-                     let k = s.keyField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                     if k.hasPrefix("ax_"), Keychain.save(k) { s.keyField.stringValue = "" }
-                     else { s.statusL.stringValue = "That doesn't start with ax_." }
-                 }),
-            Step(title: "Accessibility",
-                 body: "For the \(hotKeyName) hotkey: tap it to open Flux from any app, hold it to talk. Flux only watches for that one key. Click the button, then turn Flux on in the list, or drag this icon into it.",
-                 button: "Open Accessibility Settings", pane: settingsBase + "Privacy_Accessibility",
-                 granted: { AXIsProcessTrusted() },
-                 act: { s in
-                     _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
-                     s.openPane()
-                 }),
-            Step(title: "Microphone",
-                 body: "So you can talk to Flux. It listens only while you hold \(hotKeyName) or the talk button.",
-                 button: "Allow Microphone", pane: settingsBase + "Privacy_Microphone",
-                 granted: { AVCaptureDevice.authorizationStatus(for: .audio) == .authorized },
-                 act: { s in
-                     if AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined {
-                         AVCaptureDevice.requestAccess(for: .audio) { _ in }
-                     } else { s.openPane() }
-                 }),
-            automationStep("Calendar", "com.apple.iCal", "To read your \"\(calendarName)\" calendar and add events you ask for."),
-            automationStep("Reminders", "com.apple.reminders", "To add reminders you ask for."),
-            automationStep("Mail", "com.apple.mail", "To open an email in Mail when you ask Flux to show it. Flux doesn't send mail."),
-            Step(title: "You're set",
-                 body: "Tap \(hotKeyName) to ask from any app; hold it to talk and let go to get the answer. The waveform in the menu bar has the rest, including Set Up Flux… to come back here.",
-                 button: nil),
-        ]
+            || AVCaptureDevice.authorizationStatus(for: .audio) != .authorized || !exists(repo + "/scripts/serve_bonsai.sh")
     }
 
     func show(onDone: @escaping () -> Void) {
         self.onDone = onDone
-        if win == nil { build(); makeWindow() }
+        if win == nil { makeWindow() }
         NSApp.activate(ignoringOtherApps: true)
         win.center(); win.makeKeyAndOrderFront(nil)
-        go(0)
+        go(Int(setting("SETUP_SCREEN") ?? "") ?? 0)   // FLUX_SETUP_SCREEN=0…3 opens one screen (for screenshots)
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refresh() }
     }
@@ -681,80 +678,246 @@ final class Setup: NSObject, NSWindowDelegate {
         let v = win.contentView!
         icon.image = NSApp.applicationIconImage
         titleL.font = .systemFont(ofSize: 20, weight: .semibold); titleL.alignment = .center
-        bodyL.font = .systemFont(ofSize: 13); bodyL.textColor = .secondaryLabelColor; bodyL.alignment = .center
-        keyField.placeholderString = "ax_…"
-        actionB.bezelStyle = .rounded; actionB.target = self; actionB.action = #selector(doAction)
-        statusL.font = .systemFont(ofSize: 12); statusL.alignment = .center
+        lineL.font = .systemFont(ofSize: 13); lineL.textColor = .secondaryLabelColor; lineL.alignment = .center
+        body.orientation = .vertical; body.alignment = .leading; body.spacing = 10
+        mainB.bezelStyle = .rounded; mainB.target = self; mainB.action = #selector(doMain)
+        statusL.font = .systemFont(ofSize: 12); statusL.textColor = .secondaryLabelColor; statusL.alignment = .center
+        statusL.lineBreakMode = .byTruncatingMiddle
         countL.font = .systemFont(ofSize: 11); countL.textColor = .tertiaryLabelColor
-        for (b, t, a) in [(backB, "Back", #selector(back)), (skipB, "Skip", #selector(skip)), (nextB, "Continue", #selector(next))] {
+        for (b, t, a) in [(backB, "Back", #selector(back)), (nextB, "Continue", #selector(next))] {
             b.title = t; b.bezelStyle = .rounded; b.target = self; b.action = a
         }
         nextB.keyEquivalent = "\r"
-        for x in [icon, titleL, bodyL, slot, actionB, statusL, countL, backB, skipB, nextB] as [NSView] {
+        detailsB.title = "Details"; detailsB.bezelStyle = .inline; detailsB.controlSize = .small
+        detailsB.target = self; detailsB.action = #selector(toggleDetails)
+        details.isEditable = false; details.font = .monospacedSystemFont(ofSize: 10, weight: .regular)
+        details.textColor = .secondaryLabelColor; details.backgroundColor = NSColor.textBackgroundColor.withAlphaComponent(0.4)
+        detailsScroll.documentView = details; detailsScroll.hasVerticalScroller = true; detailsScroll.isHidden = true
+        detailsScroll.borderType = .noBorder
+        details.autoresizingMask = [.width]; details.isVerticallyResizable = true
+        for x in [icon, titleL, lineL, body, mainB, statusL, detailsB, detailsScroll, countL, backB, nextB] as [NSView] {
             x.translatesAutoresizingMaskIntoConstraints = false; v.addSubview(x)
         }
         NSLayoutConstraint.activate([
-            icon.topAnchor.constraint(equalTo: v.topAnchor, constant: 28), icon.centerXAnchor.constraint(equalTo: v.centerXAnchor),
-            icon.widthAnchor.constraint(equalToConstant: 72), icon.heightAnchor.constraint(equalToConstant: 72),
-            titleL.topAnchor.constraint(equalTo: icon.bottomAnchor, constant: 14), titleL.centerXAnchor.constraint(equalTo: v.centerXAnchor),
-            bodyL.topAnchor.constraint(equalTo: titleL.bottomAnchor, constant: 10),
-            bodyL.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 36), bodyL.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -36),
-            slot.topAnchor.constraint(equalTo: bodyL.bottomAnchor, constant: 16), slot.centerXAnchor.constraint(equalTo: v.centerXAnchor),
-            slot.widthAnchor.constraint(equalToConstant: 280), slot.heightAnchor.constraint(equalToConstant: 64),
-            actionB.topAnchor.constraint(equalTo: slot.bottomAnchor, constant: 12), actionB.centerXAnchor.constraint(equalTo: v.centerXAnchor),
-            statusL.topAnchor.constraint(equalTo: actionB.bottomAnchor, constant: 10), statusL.centerXAnchor.constraint(equalTo: v.centerXAnchor),
-            nextB.bottomAnchor.constraint(equalTo: v.bottomAnchor, constant: -20), nextB.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -20),
-            skipB.centerYAnchor.constraint(equalTo: nextB.centerYAnchor), skipB.trailingAnchor.constraint(equalTo: nextB.leadingAnchor, constant: -8),
+            icon.topAnchor.constraint(equalTo: v.topAnchor, constant: 26), icon.centerXAnchor.constraint(equalTo: v.centerXAnchor),
+            icon.widthAnchor.constraint(equalToConstant: 64), icon.heightAnchor.constraint(equalToConstant: 64),
+            titleL.topAnchor.constraint(equalTo: icon.bottomAnchor, constant: 12), titleL.centerXAnchor.constraint(equalTo: v.centerXAnchor),
+            lineL.topAnchor.constraint(equalTo: titleL.bottomAnchor, constant: 8),
+            lineL.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 48), lineL.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -48),
+            body.topAnchor.constraint(equalTo: lineL.bottomAnchor, constant: 22),
+            body.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 64), body.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -64),
+            mainB.topAnchor.constraint(equalTo: body.bottomAnchor, constant: 20), mainB.centerXAnchor.constraint(equalTo: v.centerXAnchor),
+            statusL.topAnchor.constraint(equalTo: mainB.bottomAnchor, constant: 8),
+            statusL.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 40), statusL.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -40),
+            detailsB.topAnchor.constraint(equalTo: statusL.bottomAnchor, constant: 4), detailsB.centerXAnchor.constraint(equalTo: v.centerXAnchor),
+            detailsScroll.topAnchor.constraint(equalTo: detailsB.bottomAnchor, constant: 6),
+            detailsScroll.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 20), detailsScroll.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -20),
+            detailsScroll.bottomAnchor.constraint(equalTo: nextB.topAnchor, constant: -12),
+            nextB.bottomAnchor.constraint(equalTo: v.bottomAnchor, constant: -18), nextB.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -20),
             backB.centerYAnchor.constraint(equalTo: nextB.centerYAnchor), backB.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 20),
             countL.centerYAnchor.constraint(equalTo: nextB.centerYAnchor), countL.leadingAnchor.constraint(equalTo: backB.trailingAnchor, constant: 12),
         ])
     }
 
+    // ---- screens ----
     func go(_ n: Int) {
-        i = max(0, min(n, steps.count - 1))
-        let s = steps[i]
+        screen = max(0, min(n, 3))
         NSApp.activate(ignoringOtherApps: true)
-        titleL.stringValue = s.title; bodyL.stringValue = s.body
-        actionB.isHidden = s.button == nil; actionB.title = s.button ?? ""
-        slot.subviews.forEach { $0.removeFromSuperview() }
-        if s.title == "Argmax key" {
-            keyField.frame = NSRect(x: 20, y: 20, width: 240, height: 24); slot.addSubview(keyField)
+        body.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        installRows = []; permRows = []
+        statusL.stringValue = ""; detailsB.isHidden = true; detailsScroll.isHidden = true
+        mainB.isHidden = false
+        switch screen {
+        case 0:
+            titleL.stringValue = "Welcome to Flux"
+            lineL.stringValue = "Flux runs on this Mac. Let's set it up."
+            mainB.title = "How Flux handles your data"
+        case 1:
+            titleL.stringValue = "Install"
+            lineL.stringValue = "Each part runs on this Mac. Parts you already have are skipped."
+            for p in parts() {
+                let r = Row(p.name, note: p.size ?? ""); installRows.append(r); body.addArrangedSubview(r)
+            }
+            mainB.title = installing ? "Installing…" : (failedPart == nil ? "Install" : "Try Again")
+            detailsB.isHidden = false
+        case 2:
+            titleL.stringValue = "Argmax key"
+            lineL.stringValue = "Voice needs your own key (ax_…). It stays in your Keychain."
+            keyField.placeholderString = "ax_…"
+            keyField.translatesAutoresizingMaskIntoConstraints = false
+            keyField.widthAnchor.constraint(equalToConstant: 300).isActive = true
+            body.addArrangedSubview(keyField)
+            mainB.title = "Save"
             win.makeFirstResponder(keyField)
-        } else if s.title == "Accessibility" {
-            slot.addSubview(DragIcon(frame: NSRect(x: 108, y: 0, width: 64, height: 64)))
+        default:
+            titleL.stringValue = "Permissions"
+            lineL.stringValue = "Flux asks once for each."
+            let perms: [(String, () -> Bool?, () -> Void)] = [
+                ("Accessibility, for Fn-Space", { AXIsProcessTrusted() }, {
+                    _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
+                    NSWorkspace.shared.open(URL(string: settingsBase + "Privacy_Accessibility")!) }),
+                ("Microphone", { AVCaptureDevice.authorizationStatus(for: .audio) == .authorized }, {
+                    if AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined { AVCaptureDevice.requestAccess(for: .audio) { _ in } }
+                    else { NSWorkspace.shared.open(URL(string: settingsBase + "Privacy_Microphone")!) } }),
+            ] + [("Calendar", "com.apple.iCal"), ("Reminders", "com.apple.reminders"), ("Mail", "com.apple.mail")].map { (n, id) in
+                (n, { automationGranted(id) }, {
+                    launchHidden(id)
+                    DispatchQueue.global().async {
+                        Thread.sleep(forTimeInterval: 1.0)
+                        if automationGranted(id, ask: true) == false {
+                            DispatchQueue.main.async { NSWorkspace.shared.open(URL(string: settingsBase + "Privacy_Automation")!) }
+                        }
+                    } })
+            }
+            for (n, check, act) in perms {
+                let b = NSButton(title: "Allow", target: nil, action: nil)
+                let r = Row(n, button: b)
+                b.target = self; b.action = #selector(permButton(_:)); b.tag = permRows.count
+                permActions.append(act); permRows.append((r, check)); body.addArrangedSubview(r)
+            }
+            for id in ["com.apple.iCal", "com.apple.reminders", "com.apple.mail"] { launchHidden(id) }
+            mainB.isHidden = true
         }
-        backB.isEnabled = i > 0
-        skipB.isHidden = s.granted() == nil && s.title != "Accessibility" || i == steps.count - 1
-        nextB.title = i == steps.count - 1 ? "Done" : "Continue"
-        countL.stringValue = "\(i + 1) of \(steps.count)"
-        statusL.stringValue = ""
-        s.onShow()
+        backB.isEnabled = screen > 0
+        nextB.title = screen == 3 ? "Done" : "Continue"
+        countL.stringValue = "\(screen + 1) of 4"
+        refresh()
+    }
+    var permActions: [() -> Void] = []
+
+    func refresh() {
+        switch screen {
+        case 1:
+            for (r, p) in zip(installRows, parts()) { r.set(p.done(), failed: failedPart == p.name) }
+            nextB.isEnabled = !installing
+            if !installing && failedPart == nil && parts().allSatisfy({ $0.done() }) {
+                mainB.title = "Installed"; mainB.isEnabled = false
+            } else { mainB.isEnabled = !installing }
+        case 2:
+            let ok = Keychain.read()?.hasPrefix("ax_") ?? false
+            if ok && statusL.stringValue.isEmpty { statusL.stringValue = "● Saved" ; statusL.textColor = .systemGreen }
+        case 3:
+            for (r, check) in permRows { let ok = check(); r.set(ok); r.button?.isHidden = ok == true }
+        default: break
+        }
+    }
+
+    @objc func permButton(_ b: NSButton) { if b.tag < permActions.count { permActions[b.tag]() } }
+    @objc func back() { go(screen - 1) }
+    @objc func next() { if screen == 3 { finish() } else { permActions = []; go(screen + 1) } }
+    @objc func toggleDetails() { detailsScroll.isHidden.toggle() }
+
+    @objc func doMain() {
+        switch screen {
+        case 0: NSWorkspace.shared.open(privacyURL)
+        case 1: install()
+        case 2:
+            let k = keyField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if k.hasPrefix("ax_"), Keychain.save(k) { keyField.stringValue = ""; statusL.stringValue = "" }
+            else { statusL.stringValue = "That doesn't start with ax_."; statusL.textColor = .systemRed }
+        default: break
+        }
         refresh()
     }
 
-    func openPane() { if let p = steps[i].pane, let u = URL(string: p) { NSWorkspace.shared.open(u) } }
-
-    func refresh() {
-        let s = steps[i]
-        guard let ok = s.granted() else { nextB.isEnabled = true; statusL.stringValue = ""; return }
-        if ok {
-            statusL.attributedStringValue = NSAttributedString(string: "●  Allowed", attributes: [.foregroundColor: NSColor.systemGreen])
-            nextB.isEnabled = true
-            skipB.isHidden = true
-        } else {
-            if !statusL.stringValue.hasPrefix("That") {
-                statusL.attributedStringValue = NSAttributedString(string: "○  Not yet", attributes: [.foregroundColor: NSColor.secondaryLabelColor])
-            }
-            nextB.isEnabled = false
-            skipB.isHidden = i == steps.count - 1
+    // ---- install ----
+    func say(_ s: String) {
+        DispatchQueue.main.async {
+            self.details.textStorage?.append(NSAttributedString(string: s + "\n",
+                attributes: [.font: NSFont.monospacedSystemFont(ofSize: 10, weight: .regular), .foregroundColor: NSColor.secondaryLabelColor]))
+            self.details.scrollToEndOfDocument(nil)
+            if let h = FileHandle(forWritingAtPath: self.log) { h.seekToEndOfFile(); h.write(Data((s + "\n").utf8)); h.closeFile() }
         }
     }
 
-    @objc func doAction() { steps[i].act(self); refresh() }
-    @objc func back() { go(i - 1) }
-    @objc func skip() { go(i + 1) }
-    @objc func next() {
-        if i == steps.count - 1 { finish() } else { go(i + 1) }
+    func ask(_ title: String, _ text: String, field: NSTextField? = nil, ok: String = "Continue") -> Bool {
+        let a = NSAlert(); a.messageText = title; a.informativeText = text
+        a.addButton(withTitle: ok); a.addButton(withTitle: "Cancel")
+        if let field { field.frame = NSRect(x: 0, y: 0, width: 320, height: 24); a.accessoryView = field; a.window.initialFirstResponder = field }
+        return a.runModal() == .alertFirstButtonReturn
+    }
+
+    func install() {
+        try? FileManager.default.createDirectory(atPath: logDir, withIntermediateDirectories: true)
+        if !exists(log) { FileManager.default.createFile(atPath: log, contents: nil) }
+        var todo = parts().filter { !$0.done() }
+        if todo.isEmpty { return }
+        // Where the code comes from, if it isn't here yet.
+        if todo.contains(where: { $0.name == "Flux code" }) && repoURL.isEmpty {
+            let f = NSTextField(); f.placeholderString = "https://… or git@…"
+            guard ask("Where's the Flux code?", "Paste the git URL you were given. It's cloned into \(repo).", field: f),
+                  !f.stringValue.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+            repoURL = f.stringValue.trimmingCharacters(in: .whitespaces)
+            todo = parts().filter { !$0.done() }
+        }
+        var token = ""
+        if todo.contains(where: { $0.name == "Voice program" }) {
+            guard xcodeReady() else {
+                statusL.stringValue = "The voice program needs Xcode 16 or later (App Store). Install it, open it once, then try again."
+                statusL.textColor = .systemRed; NSWorkspace.shared.open(URL(string: "macappstore://apps.apple.com/app/id497799835")!)
+                return
+            }
+            if !registryReady() {
+                let f = NSSecureTextField(); f.placeholderString = "axst_…"
+                guard ask("Argmax secret token", "Your own token (axst_…) from app.argmaxinc.com, used once to download Argmax's SDK. Flux doesn't keep it.",
+                          field: f), f.stringValue.hasPrefix("axst_") else { return }
+                token = f.stringValue
+            }
+        }
+        let sizes = todo.compactMap { p in p.size.map { "\(p.name): \($0)" } }
+        guard ask("Install \(todo.count) part\(todo.count == 1 ? "" : "s")?",
+                  todo.map { $0.name }.joined(separator: ", ") + "."
+                  + (sizes.isEmpty ? "" : "\n\nDownloads:\n" + sizes.joined(separator: "\n"))
+                  + "\n\nNothing needs an administrator password.", ok: "Install") else { return }
+        installing = true; failedPart = nil; go(1)
+        DispatchQueue.global().async {
+            for p in todo {
+                DispatchQueue.main.async { self.statusL.stringValue = "Installing \(p.name)…"; self.statusL.textColor = .secondaryLabelColor }
+                self.say("== \(p.name)")
+                for cmd in p.commands() {
+                    self.say("$ " + cmd)
+                    let wd = p.name == "Flux code" ? home : repo
+                    let (code, last) = self.shell(cmd, cwd: wd, env: ["ARGMAX_TOKEN": token])
+                    if code != 0 {
+                        DispatchQueue.main.async {
+                            self.installing = false; self.failedPart = p.name
+                            self.statusL.stringValue = "\(p.name) didn't install: \(last). Details has the output."
+                            self.statusL.textColor = .systemRed; self.go(1)
+                        }
+                        return
+                    }
+                }
+                if p.name == "Flux code" { UserDefaults.standard.set(repo, forKey: "FluxRepo") }
+            }
+            DispatchQueue.main.async {
+                self.installing = false
+                self.statusL.stringValue = "All parts are installed."; self.statusL.textColor = .systemGreen
+                self.go(1)
+            }
+        }
+    }
+
+    func xcodeReady() -> Bool { run("/usr/bin/xcrun", ["--find", "swift"], timeout: 20).0 == 0 }
+
+    /// Run one shell line, streaming its output into Details. Returns (exit code, last output line).
+    func shell(_ cmd: String, cwd: String, env extra: [String: String]) -> (Int32, String) {
+        let p = Process(); p.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        p.arguments = ["-l", "-c", shellPath + cmd]
+        p.currentDirectoryURL = URL(fileURLWithPath: cwd)
+        var e = env; for (k, v) in extra { e[k] = v }; p.environment = e
+        let pipe = Pipe(); p.standardOutput = pipe; p.standardError = pipe; p.standardInput = FileHandle.nullDevice
+        var last = ""
+        pipe.fileHandleForReading.readabilityHandler = { h in
+            let s = String(decoding: h.availableData, as: UTF8.self)
+            for line in s.split(whereSeparator: { $0 == "\n" || $0 == "\r" }) where !line.trimmingCharacters(in: .whitespaces).isEmpty {
+                last = String(line); self.say(String(line))
+                DispatchQueue.main.async { self.statusL.stringValue = String(line.prefix(90)) }
+            }
+        }
+        do { try p.run() } catch { return (-1, error.localizedDescription) }
+        p.waitUntilExit()
+        pipe.fileHandleForReading.readabilityHandler = nil
+        return (p.terminationStatus, last.isEmpty ? "exit \(p.terminationStatus)" : String(last.prefix(120)))
     }
 
     func finish() {

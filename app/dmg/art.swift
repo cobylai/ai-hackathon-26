@@ -17,35 +17,24 @@ func png(_ size: NSSize, scale: CGFloat, _ draw: (CGRect) -> Void) -> Data {
     return rep.representation(using: .png, properties: [:])!
 }
 
-// ---- App icon: white waveform on a soft blue-grey rounded square ----
+// ---- App icon: the menu-bar "waveform" symbol in black on a light grey macOS tile ----
 func drawIcon(_ r: CGRect) {
-    let s = r.width
-    let inset = s * 0.1
-    let tile = r.insetBy(dx: inset, dy: inset)
+    let s = r.width, inset = s * 0.1, tile = r.insetBy(dx: inset, dy: inset)   // Apple's 824/1024 grid
     let path = NSBezierPath(roundedRect: tile, xRadius: tile.width * 0.225, yRadius: tile.width * 0.225)
     NSGraphicsContext.saveGraphicsState()
     let shadow = NSShadow()
-    shadow.shadowColor = NSColor.black.withAlphaComponent(0.25)
-    shadow.shadowOffset = NSSize(width: 0, height: -s * 0.012)
-    shadow.shadowBlurRadius = s * 0.03
+    shadow.shadowColor = NSColor.black.withAlphaComponent(0.22)
+    shadow.shadowOffset = NSSize(width: 0, height: -s * 0.01)
+    shadow.shadowBlurRadius = s * 0.025
     shadow.set()
-    NSColor(red: 0.36, green: 0.45, blue: 0.56, alpha: 1).setFill()
+    NSColor(white: 0.965, alpha: 1).setFill()
     path.fill()
     NSGraphicsContext.restoreGraphicsState()
-    NSGradient(starting: NSColor(red: 0.47, green: 0.57, blue: 0.68, alpha: 1),
-               ending: NSColor(red: 0.30, green: 0.38, blue: 0.49, alpha: 1))!.draw(in: path, angle: -90)
-    // waveform: seven rounded bars
-    let heights: [CGFloat] = [0.16, 0.32, 0.52, 0.70, 0.52, 0.32, 0.16]
-    let barW = tile.width * 0.075, gap = tile.width * 0.045
-    let total = CGFloat(heights.count) * barW + CGFloat(heights.count - 1) * gap
-    var x = tile.midX - total / 2
-    NSColor.white.setFill()
-    for h in heights {
-        let bh = tile.height * h
-        NSBezierPath(roundedRect: CGRect(x: x, y: tile.midY - bh / 2, width: barW, height: bh),
-                     xRadius: barW / 2, yRadius: barW / 2).fill()
-        x += barW + gap
-    }
+    NSColor.black.withAlphaComponent(0.08).setStroke(); path.lineWidth = max(1, s * 0.002); path.stroke()
+    let cfg = NSImage.SymbolConfiguration(pointSize: tile.width * 0.42, weight: .medium)
+        .applying(NSImage.SymbolConfiguration(paletteColors: [.black]))
+    let g = NSImage(systemSymbolName: "waveform", accessibilityDescription: nil)!.withSymbolConfiguration(cfg)!
+    g.draw(in: CGRect(x: tile.midX - g.size.width / 2, y: tile.midY - g.size.height / 2, width: g.size.width, height: g.size.height))
 }
 
 let iconset = out.appendingPathComponent("Flux.iconset")
@@ -58,11 +47,10 @@ for pt in [16, 32, 128, 256, 512] {
 }
 
 // ---- DMG background, 660x400 points ----
-// Icon centres (Finder, top-left origin): Flux (165,150), Applications (495,150); bottom row y=322 (app/dmg/dmg_settings.py).
+// Icon centres (Finder, top-left origin): Flux (165,175), Applications (495,175) (app/dmg/dmg_settings.py).
 func drawBackground(_ r: CGRect) {
-    NSGradient(starting: NSColor(white: 0.985, alpha: 1), ending: NSColor(white: 0.94, alpha: 1))!.draw(in: r, angle: -90)
-    let y = r.height - 150   // flip: Finder y is from the top
-    // arrow between the two icons
+    NSGradient(starting: NSColor(white: 0.985, alpha: 1), ending: NSColor(white: 0.95, alpha: 1))!.draw(in: r, angle: -90)
+    let y = r.height - 175   // flip: Finder y is from the top
     let arrow = NSBezierPath()
     arrow.move(to: NSPoint(x: 250, y: y)); arrow.line(to: NSPoint(x: 405, y: y))
     arrow.lineWidth = 2.5; arrow.lineCapStyle = .round
@@ -70,14 +58,10 @@ func drawBackground(_ r: CGRect) {
     let head = NSBezierPath()
     head.move(to: NSPoint(x: 393, y: y + 10)); head.line(to: NSPoint(x: 407, y: y)); head.line(to: NSPoint(x: 393, y: y - 10))
     head.lineWidth = 2.5; head.lineCapStyle = .round; head.lineJoinStyle = .round; head.stroke()
-    // one line of text under the icons
     let para = NSMutableParagraphStyle(); para.alignment = .center
-    let text = NSAttributedString(string: "Drag Flux to Applications, then open it to finish setup.",
-        attributes: [.font: NSFont.systemFont(ofSize: 13), .foregroundColor: NSColor(white: 0.40, alpha: 1), .paragraphStyle: para])
-    text.draw(in: CGRect(x: 0, y: r.height - 258, width: r.width, height: 20))
-    // hairline above the bottom row
-    NSColor(white: 0.86, alpha: 1).setFill()
-    NSBezierPath(rect: CGRect(x: 60, y: r.height - 274, width: r.width - 120, height: 1)).fill()
+    NSAttributedString(string: "Drag Flux to Applications, then open it to set it up.",
+        attributes: [.font: NSFont.systemFont(ofSize: 13), .foregroundColor: NSColor(white: 0.42, alpha: 1), .paragraphStyle: para])
+        .draw(in: CGRect(x: 0, y: r.height - 300, width: r.width, height: 20))
 }
 
 try! png(NSSize(width: 660, height: 400), scale: 1, drawBackground).write(to: out.appendingPathComponent("background.png"))

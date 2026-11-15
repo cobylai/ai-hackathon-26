@@ -2,11 +2,11 @@
 # Build app/dist/Flux.dmg for another Mac, signed and notarized:
 #   app/make_dmg.sh                    # needs the "Flux-notarize" notarytool profile
 #   FLUX_NOTARIZE=0 app/make_dmg.sh    # signed, not notarized (testing)
-#   FLUX_REPO_URL=https://… app/make_dmg.sh   # where setup.sh clones the code from (else: "ask whoever gave you Flux")
+#   FLUX_REPO_URL=https://… app/make_dmg.sh   # where Set Up Flux clones the code from (else it asks)
 #   FLUX_DMG_OUT=app/dist/Flux-test.dmg app/make_dmg.sh   # another output name
 # Order: build + sign Flux.app (app/build.sh, Developer ID, hardened runtime) -> notarize + staple
 # the app -> DMG with the drag window (dmgbuild via uvx) -> sign -> notarize + staple the DMG -> check.
-# Contents: Flux.app (no repo path baked in), INSTALL.html, setup.sh, Applications link. No models,
+# Contents: Flux.app (no repo path baked in; its Set Up window installs the parts) and an Applications link. No models,
 # keys or bank data. app/build/ (your own app) is untouched.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -45,19 +45,6 @@ mkdir -p "$STAGE" "$ART"
 
 step "Build and sign Flux.app"
 FLUX_APP_OUT="$STAGE" FLUX_NO_REPO=1 FLUX_SIGN="$DEVID" "$HERE/build.sh"
-# The code's location is one setting; no personal names in the shipped text.
-REPO_URL="${FLUX_REPO_URL:-}"
-if [ -n "$REPO_URL" ]; then
-  REPO_LINE="Get it from <a href=\"$REPO_URL\">$REPO_URL</a>. If it's private, ask whoever gave you Flux for access."
-else
-  REPO_URL="&lt;repo URL&gt;"; REPO_LINE="Ask whoever gave you Flux where to get it (the repo URL)."
-fi
-python3 - "$HERE/dmg/INSTALL.html" "$STAGE/INSTALL.html" "$REPO_URL" "$REPO_LINE" <<'PY'
-import sys; src, dst, url, line = sys.argv[1:]
-open(dst, "w").write(open(src).read().replace("@REPO_LINE@", line).replace("@REPO_URL@", url))
-PY
-sed "s|@REPO_URL@|${FLUX_REPO_URL:-not set}|" "$HERE/dmg/setup.sh" > "$STAGE/setup.sh"
-chmod +x "$STAGE/setup.sh"
 
 if [ "$NOTARIZE" = 1 ]; then
   step "Notarize and staple Flux.app"

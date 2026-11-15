@@ -6,6 +6,7 @@
 # identity is in the keychain, so macOS keeps Flux's permissions across rebuilds; else ad hoc.
 # FLUX_SIGN=adhoc forces ad hoc; FLUX_SIGN="<identity>" picks another.
 # The app runs the servers from the main checkout (models live only there);
+# FLUX_REPO_URL at build time: where Set Up clones the code from (empty: it asks).
 # FLUX_REPO at build time, or `defaults write local.ai-hackathon-26.flux FluxRepo <path>`, points it elsewhere.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -47,6 +48,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>NSMicrophoneUsageDescription</key><string>Flux listens only while you hold the hotkey or the talk button.</string>
   <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
   <key>FluxRepo</key><string>$REPO</string>
+  <key>FluxRepoURL</key><string>${FLUX_REPO_URL:-}</string>
 </dict></plist>
 PLIST
 if [ "$SIGN" = "adhoc" ]; then

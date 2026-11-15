@@ -38,7 +38,7 @@ round covers what landed since. Start from `main` (a8ecbca or later).
 - **Speak button** (window) / `--speak` (chat loop): reads answers aloud with macOS `say`. Off by default; talking stops it.
 - **No web for chit-chat**: greetings, mic checks, misheard names and "what did everyone ask me" now stay off the web (your round 1 bug 8). Bot-check and error pages are never saved (bug 7).
 - **Bank** is now a right-side slide-over (bank button, Done, Escape or ⌘B).
-- **Install on another Mac**: `Flux.dmg` (ask Coby) with INSTALL.html and setup.sh. See "Ship to another Mac" in `docs/window.md`.
+- **Install on another Mac**: `Flux.dmg` (ask Coby): drag Flux to Applications, open it, and its Set Up window installs the parts. See "Ship to another Mac" in `docs/window.md`.
 
 Still being built, so don't test these yet: saved chats on the left, bigger computer control (Mail/Settings/Chrome), and suggested replies.
 

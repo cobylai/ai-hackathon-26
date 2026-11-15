@@ -118,18 +118,16 @@ The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it 
 - **Menu bar** (waveform icon): Open, Sync mail (`scripts/sync_email.py 7` into `FLUX_SYNC_BANK_DIR`, default `~/flux-bank`, never the demo bank; the last result shows under it), Discover (presses the page's Discover button), Set Up Flux…, Check setup, Set Argmax key…, Quit Flux.
 - The hotkey is two constants at the top of `app/Flux.swift` (`hotKeyCode`, `hotKeyFlags`). The system hotkey call ignores Fn, so Flux reads the keyboard with an event tap, which needs **Accessibility** for Flux. It swallows Fn-Space, so no space reaches the app in front.
 
-### First launch: the setup window
+### First launch: Set Up Flux
 
-"Set Up Flux" shows one step per screen, each with a button, a live status dot and Back / Skip / Continue (Continue turns on once that permission is allowed):
+Four short screens, each with one line of text, a checklist with a status dot per row, and one main button:
 
-1. Welcome and privacy: what stays on the Mac, what leaves it, and a link to https://cobydev.com/flux/privacy.
-2. Argmax key: kept in the login Keychain as **"Flux Argmax key"**, never in the repo, the app or a file. Each Mac needs its own.
-3. Accessibility, for Fn-Space: opens the right Settings pane; the app icon can be dragged into the list (Jot's pattern).
-4. Microphone.
-5. Calendar, 6. Reminders, 7. Mail: Automation, one app each; Flux launches the app hidden and asks, so macOS shows its own prompt.
-8. Done.
+1. **Welcome:** "Flux runs on this Mac. Let's set it up." and a link to https://cobydev.com/flux/privacy.
+2. **Install:** five rows that turn green when found: Flux code, Python tools, Bonsai 2 4B, Speech model, Voice program. **Install** asks once (listing the downloads and sizes), then runs only the missing parts in order; **Details** shows each real command and its output (also in `~/Library/Logs/Flux/setup.log`). It asks for the repo URL only if the build has none (`FLUX_REPO_URL`), and for your own Argmax secret token (`axst_…`) only if the Swift registry isn't logged in yet; the token goes to that one command and isn't kept. No sudo. A failure turns its row red, shows the last line, and the button becomes **Try Again**; every row re-checks on open, so it resumes where it stopped. The voice program needs Xcode; without it the screen says so and opens the App Store page.
+3. **Argmax key:** one field; kept in the login Keychain as **"Flux Argmax key"** (an old "Muse Argmax key" is moved once).
+4. **Permissions:** Accessibility (for Fn-Space), Microphone, Calendar, Reminders, Mail, each with **Allow** until it's on. Flux launches Calendar, Reminders and Mail hidden so macOS can ask.
 
-It shows on first launch and whenever the key, Accessibility or the microphone is missing; "Set Up Flux…" in the menu reopens it. Flux starts the Python server, so macOS charges the microphone and Automation allows to Flux.
+It shows on first launch and whenever the code, the key, Accessibility or the microphone is missing; "Set Up Flux…" in the menu reopens it. `FLUX_SETUP_SCREEN=0…3` opens one screen directly (for screenshots). Permissions survive rebuilds because every build is signed with the same Developer ID.
 
 ### What it does on every launch
 
@@ -153,9 +151,7 @@ FLUX_NOTARIZE=0 app/make_dmg.sh  # signed only, for a quick look
 Order: build and sign Flux.app (Developer ID, hardened runtime), notarize and staple it, make the DMG, sign it, notarize and staple it, then `stapler validate` and `spctl -a -vvv` on both. `app/build/` (your own app) is untouched.
 
 - **Notary profile:** its own, "Flux-notarize" (`FLUX_NOTARY_PROFILE` to change). Made once by hand: accept the current agreement at developer.apple.com/account; make an app-specific password at appleid.apple.com named "Flux notarize"; then `xcrun notarytool store-credentials "Flux-notarize" --apple-id <Apple ID> --team-id XD7QDRDR78`. The script stops with these steps if the profile doesn't work.
-- **The window:** 660x400, drawn locally by `app/dmg/art.swift` (light background, arrow, one line of text; also the app and volume icon: a white waveform on a blue-grey square). Layout in `app/dmg/dmg_settings.py`, built by `dmgbuild` through `uvx --python 3.12` (nothing installed, no Finder automation prompt; Python 3.9's older dmgbuild loses the background on macOS 26).
-- **Repo URL:** one setting, `FLUX_REPO_URL=<url> app/make_dmg.sh`; it fills in setup.sh and INSTALL.html. Unset, both say to ask whoever gave you Flux. The shipped text names no person. The Developer ID signature does carry the certificate holder's name (Finder's Get Info and Gatekeeper show it).
-- **Contents:** `Flux.app` (no folder recorded, so it looks in `~/ai-hackathon-26` or the `defaults` setting), `INSTALL.html`, `setup.sh`, an Applications link. No models, keys, bank or `data/`.
-- **INSTALL.html** has two paths. One command: `bash /Volumes/Flux/setup.sh`. Do it yourself: one numbered step per part, each with its official link and exact command: Xcode, uv, the repo (private), Python packages and Playwright Chromium, Bonsai 2 4B with its own venv, the Whisper model, the Argmax registry login and your own keys, building `voice/swift`, the demo bank and "Flux demo" calendar, then opening Flux. Each part installs on its own, so Bonsai, Argmax and the harness are visibly separate.
-- **setup.sh** prints each command before it runs it, asks before every download or install, skips what's already there, never uses `sudo`, and reads the Argmax secret token hidden. It ends with `defaults write … FluxRepo <folder>`.
+- **The window:** 660x400, drawn locally by `app/dmg/art.swift` (light background, arrow, one line of text; also the app and volume icon: the black menu-bar waveform on a light grey macOS tile). Layout in `app/dmg/dmg_settings.py`, built by `dmgbuild` through `uvx --python 3.12` (nothing installed, no Finder automation prompt; Python 3.9's older dmgbuild loses the background on macOS 26).
+- **Repo URL:** one setting, `FLUX_REPO_URL=<url> app/make_dmg.sh`, stored in the app's Info.plist for Set Up's Install step. Unset (the site build), Set Up asks for it. The shipped text names no person. The Developer ID signature does carry the certificate holder's name (Finder's Get Info and Gatekeeper show it).
+- **Contents:** only `Flux.app` and an Applications link. Set Up Flux installs the rest (no INSTALL page or setup script any more).
 - **Each Mac needs its own Argmax key**, and the first voice start on a new Mac takes several minutes (one-time Neural Engine compile).

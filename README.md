@@ -81,7 +81,7 @@ FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason       # terminal chat loo
 
 ```bash
 app/build.sh && open app/build/Flux.app     # menu bar; Fn-Space shows it, hold Fn-Space to talk
-app/make_dmg.sh                             # app/dist/Flux.dmg: drag-to-Applications, with INSTALL.html and setup.sh
+app/make_dmg.sh                             # app/dist/Flux.dmg: drag-to-Applications; Set Up Flux installs the rest
 ```
 
 The app is signed with a Developer ID (hardened runtime); notarization is pending. On first launch an 8-screen setup window walks through the Argmax key (kept in the Keychain), Accessibility (for Fn-Space), the microphone, and Calendar, Reminders and Mail. It starts Bonsai and the window server itself if they aren't running. The first voice start on a new Mac takes several minutes (one-time Neural Engine compile). Details: "Mac app" in [docs/window.md](docs/window.md).
