@@ -542,6 +542,7 @@ function talkState(s) {
 async function post(path) { return (await fetch(path, { method: 'POST' })).json(); }
 async function postJSON(path, obj) { return (await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) })).json(); }
 function voiceError(msg) {
+  if (/too short/.test(msg)) msg = "that was too short to hear. Hold the mic while you speak, or click it once, speak, then click again";
   const t = el('section', 'turn'); t.appendChild(el('div', 'err', "Couldn't listen: " + msg + '. Type your question instead.'));
   const e = $('empty'); if (e) e.remove(); log.appendChild(t); bottom();
 }
@@ -553,7 +554,7 @@ async function startTalk() {
 }
 async function stopTalk(cancel) {
   if (!recording) return;
-  recording = false; talkState('working'); talk.disabled = true;
+  recording = false; latched = false; talkState('working'); talk.disabled = true;
   let r; try { r = await post('/listen/stop'); } catch (e) { r = { error: "Flux isn't reachable" }; }
   talk.disabled = !voiceOk; talkState('idle'); q.focus();
   if (cancel) return;
@@ -561,9 +562,21 @@ async function stopTalk(cancel) {
   if (r.text && r.text.trim()) ask(r.text.trim(), true);
   else voiceError("nothing was heard");
 }
-talk.addEventListener('pointerdown', (ev) => { if (talk.disabled) return; ev.preventDefault(); talk.setPointerCapture(ev.pointerId); startTalk(); });
-talk.addEventListener('pointerup', () => stopTalk(false));
-talk.addEventListener('pointercancel', () => stopTalk(false));
+// Hold to talk, or click once to start and click again to send. A press shorter than 0.4 s is a click:
+// it keeps listening (a release that fast would record almost nothing and fail with "recording too short").
+let pressAt = 0, latched = false;
+talk.addEventListener('pointerdown', (ev) => {
+  if (talk.disabled) return; ev.preventDefault();
+  if (latched) { latched = false; stopTalk(false); return; }
+  talk.setPointerCapture(ev.pointerId); pressAt = Date.now(); startTalk();
+});
+talk.addEventListener('pointerup', () => {
+  if (!recording || !pressAt) return;
+  if (Date.now() - pressAt < 400) { latched = true; talk.title = 'Click again to ask, Escape to cancel'; q.placeholder = 'Listening — click the mic again to ask'; }
+  else stopTalk(false);
+  pressAt = 0;
+});
+talk.addEventListener('pointercancel', () => { if (!latched) stopTalk(false); pressAt = 0; });
 window.fluxTalk = { start: startTalk, stop: () => stopTalk(false) };
 window.fluxFocus = () => { if (!recording) q.focus(); };
 
