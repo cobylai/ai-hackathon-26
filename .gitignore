@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+voice/swift/.build/
+voice/swift/.swiftpm/
+voice/swift/Package.resolved
