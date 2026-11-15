@@ -176,8 +176,10 @@ One entry point for typed and spoken questions. Code picks the route, never the 
 from reason import answer
 answer(question, today=None) -> Answer
     # Answer: text (ends with "Source: sender, Nov 12" or the url), route, sources, seconds
-    # route: "due" | "person" | "bank" | "web" | "offline" | "not_found"
+    # route: "act" | "due" | "person" | "bank" | "web" | "offline" | "not_found"
 ```
+
+- **Act** (checked first): "draft a reply to <name> saying ...", "open my calendar", "open the assignment page". Muse shows exactly what it will do and waits for a typed or spoken yes. Then it calls the partner's `app_open`, `email.search` + `draft.reply` (drafts only, never sent, only in `ilovelocalai@gmail.com`), or opens a bank link. A draft needs a connection; opening an app doesn't. Details: `docs/acting.md`.
 
 - **Due:** the question says due/deadline. Code picks the date range, calls `bank.due` and writes the list. No model call.
 - **Person:** a question word is a sender's name.
@@ -208,4 +210,4 @@ Argmax runs only from Swift, so voice is a small Swift program, `voice/swift/` â
 
 - The app's name: "Muse" vs "Hearth" (Coby's call; no code depends on it; the partner prefers not "Muse").
 - Canvas sync: not started. It would follow the same pattern as email.
-- Not used by the app: the partner's computer-control, `email_asks` and draft tools, and `research()`.
+- Not used by the app: `email_asks`, `research()`, `ui_click`/`ui_type`, `file_find`. Used since the acting route: `app_open`, `email_search`, `draft.reply`.
