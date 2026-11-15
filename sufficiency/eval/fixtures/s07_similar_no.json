@@ -1,0 +1,9 @@
+{
+  "id": "s07_similar_no",
+  "task": "sufficiency",
+  "note": "answers the fall question, not spring",
+  "question": "What is the spring 2027 add/drop deadline?",
+  "url": "https://registrar.example.edu/calendar/fall-2026",
+  "page": "Academic Calendar - Fall 2026\nClasses begin: Wednesday, August 26\nLast day to add a course: Wednesday, September 9\nLast day to drop a course: Thursday, October 15\nFall break: October 10-13\nThanksgiving break: November 25-29\nLast day of classes: Tuesday, December 8",
+  "expected": "not enough"
+}
