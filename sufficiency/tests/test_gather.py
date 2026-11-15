@@ -129,6 +129,13 @@ class Gather(unittest.TestCase):
         self.assertEqual(G._page({"title": "t", "text": "x"}), G.Page("t", "x"))
         self.assertEqual(G._page(None), G.Page("", ""))
 
+    def test_adapter_partner_shapes(self):
+        from harness.search.google import Result
+        r = Result(title="T", url="https://a.example/x", domain="a.example", snippet="s")
+        self.assertEqual(G._hits([r]), [G.Hit("T", "https://a.example/x", "s")])
+        self.assertEqual(G._page(("OK", "body")), G.Page("", "body"))
+        self.assertEqual(G._page(("BLOCKED", "bot check")), G.Page("", ""))
+
 
 def stub_chat(*texts):
     it = iter(texts)
