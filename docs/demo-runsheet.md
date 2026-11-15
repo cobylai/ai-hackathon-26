@@ -1,8 +1,9 @@
 # Demo run sheet (the 2-minute video)
 
-One story: Flux learns while online, then Wi-Fi goes off and it still runs your day and
-helps you act on it. Everything on screen is **sample data** (made-up mail, coursework and
-calendar), and the video says so.
+One screen recording, no narration: Coby and Antranig take turns asking Flux questions, and
+Flux does all the explaining. The take starts with the bank already synced (no Sync on
+camera). Everything on screen is **sample data**: the status line reads "Demo data", and the
+end card says sample mail and coursework.
 
 ## Before every take
 
@@ -21,7 +22,7 @@ What the reset does:
 
 It refuses the real bank `~/flux-bank` and any calendar or list not named "Flux demo".
 
-Then the typed check (network blocked; every line below must be RIGHT):
+Then the typed check (network blocked; the preflight and all 12 lines must be RIGHT):
 
 ```bash
 uv run python scripts/demo/demo_check.py --today 2026-11-15
@@ -36,29 +37,35 @@ What's in the demo state (built for Sun Nov 15):
   - nothing at Thu 3pm or Thu 7pm
 - **Notes about you:** none.
 
-## Beats
+## The 12 lines
 
-| Time | Do / say | Must appear | If it doesn't |
+Who asks: Coby (C) and Antranig (A), each taking one whole workflow. Every answer is fixed
+text or code output. Lines 1, 2, 7, 9 and 12 are fixed wording from `playbooks/about.md`.
+
+| # | Who | Say (mic button) | Must appear |
 |---|---|---|---|
-| 0:00 | **"What's Flux?"** (replaces the spoken hook) | "Flux is a private assistant that runs entirely on this Mac…", then "What it can do" with example questions | Type it. |
-| 0:08 | Online. Open the bank slide-over: "This is sample mail and coursework, already synced." | "55 items in the bank": 30 emails and 25 Canvas items | Don't click **Sync mail** in demo mode: it syncs the real Gmail account into ~/flux-bank, so the demo bank doesn't change. |
-| 0:20 | Turn Wi-Fi off in the menu bar, on camera | The label reads offline | — |
-| 0:27 | Hold Fn-Space and say **"catch me up"**. "Voice is Argmax, running locally." | Today on your calendar, "Due today through Tue Nov 17", open asks, and under it **Suggested: You're free Thursday, Nov 19 at 3pm. Draft a yes to Felix?** | If the words come out wrong, type "catch me up". If Felix's line isn't there, say "and it suggests replies to meeting asks" and move on. |
-| 0:45 | Click **Draft yes**, change one word, click **Open in Mail** | A draft box, then a Mail compose window filled in to Felix | Show the draft box only: "it opens this in Mail for me to send". |
-| 1:05 | **"What's due this week?"** | "Due this week" with Lab Report 3 (Thu 11:59pm, CHEM 1583 Kitchen Chemistry) and the $48.20 phone bill | Type it. |
-| 1:12 | **"and tomorrow?"** | "Due Mon Nov 16" | Cut this beat first if the video runs long. |
-| 1:15 | **"set me up for the lab report"**, then **"yes"** | "To set you up for the lab report, I'll open:", then the page "Lab Report 3", the email from Lena Marsh "Lab report format" and the email from Jonah Pike "Lab Report 3 template". On yes, the page opens in the browser (a local file, so it works with Wi-Fi off) and the email opens in Mail. | If it asks "Which one do you mean", say "Lab Report 3". |
-| 1:25 | **"Remember that my lab is Tuesdays at 2"** | "I'll remember: my lab is Tuesdays at 2." | Cut this beat second if long. |
-| 1:32 | **"what do you know about me?"** | "my lab is Tuesdays at 2", then "Source: your notes" | — |
-| 1:40 | Over the open app: "Answers about you come from code reading saved mail, each with its source. Every model call is Bonsai 2 on this Mac." | — | — |
-| 1:48 | End card: Flux, Bonsai 2 4B, Argmax, zero cloud calls, both names | — | — |
+| 1 | C | "What is Flux?" (still online) | The overview: "Flux is a private assistant that runs entirely on this Mac…" and "What it can do" |
+| — | | *Wi-Fi off in the menu bar, on camera* | Status line: "Demo data · Offline · 55 items in the bank" |
+| 2 | C | "Do you need the internet?" | "No. I read your mail and coursework/deadlines while you're online, then answer from what I saved. You're offline right now, and I still work." |
+| 3 | A | "Catch me up." | Today on your calendar (Sun Nov 15), "Due today through Tue Nov 17", "Asks in mail from the last 7 days" |
+| 4 | A | "What's due this week?" | "Due this week (Nov 15 to Nov 22)", each row with its source |
+| 5 | A | "And tomorrow?" | "Due Mon Nov 16": reading quiz 9am, chart critique 1:30pm, Hugo's vote 5pm |
+| 6 | C | "What did Felix ask me?" | Felix's asks, plus **Suggested: You're free Thursday, Nov 19 at 3pm. Draft a yes to Felix?** Click **Draft yes**. The draft box shows To fambrose@example.edu, "Re: Free Thursday at 3?" and "Hi Felix, Yes, Thursday, Nov 19 at 3pm works for me. See you then." Edit one word. |
+| 7 | C | "Will you send that?" | "No. I write the draft and you send it. I never send anything myself." Then click **Open in Mail**: a Mail compose window, filled in, unsent |
+| 8 | A | "Set me up for the lab report." | The page "Lab Report 3", the email from Lena Marsh "Lab report format", and the email from Jonah Pike "Lab Report 3 template". Click **Yes, do it**: the page opens in Chrome (local file, works offline) |
+| 9 | A | "When is my chemistry exam?" | "I have nothing saved about a chemistry exam, and I won't guess." |
+| 10 | C | "Remember that my lab is Tuesdays at 2." | "I'll remember: my lab is Tuesdays at 2." |
+| 11 | C | "What do you know about me?" | "my lab is Tuesdays at 2" (your notes) |
+| 12 | A | "What model are you running?" | "Bonsai 2, the 4B model, running on this Mac. Your voice is transcribed by Argmax, also on this Mac. Most answers about your day use no model at all: I look them up in what I saved." |
+| — | | *End card* | Flux · Bonsai 2 4B · Argmax · zero cloud calls · sample mail and coursework · both names |
 
-Left out on purpose: discovery, web lookups, computer control in other apps, the agent loop, sending.
+If it runs over two minutes, cut "And tomorrow?" first, then the remember pair (10–11).
 
-Spare line, not in the video (the check runs it too): "What did Nina Valdez ask me?" gives
-"You have CHEM 1583 Lab then (Tuesday, Nov 17 at 2:30pm). Draft a reply proposing another time?".
+Known on screen:
+- **Line 8:** the two emails don't open, because sample mail isn't in Apple Mail. Flux says "I couldn't open that email itself…" and shows the saved copy. Only the Lab Report 3 page opens.
+- **Sync mail:** in demo mode it syncs the real Gmail account into ~/flux-bank, so don't click it.
 
 ## Voice pass (with Coby at the mic)
 
-Say each bold line once with Fn-Space. Write down what the transcript shows. Names and
+Say each line once through the window's mic button. Write down what the transcript shows. Names and
 numbers are where voice goes wrong: Felix, Jonah, "Lab Report 3", "Tuesdays at 2".
