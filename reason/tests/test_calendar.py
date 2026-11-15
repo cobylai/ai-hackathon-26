@@ -79,7 +79,7 @@ class Answers(unittest.TestCase):
         self.assertEqual(cal.calls, [(date(2026, 11, 15), date(2026, 11, 15))])
         self.assertIn("On your calendar Sun Nov 15:", a.text)
         self.assertIn("- noon–1:30pm  Hackathon demo (Duffield Atrium)", a.text)
-        self.assertTrue(a.text.endswith("Source: Apple Calendar (Muse demo)"))
+        self.assertTrue(a.text.endswith("Source: Apple Calendar (Flux demo)"))
 
     def test_this_week_on_saturday_runs_to_next_sunday(self):
         a, cal = self.ask("what do I have this week")
@@ -111,7 +111,7 @@ class Answers(unittest.TestCase):
 
     def test_calendar_error(self):
         def broken(start, end):
-            raise applecal.CalendarError('no calendar named "Muse demo" in Calendar.app')
+            raise applecal.CalendarError('no calendar named "Flux demo" in Calendar.app')
         a, _ = self.ask("what's on my calendar today", broken)
         self.assertEqual(a.route, "calendar")
         self.assertIn("I couldn't read Apple Calendar (no calendar named", a.text)

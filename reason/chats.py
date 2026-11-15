@@ -1,7 +1,7 @@
 """Saved chats: one JSON file per conversation, on this Mac, outside the repo.
 
-    folder()            $MUSE_CHATS_DIR, else "<bank dir>-chats" (~/muse-demo-bank-chats),
-                        else ~/muse-chats when the bank sits inside the repo
+    folder()            $FLUX_CHATS_DIR, else "<bank dir>-chats" (~/flux-demo-bank-chats),
+                        else ~/flux-chats when the bank sits inside the repo
     save(session)       writes <id>.json (atomically); a chat with no turns is not written
     load(id)            -> Session, follow-ups go on from where it left off
     listing()           -> [{"id", "title", "started", "updated", "turns"}], newest first
@@ -26,12 +26,12 @@ _ID = re.compile(r"^[0-9a-f]{6,32}$")
 
 
 def folder() -> Path:
-    env = os.environ.get("MUSE_CHATS_DIR")
+    env = (os.environ.get("FLUX_CHATS_DIR") or os.environ.get("MUSE_CHATS_DIR"))
     if env:
         return Path(env).expanduser()
     bank = store.bank_dir().expanduser().resolve()
     if bank == REPO or REPO in bank.parents:
-        return Path.home() / "muse-chats"
+        return Path.home() / "flux-chats"
     return bank.parent / f"{bank.name}-chats"
 
 

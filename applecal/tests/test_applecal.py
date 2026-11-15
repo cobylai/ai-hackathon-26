@@ -39,7 +39,7 @@ class Events(unittest.TestCase):
     def setUp(self):
         applecal._INDEX.clear()
         applecal._CACHE.clear()
-        env = mock.patch.dict("os.environ", {"MUSE_CALENDAR_CACHE": "0"})
+        env = mock.patch.dict("os.environ", {"FLUX_CALENDAR_CACHE": "0"})
         env.start()
         self.addCleanup(env.stop)
 
@@ -65,13 +65,13 @@ class Events(unittest.TestCase):
             self.assertEqual(applecal.events(date(2026, 11, 17), date(2026, 11, 20)), [])
 
     def test_cache(self):
-        with mock.patch.dict("os.environ", {"MUSE_CALENDAR_CACHE": "60"}), _run(OUT) as run:
+        with mock.patch.dict("os.environ", {"FLUX_CALENDAR_CACHE": "60"}), _run(OUT) as run:
             applecal.events(date(2026, 11, 15), date(2026, 11, 15))
             self.assertEqual(len(applecal.events(date(2026, 11, 16), date(2026, 11, 16))), 1)
         self.assertEqual(run.call_count, 1)
 
     def test_warm_fills_cache_and_ignores_errors(self):
-        with mock.patch.dict("os.environ", {"MUSE_CALENDAR_CACHE": "60"}), _run(OUT) as run:
+        with mock.patch.dict("os.environ", {"FLUX_CALENDAR_CACHE": "60"}), _run(OUT) as run:
             applecal.warm().join(5)
             applecal.events(date(2026, 11, 15), date(2026, 11, 15))
         self.assertEqual(run.call_count, 1)
@@ -80,13 +80,13 @@ class Events(unittest.TestCase):
             applecal.warm("X").join(5)  # no exception
 
     def test_calendar_name_env(self):
-        with mock.patch.dict("os.environ", {"MUSE_CALENDAR": "Hearth"}):
+        with mock.patch.dict("os.environ", {"FLUX_CALENDAR": "Hearth"}):
             self.assertEqual(applecal.calendar_name(), "Hearth")
-        with mock.patch.dict("os.environ", {"MUSE_CALENDAR": ""}):
-            self.assertEqual(applecal.calendar_name(), "Muse demo")
+        with mock.patch.dict("os.environ", {"FLUX_CALENDAR": ""}):
+            self.assertEqual(applecal.calendar_name(), "Flux demo")
 
     def test_missing_calendar(self):
-        with _run(stderr="execution error: no calendar named Muse demo (4040)", code=1):
+        with _run(stderr="execution error: no calendar named Flux demo (4040)", code=1):
             with self.assertRaisesRegex(applecal.CalendarError, "no calendar named"):
                 applecal.events(date(2026, 11, 15), date(2026, 11, 15))
 

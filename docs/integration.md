@@ -36,27 +36,27 @@ Bonsai models and their venv live in the main checkout at
 curl -s localhost:8080/v1/models || scripts/serve_bonsai.sh 4B
 
 # The demo: chat window on the sample-mail bank (see "Demo bank" below)
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.web
 
 # Tests: harness tests/ and our packages are separate runs
 uv run pytest -q
 uv run python -m pytest -q bank/tests sufficiency/tests reason/tests
 ```
 
-## Demo bank: `~/muse-demo-bank`
+## Demo bank: `~/flux-demo-bank`
 
 The demo answers from sample mail (brief M's 20 fake emails from 13 made-up
 senders, written into real Gmail thread markup), not from live sends. The
 video says it is sample mail.
 
-- Bank: `~/muse-demo-bank` (outside every checkout).
-- Pages, truth.json and the saved template: `~/muse-demo-threads/`.
+- Bank: `~/flux-demo-bank` (outside every checkout).
+- Pages, truth.json and the saved template: `~/flux-demo-threads/`.
   `template.html` is a saved Gmail page with a real sender in it; keep it out of git.
 
 Regenerate for the recording day (one command; set DAY to that day; Bonsai up):
 
 ```bash
-DAY=2026-11-15; rm -rf ~/muse-demo-bank && uv run python scripts/make_test_threads.py 20 --today $DAY --template ~/muse-demo-threads/template.html --out ~/muse-demo-threads && MUSE_BANK_DIR=~/muse-demo-bank uv run python scripts/sync_test_threads.py ~/muse-demo-threads && MUSE_BANK_DIR=~/muse-demo-bank uv run python scripts/make_test_mail.py check ~/muse-demo-threads --today $DAY --offline
+DAY=2026-11-15; rm -rf ~/flux-demo-bank && uv run python scripts/make_test_threads.py 20 --today $DAY --template ~/flux-demo-threads/template.html --out ~/flux-demo-threads && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/sync_test_threads.py ~/flux-demo-threads && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/make_test_mail.py check ~/flux-demo-threads --today $DAY --offline
 ```
 
 The chat window uses the real clock, so build the bank for the day you record.
@@ -91,8 +91,8 @@ person-route fix (brief P), then 36/37 after it, matching the text bank.
 ## Email -> bank sync (live Gmail)
 
 ```bash
-MUSE_BANK_DIR=~/muse-bank uv run python scripts/sync_email.py 7     # last 7 days, signed-in account
-MUSE_BANK_DIR=/tmp/bank uv run python scripts/sync_email.py --fixture tests/pages/gmail_thread.html
+FLUX_BANK_DIR=~/flux-bank uv run python scripts/sync_email.py 7     # last 7 days, signed-in account
+FLUX_BANK_DIR=/tmp/bank uv run python scripts/sync_email.py --fixture tests/pages/gmail_thread.html
 ```
 
 `email_search(days=N)` rows -> `read.open_thread` + `read.read_messages` ->
@@ -183,4 +183,4 @@ change to harness/search: none.
 
 - 30 test threads: brief M's generator has 20 emails, so the test and demo
   banks hold 20.
-- Voice run of the video's person questions on `~/muse-demo-bank` (needs Coby).
+- Voice run of the video's person questions on `~/flux-demo-bank` (needs Coby).

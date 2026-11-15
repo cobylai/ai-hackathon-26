@@ -211,7 +211,7 @@ class Discover(unittest.TestCase):
     def test_demo_bank_skips_mail_sync_quietly(self):
         import io
         from contextlib import redirect_stderr
-        demo = self.root / "muse-demo-bank"
+        demo = self.root / "flux-demo-bank"
         demo.mkdir()
         for e in store.all_entries(self.root):
             store.write_entry({k: v for k, v in e.items() if k != "path"}, demo)

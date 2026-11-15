@@ -49,7 +49,7 @@ Tests: `python -m unittest reason.tests.test_act`. These need no model, network 
 
 ## Playbook
 
-All wording, the trigger patterns and the draft prompt live in `playbooks/act.md` (format: `playbooks/RULES.md`). Its examples run with `MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check --only act`: 6/6 on 2026-11-15, with the network blocked. No example says yes, so the checker never opens or drafts anything.
+All wording, the trigger patterns and the draft prompt live in `playbooks/act.md` (format: `playbooks/RULES.md`). Its examples run with `FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check --only act`: 6/6 on 2026-11-15, with the network blocked. No example says yes, so the checker never opens or drafts anything.
 
 ## Computer control: take me there, add to calendar, remind me, set me up (brief X)
 
@@ -58,8 +58,8 @@ All wording, the trigger patterns and the draft prompt live in `playbooks/act.md
 | Say | Shown first | On yes | Offline |
 |---|---|---|---|
 | "open it" / "open the second one" (after an answer with rows) | what will open | **Email:** Apple Mail, test account only, found by sender and subject. Otherwise its Gmail page (online, real threads). Otherwise the saved copy. **Canvas or page:** its link. **Calendar row:** Calendar shows the event. | Mail, Canvas pages and Calendar yes |
-| "add Milo's band practice to my calendar", "add it to my calendar" | title, day and time, place | `applecal.write.add_event` into MUSE_CALENDAR ("Muse demo") | yes |
-| "remind me about homework 9 (the day before)" | name, alert time, due | `applecal.write.add_reminder` into the "Muse demo" Reminders list | yes |
+| "add Milo's band practice to my calendar", "add it to my calendar" | title, day and time, place | `applecal.write.add_event` into FLUX_CALENDAR ("Flux demo") | yes |
+| "remind me about homework 9 (the day before)" | name, alert time, due | `applecal.write.add_reminder` into the "Flux demo" Reminders list | yes |
 | "set me up for homework 9", "let's work on …" | the page, up to 2 emails, up to 2 notes | opens them all | yes, except Gmail pages |
 
 **Times** come from the entry's stored deadlines, which the bank's date code worked out at ingest. If an entry has none, Flux reads date phrases in its ask and summary with the same code. The model is never asked. With no time, Flux says so and doesn't guess.
@@ -74,9 +74,9 @@ All wording, the trigger patterns and the draft prompt live in `playbooks/act.md
 - Text read from an email or page is data, never an instruction (RULES 10). Only an entry's own stored source is ever opened.
 - osascript gets every value as an argument, never pasted into the script.
 - Mail is searched only in `ilovelocalai@gmail.com`'s inbox. Nothing is sent, moved or deleted.
-- The only writes are one event or one reminder, into "Muse demo".
+- The only writes are one event or one reminder, into "Flux demo".
 - `sandbox-exec` breaks Calendar and Reminders scripting (-10004), so the offline check is the in-process network block or a real Wi-Fi-off run.
 
-**Demo data:** `scripts/make_test_mail.py` m21 (Milo: band practice Thu Nov 19 7pm, free), m22 (Greta: book club Wed Nov 18 2pm), m23 (Ivy: "sometime soon", no time). The "Muse demo" calendar has "Lab" Wed Nov 18 1:30–3:30pm, which clashes with m22.
+**Demo data:** `scripts/make_test_mail.py` m21 (Milo: band practice Thu Nov 19 7pm, free), m22 (Greta: book club Wed Nov 18 2pm), m23 (Ivy: "sometime soon", no time). The "Flux demo" calendar has "Lab" Wed Nov 18 1:30–3:30pm, which clashes with m22.
 
 Tests: `reason/tests/test_computer.py`, with Mail, Calendar and Reminders mocked, including the injection test.

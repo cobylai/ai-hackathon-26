@@ -24,18 +24,20 @@ let keychainService = "Flux Argmax key"
 let keychainAccount = "ARGMAX_API_KEY"
 
 let env = ProcessInfo.processInfo.environment
-// Where the repo is: `defaults write local.ai-hackathon-26.flux MuseRepo <path>`, then MUSE_REPO,
+/// FLUX_<name>, or the old MUSE_<name> (read for one release).
+func setting(_ name: String) -> String? { env["FLUX_" + name] ?? env["MUSE_" + name] }
+// Where the repo is: `defaults write local.ai-hackathon-26.flux FluxRepo <path>`, then FLUX_REPO,
 // then the path baked in at build time (empty in the DMG build), then ~/ai-hackathon-26.
-let repo: String = [UserDefaults.standard.string(forKey: "MuseRepo"), env["MUSE_REPO"],
-                    Bundle.main.object(forInfoDictionaryKey: "MuseRepo") as? String]
+let repo: String = [UserDefaults.standard.string(forKey: "FluxRepo"), UserDefaults.standard.string(forKey: "MuseRepo"), setting("REPO"),
+                    Bundle.main.object(forInfoDictionaryKey: "FluxRepo") as? String]
     .compactMap { $0 }.first { !$0.isEmpty } ?? (NSHomeDirectory() + "/ai-hackathon-26")
-let bankDir: String = env["MUSE_BANK_DIR"] ?? (NSHomeDirectory() + "/muse-demo-bank")
+let bankDir: String = setting("BANK_DIR") ?? (NSHomeDirectory() + "/flux-demo-bank")
 // Sync mail writes real Gmail here, never into the demo bank.
-let syncBankDir: String = env["MUSE_SYNC_BANK_DIR"] ?? (NSHomeDirectory() + "/muse-bank")
-let calendarName: String = env["MUSE_CALENDAR"] ?? "Muse demo"
+let syncBankDir: String = setting("SYNC_BANK_DIR") ?? (NSHomeDirectory() + "/flux-bank")
+let calendarName: String = setting("CALENDAR") ?? "Flux demo"
 let modelFolder: String = env["ARGMAX_MODEL_FOLDER"].flatMap { $0.isEmpty ? nil : $0 } ?? (NSHomeDirectory() +
     "/Documents/huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-large-v3-v20240930_626MB")
-let voiceBin: String = env["MUSE_VOICE_BIN"] ?? (repo + "/voice/swift/.build/release/argmax-voice")
+let voiceBin: String = setting("VOICE_BIN") ?? (repo + "/voice/swift/.build/release/argmax-voice")
 let logDir = NSHomeDirectory() + "/Library/Logs/Flux"
 
 // ---- Keychain (login keychain, generic password) ----
@@ -111,7 +113,7 @@ final class Server {
         p.arguments = ["-l", "-c", "exec " + command]
         p.currentDirectoryURL = URL(fileURLWithPath: repo)
         var e = env
-        e["MUSE_BANK_DIR"] = bankDir
+        e["FLUX_BANK_DIR"] = bankDir
         for (k, v) in extraEnv { e[k] = v }
         p.environment = e
         let fh = FileHandle(forWritingAtPath: log)
@@ -232,11 +234,11 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         let cfg = WKWebViewConfiguration()
         let js = """
         document.addEventListener('keydown', e => {
-          if (e.key === 'Escape' && !e.defaultPrevented) window.webkit.messageHandlers.muse.postMessage('hide');
+          if (e.key === 'Escape' && !e.defaultPrevented) window.webkit.messageHandlers.flux.postMessage('hide');
         });
         """
         cfg.userContentController.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true))
-        cfg.userContentController.add(self, name: "muse")
+        cfg.userContentController.add(self, name: "flux")
         web = WKWebView(frame: fx.bounds, configuration: cfg)
         web.setValue(false, forKey: "drawsBackground")
         web.autoresizingMask = [.width, .height]
@@ -278,13 +280,13 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
 
     // Page hooks if the page has them, else its #q field and #talk button.
     func focusField() {
-        js("window.museFocus ? museFocus() : (document.getElementById('q') || {focus(){}}).focus()")
+        js("window.fluxFocus ? fluxFocus() : (document.getElementById('q') || {focus(){}}).focus()")
     }
     func talkStart() {
-        js("window.museTalk ? museTalk.start() : (b => b && b.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true})))(document.getElementById('talk'))")
+        js("window.fluxTalk ? fluxTalk.start() : (b => b && b.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true})))(document.getElementById('talk'))")
     }
     func talkStop() {
-        js("window.museTalk ? museTalk.stop() : (b => b && b.dispatchEvent(new PointerEvent('pointerup', {bubbles: true})))(document.getElementById('talk'))")
+        js("window.fluxTalk ? fluxTalk.stop() : (b => b && b.dispatchEvent(new PointerEvent('pointerup', {bubbles: true})))(document.getElementById('talk'))")
     }
 
     // ---- Hotkey: a keyboard event tap, since the system hotkey call ignores Fn.
@@ -408,7 +410,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         let calProblem = calendarProblem()
 
         if !FileManager.default.fileExists(atPath: repo + "/scripts/serve_bonsai.sh") {
-            return say("Flux code not found at \(repo).\nRun setup.sh from the Flux disk image, or point Flux at your copy:\n  defaults write local.ai-hackathon-26.flux MuseRepo /path/to/ai-hackathon-26\nthen reopen Flux.")
+            return say("Flux code not found at \(repo).\nRun setup.sh from the Flux disk image, or point Flux at your copy:\n  defaults write local.ai-hackathon-26.flux FluxRepo /path/to/ai-hackathon-26\nthen reopen Flux.")
         }
         let started = Date()
         var extra: [String: String] = [:]
@@ -520,7 +522,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         syncItem.isEnabled = false; syncItem.title = "Syncing mail…"
         syncInfo.isHidden = true
         DispatchQueue.global().async {
-            let (_, out) = run("/bin/zsh", ["-l", "-c", "cd \"$MUSE_REPO_DIR\" && MUSE_BANK_DIR=\"$MUSE_BANK\" exec uv run python scripts/sync_email.py 7"], timeout: 900, env: ["MUSE_REPO_DIR": repo, "MUSE_BANK": syncBankDir])
+            let (_, out) = run("/bin/zsh", ["-l", "-c", "cd \"$FLUX_REPO_DIR\" && FLUX_BANK_DIR=\"$FLUX_BANK\" exec uv run python scripts/sync_email.py 7"], timeout: 900, env: ["FLUX_REPO_DIR": repo, "FLUX_BANK": syncBankDir])
             let last = out.split(separator: "\n").last.map(String.init) ?? "done"
             DispatchQueue.main.async {
                 self.syncItem.isEnabled = true; self.syncItem.title = "Sync mail"

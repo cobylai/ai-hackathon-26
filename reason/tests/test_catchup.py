@@ -80,7 +80,7 @@ class Answers(unittest.TestCase):
         self.assertLess(i_cal, i_due)
         self.assertLess(i_due, i_ask)
         self.assertIn("- noon–1:30pm  Hackathon judging (Duffield Atrium)", t)
-        self.assertIn("Source: Apple Calendar (Muse demo)", t)
+        self.assertIn("Source: Apple Calendar (Flux demo)", t)
         self.assertIn("- Sun Nov 15 11:59pm  Problem set 7 is posted (ZOOL 2150, Nov 10)", t)
         self.assertIn("- Tue Nov 17 noon  Send me your $35 share (Felix Ambrose, Nov 14)", t)
         self.assertNotIn("Turn in the essay (Prof", t)          # due Nov 20: outside the 3 days

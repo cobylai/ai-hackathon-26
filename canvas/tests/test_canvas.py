@@ -145,7 +145,7 @@ class Filing(unittest.TestCase):
 
     def test_refuses_other_banks(self):
         (self.root / "truth.json").write_text('{"today": "2026-11-15", "assignments": []}')
-        with mock.patch.dict("os.environ", {"MUSE_BANK_DIR": str(self.root / "bank")}):
+        with mock.patch.dict("os.environ", {"FLUX_BANK_DIR": str(self.root / "bank")}):
             with self.assertRaises(SystemExit):
                 sync.main([str(self.root)])
 

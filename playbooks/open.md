@@ -10,7 +10,7 @@ No triggers of its own: `open` in `followup.md` hands the picked row to `act.pla
 
 ## Steps
 
-1. The row is a calendar event: show `show_event_preview` and wait for a yes. On yes, Calendar shows that event (found by title and start time in the Muse calendar). If it isn't found, say `event_not_found` and open Calendar.
+1. The row is a calendar event: show `show_event_preview` and wait for a yes. On yes, Calendar shows that event (found by title and start time in the Flux calendar). If it isn't found, say `event_not_found` and open Calendar.
 2. The entry has a web or file link (Canvas, a saved web page): show the page preview from `act.md` and open it in the default browser on yes.
 3. The entry is an email: show `open_mail_preview` and wait for a yes. On yes:
    - Open the message in Apple Mail, searching only the test account's inbox by sender address and subject. This works offline.

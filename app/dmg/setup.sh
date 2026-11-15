@@ -2,7 +2,7 @@
 # Flux setup for a new Mac (Apple Silicon, macOS 15+). Read it before you run it.
 #
 #   bash setup.sh                 # installs into ~/ai-hackathon-26
-#   MUSE_DIR=~/somewhere bash setup.sh
+#   FLUX_DIR=~/somewhere bash setup.sh
 #
 # Each part is installed on its own, and every step prints what it will run.
 # It asks before every download or install, skips what's already there, and
@@ -10,9 +10,9 @@
 # The same steps by hand, with links: INSTALL.html on the Flux disk image.
 set -euo pipefail
 
-DIR="${MUSE_DIR:-$HOME/ai-hackathon-26}"
-# Where the Flux code lives. app/make_dmg.sh fills this in from MUSE_REPO_URL; MUSE_REPO_URL overrides it.
-REPO_URL="${MUSE_REPO_URL:-@REPO_URL@}"
+DIR="${FLUX_DIR:-${MUSE_DIR:-$HOME/ai-hackathon-26}}"   # MUSE_DIR: old name
+# Where the Flux code lives. app/make_dmg.sh fills this in from FLUX_REPO_URL; FLUX_REPO_URL overrides it.
+REPO_URL="${FLUX_REPO_URL:-${MUSE_REPO_URL:-@REPO_URL@}}"
 MLX="$DIR/samples/bonsai-models/mlx"
 BONSAI="$MLX/models/bonsai2-4b-mlx"
 WHISPER_ROOT="$HOME/Documents/huggingface/models/argmaxinc/whisperkit-coreml"
@@ -46,7 +46,7 @@ step "2. The Flux code — $REPO_URL"
 if [ -d "$DIR/.git" ]; then skip "$DIR"
 elif [[ "$REPO_URL" != http* && "$REPO_URL" != git@* ]]; then
   echo "   This copy of setup.sh doesn't say where the code lives. Ask whoever gave you Flux,"
-  echo "   then run:  MUSE_REPO_URL=<url> bash setup.sh"; exit 1
+  echo "   then run:  FLUX_REPO_URL=<url> bash setup.sh"; exit 1
 else
   ask "Clone it into $DIR?" || exit 1
   run git clone "$REPO_URL" "$DIR"
@@ -91,27 +91,27 @@ elif ask "Log in to Argmax's Swift package registry and build voice/swift (about
 fi
 
 step "7. Demo bank: 20 made-up emails, so nobody's real mail is shown"
-if [ -f "$HOME/muse-demo-bank/index.md" ]; then skip "$HOME/muse-demo-bank"
-elif ask "Write the sample mail and file it into ~/muse-demo-bank (uses Bonsai, about 1 min)?"; then
+if [ -f "$HOME/flux-demo-bank/index.md" ]; then skip "$HOME/flux-demo-bank"
+elif ask "Write the sample mail and file it into ~/flux-demo-bank (uses Bonsai, about 1 min)?"; then
   STARTED=""
   if ! curl -s -m 2 localhost:8080/v1/models >/dev/null; then
     show "scripts/serve_bonsai.sh 4B &"
-    scripts/serve_bonsai.sh 4B >/tmp/muse-setup-bonsai.log 2>&1 & STARTED=$!
+    scripts/serve_bonsai.sh 4B >/tmp/flux-setup-bonsai.log 2>&1 & STARTED=$!
     until curl -s -m 2 localhost:8080/v1/models >/dev/null; do sleep 2; done
   fi
   DAY=$(date +%F)
-  run uv run python scripts/make_test_mail.py write "$HOME/muse-demo-mail" --today "$DAY"
-  MUSE_BANK_DIR="$HOME/muse-demo-bank" run uv run python -m bank.load "$HOME/muse-demo-mail" --kind email
+  run uv run python scripts/make_test_mail.py write "$HOME/flux-demo-mail" --today "$DAY"
+  FLUX_BANK_DIR="$HOME/flux-demo-bank" run uv run python -m bank.load "$HOME/flux-demo-mail" --kind email
   [ -n "$STARTED" ] && kill "$STARTED"
 fi
 
 step "8. Point Flux at this folder"
-run defaults write local.ai-hackathon-26.flux MuseRepo "$DIR"
+run defaults write local.ai-hackathon-26.flux FluxRepo "$DIR"
 
 cat <<EOF
 
 Done. Next:
-  - Calendar.app: File > New Calendar, name it "Muse demo", add a few made-up events.
+  - Calendar.app: File > New Calendar, name it "Flux demo", add a few made-up events.
   - Drag Flux.app to Applications and open it.
   - "Set Up Flux" walks you through your ax_ key (kept in your Keychain), Accessibility
     (for Fn-Space), the microphone, Calendar, Reminders and Mail, one screen each.

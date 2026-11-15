@@ -1,8 +1,8 @@
-"""Live check for answer(): needs the Bonsai server; uses $MUSE_BANK_DIR (set it outside the repo).
+"""Live check for answer(): needs the Bonsai server; uses $FLUX_BANK_DIR (set it outside the repo).
 
-    MUSE_BANK_DIR=/tmp/x uv run python -m reason.live_check load
-    MUSE_BANK_DIR=/tmp/x uv run python -m reason.live_check offline --today 2026-11-14 "q1" "q2" ...
-    MUSE_BANK_DIR=/tmp/x uv run python -m reason.live_check online --today 2026-11-14 "web question"
+    FLUX_BANK_DIR=/tmp/x uv run python -m reason.live_check load
+    FLUX_BANK_DIR=/tmp/x uv run python -m reason.live_check offline --today 2026-11-14 "q1" "q2" ...
+    FLUX_BANK_DIR=/tmp/x uv run python -m reason.live_check online --today 2026-11-14 "web question"
 
 load     ingests the bank eval fixtures (bank/eval/fixtures/*.json), then prints every deadline.
 offline  blocks socket.connect for everything but localhost in this process, then asks each

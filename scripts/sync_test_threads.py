@@ -1,6 +1,6 @@
 """Sync generated thread pages into a test bank (brief N). Offline: no Gmail.
 
-    MUSE_BANK_DIR=data/bank-test uv run python scripts/sync_test_threads.py [data/test-threads]
+    FLUX_BANK_DIR=data/bank-test uv run python scripts/sync_test_threads.py [data/test-threads]
 
 Each page from make_test_threads.py is opened as a local file in the partner's
 hidden browser (his Session class, on a scratch profile under data/ so it never
@@ -39,7 +39,7 @@ def main(argv=None) -> int:
     root = bank_dir()
     if (ROOT / "data" / "bank-test").resolve() != root.resolve() and not (
             "test" in root.name or "demo" in root.name):
-        raise SystemExit(f"MUSE_BANK_DIR is {root}; point it at a test or demo bank")
+        raise SystemExit(f"FLUX_BANK_DIR is {root}; point it at a test or demo bank")
     print(f"bank: {root}")
 
     session = Session(ROOT / "data" / "test-profile").start()

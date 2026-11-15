@@ -48,7 +48,7 @@ class Problem8(unittest.TestCase):
 
     def test_chat_never_reaches_the_web(self):
         for q, want in (("Hey, can you hear me okay? Hope you're doing well.", "I can hear you"),
-                        ("Hi", "Hi."), ("hello muse", "Hi."), ("Is this working?", "I can hear you"),
+                        ("Hi", "Hi."), ("hello flux", "Hi."), ("Is this working?", "I can hear you"),
                         ("Thanks so much!", "You're welcome."), ("testing testing", "I can hear you")):
             a = self.ask(q)
             self.assertEqual(a.route, "chat", q)

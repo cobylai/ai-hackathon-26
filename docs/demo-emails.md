@@ -4,7 +4,7 @@ Eight made-up emails for the live demo. Send each one to
 **ilovelocalai@gmail.com** (the throwaway test account), then run the sync:
 
 ```bash
-MUSE_BANK_DIR=~/muse-bank uv run python scripts/sync_email.py 7
+FLUX_BANK_DIR=~/flux-bank uv run python scripts/sync_email.py 7
 ```
 
 Apart from the partner's first name (Antranig) on emails 2, 4, 6 and 8, nobody here is a real person or real course staff. Courses and groups are

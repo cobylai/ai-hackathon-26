@@ -12,7 +12,7 @@ round covers what landed since. Start from `main` (a8ecbca or later).
 - **Playbooks** (`playbooks/`): one markdown file per question kind, plus
   `RULES.md`. The code reads the wording, triggers and prompts from them.
   `python -m reason.playbook_check` scores the examples in each file.
-- **Apple Calendar** (`applecal/`): reads one Calendar.app calendar, "Muse demo".
+- **Apple Calendar** (`applecal/`): reads one Calendar.app calendar, "Flux demo".
 - **Memory**: "remember that ...", "what do you know about me", "forget that".
   **Person pages** have an API for discovery (`bank.people`).
 - **Discovery** (`discover/`): the window's Discover button (or "discover") asks yes/no questions about you and only keeps confirmed facts. Try yes, no, skip, and a second run.
@@ -50,7 +50,7 @@ rm -rf .venv && uv sync            # only if your .venv is 3.14 (uv run python -
 ```
 
 **Calendar:** in Calendar.app, File > New Calendar, put it under "On My Mac",
-and name it **Muse demo**. Add 5 or 6 made-up events over the next week, with
+and name it **Flux demo**. Add 5 or 6 made-up events over the next week, with
 a title, time and location. The first calendar question triggers a macOS
 Automation prompt for your terminal app; click Allow.
 
@@ -68,18 +68,18 @@ tests only.
 for d in reason bank sufficiency applecal canvas; do uv run python -m unittest discover $d/tests; done
                       # expect about 93 / 65 / 48 / 9 / 10 OK (or more, if main moved)
 uv run pytest -q      # your harness: 271 passed, 3 skipped (on 3.12)
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check
-                      # every example right; calendar examples need your "Muse demo" calendar
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check
+                      # every example right; calendar examples need your "Flux demo" calendar
 ```
 
 ## Things to try (typed, then spoken)
 
-Run `MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason` (an empty line
+Run `FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason` (an empty line
 starts talking), or the window `uv run python -m reason.web`.
 
 | Ask | Expect |
 |---|---|
-| What's on my calendar this week? / When is my next event? / Am I free Monday? | Events from "Muse demo", with "Source: Apple Calendar (Muse demo)" |
+| What's on my calendar this week? / When is my next event? / Am I free Monday? | Events from "Flux demo", with "Source: Apple Calendar (Flux demo)" |
 | Remember that my lab is Tuesdays at 2. | "Got it. I'll remember: ..." |
 | What do you know about me? | That note, "Source: your notes" |
 | When is my lab? | "Tuesdays at 2", sourced to your note |
@@ -115,7 +115,7 @@ offline.
   "what's due this week", and let go. Quit Flux should leave no stray
   servers (`lsof -iTCP:8765 -sTCP:LISTEN`). The app runs the servers from the
   checkout recorded at build (yours, when you build it), or the one set with
-  `defaults write local.ai-hackathon-26.flux MuseRepo <folder>`.
+  `defaults write local.ai-hackathon-26.flux FluxRepo <folder>`.
 
 ## Report back
 

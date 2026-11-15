@@ -191,7 +191,7 @@ def _time_el(d: datetime) -> lxml.html.HtmlElement:
 def _page(title: str, *parts) -> str:
     body = "".join(lxml.html.tostring(p, encoding="unicode") for p in parts)
     return (f"<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title>"
-            f"</head><body><p class='sample-note'>Sample coursework (made up for the Muse demo).</p>"
+            f"</head><body><p class='sample-note'>Sample coursework (made up for the Flux demo).</p>"
             f"{body}</body></html>\n")
 
 

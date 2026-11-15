@@ -26,7 +26,7 @@ Branch `context-store`, cut from `d118285`. Code goes in `bank/`, the doc in `do
 - **Duplicates:** an item counts as already ingested in either of two cases. In both, `ingest` returns `"duplicate"` and writes nothing.
   - **Same source:** an existing entry has the same `source`. The partner's sync passes a stable message id as `source`, and scraped text can change between syncs ("3 minutes ago", for example), so this check comes first.
   - **Same content:** the content id is already in a file name. The id is the first 12 hex characters of the sha256 of the text, with whitespace collapsed. This is the fallback.
-- **Data folder:** `data/bank/` by default, or `$MUSE_BANK_DIR` if that is set. The `.gitignore` line is `data/`. Tests and the eval write only to a temp folder.
+- **Data folder:** `data/bank/` by default, or `$FLUX_BANK_DIR` if that is set. The `.gitignore` line is `data/`. Tests and the eval write only to a temp folder.
 - Standard library only. It runs on the Bonsai venv's Python 3.12, and the tests use `unittest`.
 
 ## File layout

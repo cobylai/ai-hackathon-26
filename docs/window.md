@@ -51,11 +51,11 @@ Colours follow the system's light and dark modes. The only accent is system blue
 Keep these working:
 
 - `#q` (the text field), `#send`, `#talk`, `#status`, `#speak` (the Speak switch).
-- `window.museTalk.start()` / `window.museTalk.stop()`: start and stop listening, the same as holding and releasing the talk control. These are for the Mac app's hotkey.
-- `window.museFocus()`: puts the cursor in the text field (it does nothing while listening).
+- `window.fluxTalk.start()` / `window.fluxTalk.stop()`: start and stop listening, the same as holding and releasing the talk control. These are for the Mac app's hotkey.
+- `window.fluxFocus()`: puts the cursor in the text field (it does nothing while listening).
 - `POST /ask` → `pending: true` shows Cancel / Yes. Yes and Cancel send `yes` / `no` to `/ask`.
 - `POST /ask` → `choices: [[label, word]]` (discovery) shows those buttons instead; each sends its word to `/ask`. `#discover` is the Discover button.
-- `#chats`: the left column, the saved chats (worker 18, brief T2). The bar's `#chatsbtn` and `body.chatsopen` show it; `#chatsclose` is Done in the panel. The list draws into `#chatlist`; `#newchat` (the pencil) sits in its head. It holds day headings (`.chday`: Today, Yesterday, then the date) and one `.chat[data-id]` per chat, newest first, titled by its first question (`.chtitle`), with `.on` on the open chat and a delete control (`.chdel`: the first click shows "Delete", the second deletes the file). `window.museChats.refresh() / .open(id) / .new() / .remove(id)`. It is a 232 px column in wide windows, and a full-panel overlay in the compact panel.
+- `#chats`: the left column, the saved chats (worker 18, brief T2). The bar's `#chatsbtn` and `body.chatsopen` show it; `#chatsclose` is Done in the panel. The list draws into `#chatlist`; `#newchat` (the pencil) sits in its head. It holds day headings (`.chday`: Today, Yesterday, then the date) and one `.chat[data-id]` per chat, newest first, titled by its first question (`.chtitle`), with `.on` on the open chat and a delete control (`.chdel`: the first click shows "Delete", the second deletes the file). `window.fluxChats.refresh() / .open(id) / .new() / .remove(id)`. It is a 232 px column in wide windows, and a full-panel overlay in the compact panel.
 - Saved chats: `GET /chats`, `GET /chats/<id>`, `POST /chats/new`, `POST /chats/<id>/open`, `POST /chats/<id>/delete` (`reason/web.py` docstring). A reopened chat redraws its answers as they were given, with no rerun; a follow-up runs fresh against the current bank. Each launch starts a new chat.
 - `#side` / `#sidebtn` / `#sideclose` and `body.bankopen`: the bank slide-over and its toggles.
 - `GET /bank` rows carry `folder` (course, person, other, me) and `id`, which the sidebar groups by and the source line links by.
@@ -109,20 +109,20 @@ app/build.sh                 # -> app/build/Flux.app, ad-hoc signed, ~10 s
 open app/build/Flux.app
 ```
 
-The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it runs the servers from, because the Bonsai models live only there. Flux looks for the code in this order: `defaults write local.ai-hackathon-26.flux MuseRepo <folder>`, `MUSE_REPO`, the folder recorded at build, then `~/ai-hackathon-26`. If none has the code, the panel says so. Keep that checkout on current `main`, with `voice/swift` built (`swift build -c release`).
+The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it runs the servers from, because the Bonsai models live only there. Flux looks for the code in this order: `defaults write local.ai-hackathon-26.flux FluxRepo <folder>`, `FLUX_REPO`, the folder recorded at build, then `~/ai-hackathon-26`. If none has the code, the panel says so. Keep that checkout on current `main`, with `voice/swift` built (`swift build -c release`).
 
 ### Using it
 
 - **Fn-Space, tap** (Fn = the Globe key): shows or hides the panel, with the cursor in the question box. Escape or clicking another app hides it.
-- **Fn-Space, hold:** push to talk. It records while held and stops on release; the panel shows the transcript and the answer. It calls the page's own talk start and stop (`window.museTalk.start()/stop()` when the page has them, else the "Hold to talk" button).
-- **Menu bar** (waveform icon): Open, Sync mail (`scripts/sync_email.py 7` into `MUSE_SYNC_BANK_DIR`, default `~/muse-bank`, never the demo bank; the last result shows under it), Discover (presses the page's Discover button), Set Up Flux…, Check setup, Set Argmax key…, Quit Flux.
+- **Fn-Space, hold:** push to talk. It records while held and stops on release; the panel shows the transcript and the answer. It calls the page's own talk start and stop (`window.fluxTalk.start()/stop()` when the page has them, else the "Hold to talk" button).
+- **Menu bar** (waveform icon): Open, Sync mail (`scripts/sync_email.py 7` into `FLUX_SYNC_BANK_DIR`, default `~/flux-bank`, never the demo bank; the last result shows under it), Discover (presses the page's Discover button), Set Up Flux…, Check setup, Set Argmax key…, Quit Flux.
 - The hotkey is two constants at the top of `app/Flux.swift` (`hotKeyCode`, `hotKeyFlags`). The system hotkey call ignores Fn, so Flux reads the keyboard with an event tap, which needs **Accessibility** for Flux. It swallows Fn-Space, so no space reaches the app in front.
 
 ### First launch: the setup window
 
 "Set Up Flux" shows one step per screen, each with a button, a live status dot and Back / Skip / Continue (Continue turns on once that permission is allowed):
 
-1. Welcome and privacy: what stays on the Mac, what leaves it, and a link to https://cobydev.com/muse/privacy (placeholder).
+1. Welcome and privacy: what stays on the Mac, what leaves it, and a link to https://cobydev.com/flux/privacy.
 2. Argmax key: kept in the login Keychain as **"Flux Argmax key"**, never in the repo, the app or a file. Each Mac needs its own.
 3. Accessibility, for Fn-Space: opens the right Settings pane; the app icon can be dragged into the list (Jot's pattern).
 4. Microphone.
@@ -133,11 +133,11 @@ It shows on first launch and whenever the key, Accessibility or the microphone i
 
 ### What it does on every launch
 
-1. Reads the key from the Keychain and gives it to the window server it starts as `ARGMAX_API_KEY`. `ARGMAX_MODEL_FOLDER`, `MUSE_BANK_DIR` (default `~/muse-demo-bank`) and `MUSE_CALENDAR` pass through if set.
+1. Reads the key from the Keychain and gives it to the window server it starts as `ARGMAX_API_KEY`. `ARGMAX_MODEL_FOLDER`, `FLUX_BANK_DIR` (default `~/flux-demo-bank`) and `FLUX_CALENDAR` pass through if set.
 2. Starts `scripts/serve_bonsai.sh 4B` and `uv run python -m reason.web --no-open` if :8080 or :8765 doesn't answer, and shows "Starting… Bonsai ready · window starting" meanwhile. If one exits, the panel names it and shows the last log lines. Logs: `~/Library/Logs/Flux/`.
-3. Checks setup and lists any problem in the panel, one line each with the fix: the key, the Whisper model folder, the `argmax-voice` binary, Bonsai 4B on :8080, voice ready in the window server, microphone allowed, Accessibility allowed, Calendar allowed and the "Muse demo" calendar present, and the checkout not behind `origin/main` (as of its last fetch, no network). All fine: it shows the page.
+3. Checks setup and lists any problem in the panel, one line each with the fix: the key, the Whisper model folder, the `argmax-voice` binary, Bonsai 4B on :8080, voice ready in the window server, microphone allowed, Accessibility allowed, Calendar allowed and the "Flux demo" calendar present, and the checkout not behind `origin/main` (as of its last fetch, no network). All fine: it shows the page.
 
-**Signing:** `app/build.sh` signs with "Developer ID Application: Coby Lai (XD7QDRDR78)" and the hardened runtime when that identity is in the keychain (entitlements in `app/Flux.entitlements`: microphone and Apple Events only). macOS identifies Flux by bundle id plus team, so its permissions survive rebuilds. Without the identity it signs ad hoc, and then every rebuild counts as a new app to macOS (permissions ask again). `MUSE_SIGN=adhoc` forces that.
+**Signing:** `app/build.sh` signs with "Developer ID Application: Coby Lai (XD7QDRDR78)" and the hardened runtime when that identity is in the keychain (entitlements in `app/Flux.entitlements`: microphone and Apple Events only). macOS identifies Flux by bundle id plus team, so its permissions survive rebuilds. Without the identity it signs ad hoc, and then every rebuild counts as a new app to macOS (permissions ask again). `FLUX_SIGN=adhoc` forces that.
 
 **Quit** stops only what Flux started (SIGINT so Python closes voice, then SIGTERM). A Bonsai or window server that was already running stays up.
 
@@ -147,15 +147,15 @@ If the window server was started from a terminal instead, Flux uses it as it is;
 
 ```bash
 app/make_dmg.sh                  # -> app/dist/Flux.dmg, signed + notarized + stapled
-MUSE_NOTARIZE=0 app/make_dmg.sh  # signed only, for a quick look
+FLUX_NOTARIZE=0 app/make_dmg.sh  # signed only, for a quick look
 ```
 
 Order: build and sign Flux.app (Developer ID, hardened runtime), notarize and staple it, make the DMG, sign it, notarize and staple it, then `stapler validate` and `spctl -a -vvv` on both. `app/build/` (your own app) is untouched.
 
-- **Notary profile:** its own, "Flux-notarize" (`MUSE_NOTARY_PROFILE` to change). Made once by hand: accept the current agreement at developer.apple.com/account; make an app-specific password at appleid.apple.com named "Flux notarize"; then `xcrun notarytool store-credentials "Flux-notarize" --apple-id <Apple ID> --team-id XD7QDRDR78`. The script stops with these steps if the profile doesn't work.
+- **Notary profile:** its own, "Flux-notarize" (`FLUX_NOTARY_PROFILE` to change). Made once by hand: accept the current agreement at developer.apple.com/account; make an app-specific password at appleid.apple.com named "Flux notarize"; then `xcrun notarytool store-credentials "Flux-notarize" --apple-id <Apple ID> --team-id XD7QDRDR78`. The script stops with these steps if the profile doesn't work.
 - **The window:** 660x400, drawn locally by `app/dmg/art.swift` (light background, arrow, one line of text; also the app and volume icon: a white waveform on a blue-grey square). Layout in `app/dmg/dmg_settings.py`, built by `dmgbuild` through `uvx --python 3.12` (nothing installed, no Finder automation prompt; Python 3.9's older dmgbuild loses the background on macOS 26).
-- **Repo URL:** one setting, `MUSE_REPO_URL=<url> app/make_dmg.sh`; it fills in setup.sh and INSTALL.html. Unset, both say to ask whoever gave you Flux. The shipped text names no person. The Developer ID signature does carry the certificate holder's name (Finder's Get Info and Gatekeeper show it).
+- **Repo URL:** one setting, `FLUX_REPO_URL=<url> app/make_dmg.sh`; it fills in setup.sh and INSTALL.html. Unset, both say to ask whoever gave you Flux. The shipped text names no person. The Developer ID signature does carry the certificate holder's name (Finder's Get Info and Gatekeeper show it).
 - **Contents:** `Flux.app` (no folder recorded, so it looks in `~/ai-hackathon-26` or the `defaults` setting), `INSTALL.html`, `setup.sh`, an Applications link. No models, keys, bank or `data/`.
-- **INSTALL.html** has two paths. One command: `bash /Volumes/Flux/setup.sh`. Do it yourself: one numbered step per part, each with its official link and exact command: Xcode, uv, the repo (private), Python packages and Playwright Chromium, Bonsai 2 4B with its own venv, the Whisper model, the Argmax registry login and your own keys, building `voice/swift`, the demo bank and "Muse demo" calendar, then opening Flux. Each part installs on its own, so Bonsai, Argmax and the harness are visibly separate.
-- **setup.sh** prints each command before it runs it, asks before every download or install, skips what's already there, never uses `sudo`, and reads the Argmax secret token hidden. It ends with `defaults write … MuseRepo <folder>`.
+- **INSTALL.html** has two paths. One command: `bash /Volumes/Flux/setup.sh`. Do it yourself: one numbered step per part, each with its official link and exact command: Xcode, uv, the repo (private), Python packages and Playwright Chromium, Bonsai 2 4B with its own venv, the Whisper model, the Argmax registry login and your own keys, building `voice/swift`, the demo bank and "Flux demo" calendar, then opening Flux. Each part installs on its own, so Bonsai, Argmax and the harness are visibly separate.
+- **setup.sh** prints each command before it runs it, asks before every download or install, skips what's already there, never uses `sudo`, and reads the Argmax secret token hidden. It ends with `defaults write … FluxRepo <folder>`.
 - **Each Mac needs its own Argmax key**, and the first voice start on a new Mac takes several minutes (one-time Neural Engine compile).

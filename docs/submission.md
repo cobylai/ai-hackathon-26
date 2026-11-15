@@ -52,7 +52,7 @@ Use the Mac app panel (Fn-Space) or the window. Speak is **off** (no spoken answ
 | 1:35–1:48 | Type "Who wrote the novel Frankenstein?" again, still offline → Mary Shelley, same source, from the bank in under a second. | "The web answer from earlier, now offline." |
 | 1:48–2:00 | End card: Flux · Bonsai 2 4B, local · Argmax on-device voice · zero cloud calls · Coby Lai & Antranig Baghdassarian. | "Bonsai 2 4B, Argmax, zero cloud calls." |
 
-- **1:20 beat:** the draft box and Open in Mail work offline (a `mailto:` handed to Mail), so it stays after Wi-Fi off. The free/busy line needs Milo's meeting email (m21, band practice Thu Nov 19 7pm) in the bank and nothing on "Muse demo" at that time. The wording above is from the window screenshots and the suggest/compose playbook examples; the exact body comes from the code template. Rehearse it once offline before recording.
+- **1:20 beat:** the draft box and Open in Mail work offline (a `mailto:` handed to Mail), so it stays after Wi-Fi off. The free/busy line needs Milo's meeting email (m21, band practice Thu Nov 19 7pm) in the bank and nothing on "Flux demo" at that time. The wording above is from the window screenshots and the suggest/compose playbook examples; the exact body comes from the code template. Rehearse it once offline before recording.
 - **Spare beat** if time allows, or if the draft beat misbehaves: "What's due tomorrow?" → "open the first one" → yes (the assignment page opens), or Discover → one yes ("Are you taking CHEM 1583 Kitchen Chemistry?" → "Saved: …").
 - Person names: use only Felix, Hugo, Ivy, Jonah, Greta, Omar, Lena or Milo. Avoid Nina, Tess, Kiri, Rafe.
 - Say "sample mail and sample coursework" in the voice-over; don't imply a real inbox.
@@ -61,8 +61,8 @@ Use the Mac app panel (Fn-Space) or the window. Speak is **off** (no spoken answ
 
 - [ ] Bonsai server running, restarted since the 127.0.0.1 change (82da364): `pkill -f mlx_vlm.server; scripts/serve_bonsai.sh 4B`; `lsof -iTCP:8080 -sTCP:LISTEN` shows `localhost`/`127.0.0.1`, not `*`.
 - [ ] Demo bank rebuilt for today (DAY=2026-11-15): sample mail ("Demo bank" in `docs/integration.md`), then sample coursework (`docs/canvas.md`). Check: `make_test_mail.py check ... --offline` gives 37/38.
-- [ ] "Muse demo" calendar has today's made-up events (one-off, not repeating), the "Lab" event Wed Nov 18 1:30–3:30pm, and nothing Thu Nov 19 at 7pm (so Milo's practice shows as free).
-- [ ] Delete the "Band practice" event (Thu Nov 19 7–8pm) from "Muse demo" if worker 14's live test step 2 added it, or the video's "You're free… Draft a yes to Milo" beat turns into a clash. Delete any test reminders in the "Muse demo" Reminders list too.
+- [ ] "Flux demo" calendar has today's made-up events (one-off, not repeating), the "Lab" event Wed Nov 18 1:30–3:30pm, and nothing Thu Nov 19 at 7pm (so Milo's practice shows as free).
+- [ ] Delete the "Band practice" event (Thu Nov 19 7–8pm) from "Flux demo" if worker 14's live test step 2 added it, or the video's "You're free… Draft a yes to Milo" beat turns into a clash. Delete any test reminders in the "Flux demo" Reminders list too.
 - [ ] The demo bank includes the meeting emails m21–m23 (Milo, Greta, Ivy).
 - [ ] The Frankenstein question is **not** in the bank before recording (it's asked on camera while online, then again offline). Rehearse it on a copy of the bank, not the demo bank.
 - [ ] Mac app built once and launched once beforehand (first voice start compiles for minutes). It's Developer ID signed, so permissions survive a rebuild; without the identity it signs ad hoc and asks again.

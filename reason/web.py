@@ -277,7 +277,7 @@ PAGE = """<!doctype html>
 <script>
 /* Hooks other code relies on (keep them):
    ids #q #send #talk #status; POST /ask -> r.pending shows Yes / Cancel;
-   window.museTalk.start() / .stop() and window.museFocus() for the Mac app's hotkey panel (docs/window.md). */
+   window.fluxTalk.start() / .stop() and window.fluxFocus() for the Mac app's hotkey panel (docs/window.md). */
 const $ = (id) => document.getElementById(id);
 const log = $('log'), q = $('q'), send = $('send'), talk = $('talk'), statusEl = $('status'), groupsEl = $('groups');
 const NL = String.fromCharCode(10);
@@ -509,9 +509,9 @@ async function ask(question, spoken, into) {
 
 $('discover').addEventListener('click', () => ask('discover', false));
 // Speak switch: off by default, remembered in this browser. Turning it off stops reading.
-let speakOn = store('muse.speak') === '1';
+let speakOn = store('flux.speak') === '1';
 function speakState() { const b = $('speak'); b.setAttribute('aria-pressed', speakOn ? 'true' : 'false'); b.classList.toggle('primary', speakOn); b.title = speakOn ? 'Reading answers aloud (click to stop)' : 'Read answers aloud'; }
-$('speak').addEventListener('click', () => { speakOn = !speakOn; store('muse.speak', speakOn ? '1' : '0'); speakState(); if (!speakOn) post('/speak/stop').catch(() => {}); q.focus(); });
+$('speak').addEventListener('click', () => { speakOn = !speakOn; store('flux.speak', speakOn ? '1' : '0'); speakState(); if (!speakOn) post('/speak/stop').catch(() => {}); q.focus(); });
 speakState();
 $('f').addEventListener('submit', (ev) => { ev.preventDefault(); const v = q.value; q.value = ''; ask(v, false); });
 
@@ -564,8 +564,8 @@ async function stopTalk(cancel) {
 talk.addEventListener('pointerdown', (ev) => { if (talk.disabled) return; ev.preventDefault(); talk.setPointerCapture(ev.pointerId); startTalk(); });
 talk.addEventListener('pointerup', () => stopTalk(false));
 talk.addEventListener('pointercancel', () => stopTalk(false));
-window.museTalk = { start: startTalk, stop: () => stopTalk(false) };
-window.museFocus = () => { if (!recording) q.focus(); };
+window.fluxTalk = { start: startTalk, stop: () => stopTalk(false) };
+window.fluxFocus = () => { if (!recording) q.focus(); };
 
 // Hold Option (alone) to talk; Escape cancels listening, then a held action, then closes the bank overlay.
 let altTimer = null, altTalk = false;
@@ -590,7 +590,7 @@ document.addEventListener('keyup', (ev) => {
   if (altTimer) { clearTimeout(altTimer); altTimer = null; }
   if (altTalk) { altTalk = false; stopTalk(false); }
 });
-window.addEventListener('focus', () => window.museFocus());
+window.addEventListener('focus', () => window.fluxFocus());
 document.addEventListener('pointerup', () => {
   setTimeout(() => { if (!recording && window.getSelection().isCollapsed && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) q.focus(); }, 0);
 });
@@ -613,11 +613,11 @@ function syncSideBtn() {
 function toggleSide(show, keep) {
   const on = show ?? !sideShown();
   document.body.classList.toggle('bankopen', on);
-  if (isWide() && !keep) store('muse.bank', on ? '1' : '0');
+  if (isWide() && !keep) store('flux.bank', on ? '1' : '0');
   syncSideBtn();
   if (!recording) q.focus();
 }
-if (isWide() && store('muse.bank') === '1') document.body.classList.add('bankopen');
+if (isWide() && store('flux.bank') === '1') document.body.classList.add('bankopen');
 $('sidebtn').onclick = () => toggleSide();
 $('sideclose').onclick = () => toggleSide(false);
 window.matchMedia('(min-width: 761px)').addEventListener('change', (e) => { if (!e.matches) document.body.classList.remove('bankopen'); syncSideBtn(); });
@@ -629,9 +629,9 @@ statusEl.onclick = () => toggleSide(true);
 
 function group(key, title, items, fill) {
   const g = el('div', 'group'); g.dataset.key = key;
-  if (store('muse.shut.' + key) === '1') g.classList.add('shut');
+  if (store('flux.shut.' + key) === '1') g.classList.add('shut');
   const h = el('button'); h.type = 'button'; h.innerHTML = CHEV; h.appendChild(el('span', '', title)); h.appendChild(el('span', 'n', String(items.length)));
-  h.onclick = () => { g.classList.toggle('shut'); store('muse.shut.' + key, g.classList.contains('shut') ? '1' : '0'); };
+  h.onclick = () => { g.classList.toggle('shut'); store('flux.shut.' + key, g.classList.contains('shut') ? '1' : '0'); };
   const ul = el('ul'); g.appendChild(h); g.appendChild(ul);
   if (!items.length) ul.appendChild(el('li', 'none', 'Nothing yet'));
   items.forEach((it) => ul.appendChild(fill(it)));
@@ -683,7 +683,7 @@ async function loadBank() {
 talkState('idle');
 /* ---------- saved chats (left column, #chats) ----------
    Hooks for the layout: #newchat, .chat[data-id] (.on = the open chat), .chtitle, .chdel;
-   window.museChats.refresh() / .open(id) / .new() / .remove(id). A reopened chat shows its
+   window.fluxChats.refresh() / .open(id) / .new() / .remove(id). A reopened chat shows its
    answers as they were given; nothing is asked again. Delete takes two clicks. */
 const chatsEl = $('chatlist');
 let currentChat = null;
@@ -743,17 +743,17 @@ function chatsShown() { return document.body.classList.contains('chatsopen'); }
 function toggleChats(show) {
   const on = show ?? !chatsShown();
   document.body.classList.toggle('chatsopen', on);
-  if (isWide()) store('muse.chats', on ? '1' : '0');
+  if (isWide()) store('flux.chats', on ? '1' : '0');
   const b = $('chatsbtn'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.title = on ? 'Hide chats' : 'Show chats';
   if (!recording) q.focus();
 }
 function chatsDone() { if (!isWide() && chatsShown()) toggleChats(false); }  // compact: back to the conversation
 $('chatsbtn').onclick = () => toggleChats();
 $('chatsclose').onclick = () => toggleChats(false);
-if (isWide() && store('muse.chats') !== '0') document.body.classList.add('chatsopen');
+if (isWide() && store('flux.chats') !== '0') document.body.classList.add('chatsopen');
 toggleChats(chatsShown());
 window.matchMedia('(min-width: 761px)').addEventListener('change', (e) => { if (!e.matches) toggleChats(false); });
-window.museChats = { refresh: loadChats, open: openChat, new: newChat, remove: (id) => removeChat(id, null) };
+window.fluxChats = { refresh: loadChats, open: openChat, new: newChat, remove: (id) => removeChat(id, null) };
 
 showEmpty();
 refresh(); loadBank(); loadChats();

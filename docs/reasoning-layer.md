@@ -24,7 +24,7 @@ Both front ends are thin wrappers over `answer()`; neither adds logic.
 **Chat loop** (terminal):
 
 ```bash
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason [--today YYYY-MM-DD] [--no-voice]
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason [--today YYYY-MM-DD] [--no-voice]
 ```
 
 Type a question and press Enter. Press Enter on an empty line to talk, and Enter again to stop; the words heard are printed as `you (spoken)>` and answered like typed text. `quit` or Ctrl-D exits. `--speak` reads each answer aloud with the Mac's `say` (no Source line); talking or a new question stops it.
@@ -32,7 +32,7 @@ Type a question and press Enter. Press Enter on an empty line to talk, and Enter
 **Chat window** (one local page, standard library only, nothing loaded from the internet, so it opens with Wi-Fi off):
 
 ```bash
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] [--port 8765] [--no-voice] [--no-open]
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] [--port 8765] [--no-voice] [--no-open]
 ```
 
 - The conversation, with each answer's `Source:` line in grey under it and the route and seconds under that.
@@ -43,7 +43,7 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
 - Endpoints: `GET /`, `GET /status`, `GET /bank`, `POST /ask`, `POST /listen/start`, `POST /listen/stop`.
 
 **Voice** (`reason/speech.py`) starts `voice/listen.py`'s `Voice` once at launch.
-- Needs `ARGMAX_API_KEY` in the same shell, and a built `argmax-voice`. `MUSE_VOICE_BIN` points at a binary built in another checkout; the default is `voice/swift/.build/release/argmax-voice`.
+- Needs `ARGMAX_API_KEY` in the same shell, and a built `argmax-voice`. `FLUX_VOICE_BIN` points at a binary built in another checkout; the default is `voice/swift/.build/release/argmax-voice`.
 - If voice can't start (no key, no binary, mic denied), both front ends say "Voice is unavailable (<reason>)" and typing still works. The window's button stays disabled, and its tooltip gives the reason.
 - **Use easy names when speaking.** The person route needs the spoken name to come back spelled like the sender's name. Whisper heard "Coby" as "Kobe". Names that worked in the demo checks: Felix, Hugo, Ivy, Jonah, Greta, Omar, Lena, Milo. Avoid Nina (two senders), Tess, Kiri and Rafe.
 
@@ -54,7 +54,7 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
 - Code reads the Triggers patterns, the Wording and Not found lines, and the Prompt blocks (`reason/playbook.py`). Edit a file and restart Flux to change how a route answers. Code keeps no second copy of the wording.
 - The steps' order is code. `STEPS` in `reason/answer.py` must match each file's numbered steps (`reason/tests/test_playbooks.py`).
 - The bank/web judge and rephrase prompts live in `sufficiency/prompts.py`; `bank.md` and `web.md` hold copies, and a test fails if they drift.
-- Checker: `MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check` runs every Examples table on a temporary copy of the bank with the network blocked. 27/27 on 2026-11-15 (14 when the playbooks landed, 13 more with remember and people). Brief M's check gave the same output line for line before and after the move (37/38). 69/69 after follow-ups (`followup.md` adds 19, run in order as one conversation; 50 before).
+- Checker: `FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check` runs every Examples table on a temporary copy of the bank with the network blocked. 27/27 on 2026-11-15 (14 when the playbooks landed, 13 more with remember and people). Brief M's check gave the same output line for line before and after the move (37/38). 69/69 after follow-ups (`followup.md` adds 19, run in order as one conversation; 50 before).
 
 ## Routes, checked in this order
 
@@ -131,11 +131,11 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
 |---|---|---|---|---|---|---|
 | Sat 2026-11-14, before brief P | scratch, `bank.load` | 32/37 | 10/14 | 2/2 | 15/15 | 5/6 |
 | Sat 2026-11-14, after brief P (code-listed asks) | scratch, `bank.load` | **36/37** | 14/14 | 2/2 | 15/15 | 5/6 |
-| Sun 2026-11-15 | demo bank (`~/muse-demo-bank`, via Gmail pages) | **37/38** | 14/14 | 2/2 | 16/16 | 5/6 |
+| Sun 2026-11-15 | demo bank (`~/flux-demo-bank`, via Gmail pages) | **37/38** | 14/14 | 2/2 | 16/16 | 5/6 |
 
 The one miss in every run: "What are the team name options for the hackathon?" gets the offline message, because the bank's summary of that email dropped the options. That's logged, with no fix (thinker ruling). How to build the demo bank: `docs/integration.md` ("Demo bank") and `docs/PARTNER-TESTING.md`.
 
-## Voice runs (Coby at the mic, network denied with `sandbox-exec`, localhost allowed, `~/muse-bank`)
+## Voice runs (Coby at the mic, network denied with `sandbox-exec`, localhost allowed, `~/flux-bank`)
 
 | Front end | Spoken | Heard | Answer | Seconds |
 |---|---|---|---|---|
@@ -147,7 +147,7 @@ Stop-to-text for the voice program alone is about 1.1–1.25 s (`docs/voice-inpu
 
 ## Live results (2026-11-14, Bonsai 2 4B on :8080 shared with worker 8, `--today 2026-11-14` a Saturday)
 
-Bank: the 16 `bank/eval/fixtures` ingested into a scratch `MUSE_BANK_DIR` outside the repo (`python -m reason.live_check load`, 45.8 s). Offline runs use `python -m reason.live_check offline`, which blocks `socket.connect` for everything except localhost in that process.
+Bank: the 16 `bank/eval/fixtures` ingested into a scratch `FLUX_BANK_DIR` outside the repo (`python -m reason.live_check load`, 45.8 s). Offline runs use `python -m reason.live_check offline`, which blocks `socket.connect` for everything except localhost in that process.
 
 | Network | Question | Route | Answer (abridged) | Seconds |
 |---|---|---|---|---|

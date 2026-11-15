@@ -72,7 +72,7 @@ your block list, so nothing on it can ever be touched. See `docs/acting.md`.
 ```bash
 uv sync
 curl -s localhost:8080/v1/models || scripts/serve_bonsai.sh 4B
-MUSE_BANK_DIR=~/muse-bank uv run python -m reason.web
+FLUX_BANK_DIR=~/flux-bank uv run python -m reason.web
 ```
 
 More: `docs/integration.md`, `docs/INTERFACES.md`, `docs/reasoning-layer.md`.

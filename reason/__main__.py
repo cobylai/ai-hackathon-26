@@ -29,9 +29,9 @@ def ask(q: str, today) -> None:
     try:
         a = answer(q, today=today, session=SESSION)
     except Exception as e:  # keep the loop alive; show what broke
-        print(f"muse> Error: {type(e).__name__}: {e}\n")
+        print(f"flux> Error: {type(e).__name__}: {e}\n")
         return
-    print(f"muse> {a.text}\n[{a.route}, {a.seconds:.1f}s]\n")
+    print(f"flux> {a.text}\n[{a.route}, {a.seconds:.1f}s]\n")
     if a.suggestions:  # playbooks/suggest.md; type or say the request to act on one
         print("Suggested:\n" + "\n".join(f"  - {s['line']}" for s in a.suggestions) + "\n")
     if SAVE:

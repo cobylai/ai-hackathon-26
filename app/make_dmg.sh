@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Build app/dist/Flux.dmg for another Mac, signed and notarized:
 #   app/make_dmg.sh                    # needs the "Flux-notarize" notarytool profile
-#   MUSE_NOTARIZE=0 app/make_dmg.sh    # signed, not notarized (testing)
-#   MUSE_REPO_URL=https://… app/make_dmg.sh   # where setup.sh clones the code from (else: "ask whoever gave you Flux")
-#   MUSE_DMG_OUT=app/dist/Flux-test.dmg app/make_dmg.sh   # another output name
+#   FLUX_NOTARIZE=0 app/make_dmg.sh    # signed, not notarized (testing)
+#   FLUX_REPO_URL=https://… app/make_dmg.sh   # where setup.sh clones the code from (else: "ask whoever gave you Flux")
+#   FLUX_DMG_OUT=app/dist/Flux-test.dmg app/make_dmg.sh   # another output name
 # Order: build + sign Flux.app (app/build.sh, Developer ID, hardened runtime) -> notarize + staple
 # the app -> DMG with the drag window (dmgbuild via uvx) -> sign -> notarize + staple the DMG -> check.
 # Contents: Flux.app (no repo path baked in), INSTALL.html, setup.sh, Applications link. No models,
@@ -13,10 +13,10 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 DIST="$HERE/dist"
 STAGE="$DIST/stage"
 ART="$DIST/art"
-DMG="${MUSE_DMG_OUT:-$DIST/Flux.dmg}"
-PROFILE="${MUSE_NOTARY_PROFILE:-Flux-notarize}"
+DMG="${FLUX_DMG_OUT:-$DIST/Flux.dmg}"
+PROFILE="${FLUX_NOTARY_PROFILE:-Flux-notarize}"
 DEVID="Developer ID Application: Coby Lai (XD7QDRDR78)"
-NOTARIZE="${MUSE_NOTARIZE:-1}"
+NOTARIZE="${FLUX_NOTARIZE:-1}"
 
 step() { printf '\n== %s\n' "$1"; }
 notarize() {  # notarize <file>: submit, wait, fail loudly with the log on rejection
@@ -35,7 +35,7 @@ The notary profile "$PROFILE" isn't usable yet. Once, by hand:
   1. Accept the current agreement at https://developer.apple.com/account
   2. https://appleid.apple.com > Sign-In and Security > App-Specific Passwords > new: "Flux notarize"
   3. xcrun notarytool store-credentials "$PROFILE" --apple-id <your Apple ID> --team-id XD7QDRDR78
-Or MUSE_NOTARIZE=0 app/make_dmg.sh for a signed, not notarized test build.
+Or FLUX_NOTARIZE=0 app/make_dmg.sh for a signed, not notarized test build.
 MSG
   exit 1
 fi
@@ -44,9 +44,9 @@ rm -rf "$STAGE" "$ART" "$DMG"
 mkdir -p "$STAGE" "$ART"
 
 step "Build and sign Flux.app"
-MUSE_APP_OUT="$STAGE" MUSE_NO_REPO=1 MUSE_SIGN="$DEVID" "$HERE/build.sh"
+FLUX_APP_OUT="$STAGE" FLUX_NO_REPO=1 FLUX_SIGN="$DEVID" "$HERE/build.sh"
 # The code's location is one setting; no personal names in the shipped text.
-REPO_URL="${MUSE_REPO_URL:-}"
+REPO_URL="${FLUX_REPO_URL:-}"
 if [ -n "$REPO_URL" ]; then
   REPO_LINE="Get it from <a href=\"$REPO_URL\">$REPO_URL</a>. If it's private, ask whoever gave you Flux for access."
 else
@@ -56,7 +56,7 @@ python3 - "$HERE/dmg/INSTALL.html" "$STAGE/INSTALL.html" "$REPO_URL" "$REPO_LINE
 import sys; src, dst, url, line = sys.argv[1:]
 open(dst, "w").write(open(src).read().replace("@REPO_LINE@", line).replace("@REPO_URL@", url))
 PY
-sed "s|@REPO_URL@|${MUSE_REPO_URL:-not set}|" "$HERE/dmg/setup.sh" > "$STAGE/setup.sh"
+sed "s|@REPO_URL@|${FLUX_REPO_URL:-not set}|" "$HERE/dmg/setup.sh" > "$STAGE/setup.sh"
 chmod +x "$STAGE/setup.sh"
 
 if [ "$NOTARIZE" = 1 ]; then

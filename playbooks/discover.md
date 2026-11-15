@@ -31,7 +31,7 @@ The bank (mail, Canvas, notes, person pages), Apple Calendar, Gmail through the 
 
 ## May not look
 
-New scrapers, the web, any calendar other than the Muse one. The model never writes a fact and never picks a question.
+New scrapers, the web, any calendar other than the Flux one. The model never writes a fact and never picks a question.
 
 ## Wording
 

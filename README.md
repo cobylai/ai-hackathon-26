@@ -4,7 +4,7 @@ Flux is a Mac assistant for students that answers from your own mail, coursework
 
 By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 
-> The demo answers from **sample mail and sample coursework** (made-up senders and courses written into real Gmail and Canvas page markup) and a made-up "Muse demo" calendar. No real inbox is shown.
+> The demo answers from **sample mail and sample coursework** (made-up senders and courses written into real Gmail and Canvas page markup) and a made-up "Flux demo" calendar. No real inbox is shown.
 
 ## How it meets the rules
 
@@ -20,14 +20,14 @@ By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 
 - **Due:** "what's due this week / tomorrow / Friday" lists mail and Canvas deadlines together, each with its source.
 - **People:** "what did Felix ask me", "who is Hugo"; misheard names ("Elena" → Lena) and "what did everyone ask me" are handled in code.
-- **Calendar:** "what's on my calendar tomorrow", "when is my next meeting", "am I free Monday" (Apple Calendar, one calendar named "Muse demo").
+- **Calendar:** "what's on my calendar tomorrow", "when is my next meeting", "am I free Monday" (Apple Calendar, one calendar named "Flux demo").
 - **Catch me up:** today's calendar, deadlines for the next three days and recent asks, in one answer.
 - **Memory:** "remember that my lab is Tuesdays at 2", "what do you know about me", "forget that".
 - **Discovery:** up to 10 yes/no questions about you built from the bank and calendar; only a yes is kept.
 - **Web:** a factual question the bank can't answer is searched online, answered only with a quoted line from the page, and filed, so the same question answers offline later.
 - **Suggestions:** under an answer, at most two next steps from that answer's own entries, e.g. "You're free Thursday, Nov 19 at 7pm. Draft a yes to Milo?" (it checks Apple Calendar), "You have Lab then. Draft a reply proposing another time?", "Open the assignment page", "Remind me".
 - **Drafts:** "draft a reply to Milo", "write an email to Felix about the cabin" open an editable draft box (To, Subject, body, the entries used). **Open in Mail** hands it to Mail as a new message; nothing is ever sent, and it works offline. "… in Gmail" saves a Gmail draft on the test account instead.
-- **Computer control:** "open it" / "open the second one" (the email in Apple Mail, the assignment page, or the event in Calendar), "add Milo's band practice to my calendar", "remind me about homework 9 the day before", "set me up for homework 9", "open my calendar". It always shows what it will do and waits for a yes. Text inside an email is never taken as an instruction, and the only writes are one event or one reminder into "Muse demo".
+- **Computer control:** "open it" / "open the second one" (the email in Apple Mail, the assignment page, or the event in Calendar), "add Milo's band practice to my calendar", "remind me about homework 9 the day before", "set me up for homework 9", "open my calendar". It always shows what it will do and waits for a yes. Text inside an email is never taken as an instruction, and the only writes are one event or one reminder into "Flux demo".
 - **Follow-ups:** "and tomorrow?", "and Hugo?", "the first one", "who sent that?", "open it".
 - **Front ends:** a chat window, a terminal chat loop, and a menu-bar Mac app (Fn-Space to show, hold Fn-Space to talk), with saved chats and optional spoken answers (macOS `say`).
 
@@ -64,7 +64,7 @@ hf download argmaxinc/whisperkit-coreml --include "openai_whisper-large-v3-v2024
 cd voice/swift && swift build -c release && cd ../..
 ```
 
-- **Calendar:** in Calendar.app, File > New Calendar under "On My Mac", named **Muse demo**, with a few made-up one-off events (the demo adds a "Lab" event Wed 1:30–3:30pm for the busy case).
+- **Calendar:** in Calendar.app, File > New Calendar under "On My Mac", named **Flux demo**, with a few made-up one-off events (the demo adds a "Lab" event Wed 1:30–3:30pm for the busy case).
 - **Demo bank** (sample mail, then sample coursework; set DAY to the day you record, Bonsai running): see "Demo bank" in [docs/integration.md](docs/integration.md) and [docs/canvas.md](docs/canvas.md).
 
 ## Run
@@ -73,8 +73,8 @@ cd voice/swift && swift build -c release && cd ../..
 scripts/serve_bonsai.sh 4B                                   # Bonsai 2 4B on 127.0.0.1:8080 (leave running)
 export ARGMAX_API_KEY=ax_...                                 # for voice; typing works without it
 
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web   # chat window at localhost:8765
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason       # terminal chat loop (empty line = talk)
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.web   # chat window at localhost:8765
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason       # terminal chat loop (empty line = talk)
 ```
 
 **Mac app:**
@@ -91,7 +91,7 @@ The app is signed with a Developer ID (hardened runtime); notarization is pendin
 ```bash
 for d in reason bank sufficiency applecal canvas; do uv run python -m unittest discover $d/tests; done
 uv run pytest -q                                              # harness
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check   # every playbook example, network blocked
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check   # every playbook example, network blocked
 ```
 
 ## Results on record

@@ -41,7 +41,7 @@ samples/bonsai-models/mlx/.venv/bin/python -m bank.load saved_mail/ --kind email
 
 ## Where the data lives
 
-- **Location:** `data/bank/` by default, or `$MUSE_BANK_DIR` if that is set.
+- **Location:** `data/bank/` by default, or `$FLUX_BANK_DIR` if that is set.
 - **Kept out of git:** `.gitignore` has `data/`. The tests and the eval write only to temp folders.
 
 ```

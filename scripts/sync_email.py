@@ -1,6 +1,6 @@
 """Email -> bank sync: read the last N days of Gmail and file each message.
 
-    MUSE_BANK_DIR=~/muse-bank uv run python scripts/sync_email.py 7
+    FLUX_BANK_DIR=~/flux-bank uv run python scripts/sync_email.py 7
     (live mail is refused for a bank folder named *demo* or *test*; --allow-demo overrides)
     uv run python scripts/sync_email.py --fixture tests/pages/gmail_thread.html
 
@@ -49,7 +49,7 @@ def check_live_bank(root: Path) -> None:
     name = root.name.lower()
     if "demo" in name or "test" in name:
         raise SystemExit(f"Refusing to sync live mail into {root}: it looks like a demo/test "
-                         "bank (sample mail). Use MUSE_BANK_DIR=~/muse-bank, or pass "
+                         "bank (sample mail). Use FLUX_BANK_DIR=~/flux-bank, or pass "
                          "--allow-demo if you really mean it.")
 
 
@@ -68,7 +68,7 @@ def file_thread(thread_id: str, subject: str | None, messages, ingest) -> list[d
 
 
 def sync(days: int, ingest, *, root: Path | None = None, allow_demo: bool = False) -> list[dict]:
-    """Live Gmail -> ingest. Refuses a demo/test bank (root, else $MUSE_BANK_DIR) unless allow_demo."""
+    """Live Gmail -> ingest. Refuses a demo/test bank (root, else $FLUX_BANK_DIR) unless allow_demo."""
     if not allow_demo:
         from bank import bank_dir
         check_live_bank(Path(root) if root else bank_dir())

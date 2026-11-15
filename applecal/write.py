@@ -1,7 +1,7 @@
 """The only writes Flux makes to the Mac: one calendar event, one reminder, and showing an event.
 
-    add_event(title, start, end, location="", all_day=False)  -> into MUSE_CALENDAR ("Muse demo")
-    add_reminder(name, due, remind_at, note="")              -> into the "Muse demo" Reminders list
+    add_event(title, start, end, location="", all_day=False)  -> into FLUX_CALENDAR ("Flux demo")
+    add_reminder(name, due, remind_at, note="")              -> into the "Flux demo" Reminders list
     show_event(title, start)                                  -> Calendar shows that event
 
 Called only after the user said yes to a preview (reason/act.py). Every value goes to
@@ -16,7 +16,7 @@ from datetime import datetime
 
 from . import TIMEOUT, CalendarError, _CACHE, calendar_name
 
-REMINDER_LIST = "Muse demo"
+REMINDER_LIST = "Flux demo"
 
 # A date is passed as "Y M D h m" and built here, so the Mac's date format doesn't matter.
 _DATE = r'''
@@ -115,5 +115,5 @@ def show_event(title: str, start: datetime, calendar: str | None = None) -> bool
 
 def add_reminder(name: str, due: datetime | None, remind_at: datetime | None, note: str = "",
                  list_name: str | None = None) -> None:
-    lst = list_name or os.environ.get("MUSE_REMINDERS") or REMINDER_LIST
+    lst = list_name or (os.environ.get("FLUX_REMINDERS") or os.environ.get("MUSE_REMINDERS")) or REMINDER_LIST
     _run(_ADD_REMINDER, [lst, name, _d(due), _d(remind_at), note or ""], "Reminders")

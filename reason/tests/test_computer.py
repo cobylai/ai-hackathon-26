@@ -192,7 +192,7 @@ class Injection(Base):
         with mock.patch("applecal.write.subprocess.run") as run:
             run.return_value = mock.Mock(returncode=0, stdout="OK", stderr="")
             write.add_event('x" & (do shell script "rm -rf ~") & "', datetime(2026, 11, 19, 19),
-                            datetime(2026, 11, 19, 20), calendar="Muse demo")
+                            datetime(2026, 11, 19, 20), calendar="Flux demo")
             argv, kw = run.call_args[0][0], run.call_args[1]
             self.assertIn('x" & (do shell script "rm -rf ~") & "', argv)
             self.assertNotIn("rm -rf", kw["input"])

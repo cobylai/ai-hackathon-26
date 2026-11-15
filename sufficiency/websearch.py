@@ -26,7 +26,7 @@ from urllib.parse import parse_qs, quote, quote_plus, urlencode, urlparse
 BING_URL = "https://www.bing.com/search?q={q}&setlang=en"
 WIKI_API = "https://en.wikipedia.org/w/api.php"
 WIKI_PAGE = "https://en.wikipedia.org/wiki/"
-WIKI_UA = "muse-local-assistant/0.1"
+WIKI_UA = "flux-local-assistant/0.1"
 WIKI_RESULTS = 5
 MIN_GOOD = 3   # fewer relevant hits than this -> add Wikipedia's
 

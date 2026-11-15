@@ -1,6 +1,6 @@
 """Voice for the chat loop and the window: start argmax-voice once, or say why not.
 
-Uses voice/listen.py as it is. MUSE_VOICE_BIN points at another built argmax-voice
+Uses voice/listen.py as it is. FLUX_VOICE_BIN points at another built argmax-voice
 binary (e.g. one built in a different checkout); default is voice/swift/.build/release.
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ def start_voice():
     """(Voice, None) when voice works, else (None, reason)."""
     try:
         from voice.listen import BINARY, Voice
-        return Voice(os.environ.get("MUSE_VOICE_BIN") or BINARY), None
+        return Voice((os.environ.get("FLUX_VOICE_BIN") or os.environ.get("MUSE_VOICE_BIN")) or BINARY), None
     except Exception as e:  # VoiceError, missing key or binary, mic denied...
         return None, str(e) or type(e).__name__
 

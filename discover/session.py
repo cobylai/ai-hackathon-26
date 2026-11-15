@@ -68,7 +68,7 @@ def _default_sync(root) -> int | None:
     or None when skipped: live mail never goes into a demo/test bank (the sync's own
     check_live_bank rule), so there discovery just uses what is already saved."""
     p = Path(__file__).resolve().parent.parent / "scripts" / "sync_email.py"
-    spec = importlib.util.spec_from_file_location("muse_sync_email", p)
+    spec = importlib.util.spec_from_file_location("flux_sync_email", p)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     target = Path(root) if root else store.bank_dir()

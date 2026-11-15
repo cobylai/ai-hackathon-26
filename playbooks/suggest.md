@@ -21,7 +21,7 @@ At most two small next steps under an answer, each one line and one button, unde
 
 ## May look
 
-The answer's own entries, and Apple Calendar for the one day an email proposes. After a click only: the Muse calendar or the "Muse demo" reminders list, through worker 14's `reason/computer.py`.
+The answer's own entries, and Apple Calendar for the one day an email proposes. After a click only: the Flux calendar or the "Flux demo" reminders list, through worker 14's `reason/computer.py`.
 
 ## May not look
 
@@ -65,7 +65,7 @@ No model step.
 
 ## Examples
 
-The checker reads the suggestion lines after the answer text. These need the demo bank with Milo's, Greta's and Ivy's meeting emails and the "Lab" event on "Muse demo" (Wed Nov 18, 1:30–3:30pm).
+The checker reads the suggestion lines after the answer text. These need the demo bank with Milo's, Greta's and Ivy's meeting emails and the "Lab" event on "Flux demo" (Wed Nov 18, 1:30–3:30pm).
 
 | question | route | answer contains |
 |---|---|---|

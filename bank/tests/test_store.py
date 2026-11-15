@@ -113,7 +113,7 @@ class TestIngest(StoreCase):
             bank.ingest(EMAIL, "x", "tweet", root=self.root)
 
     def test_env_var_location(self):
-        with mock.patch.dict(os.environ, {"MUSE_BANK_DIR": str(self.root / "elsewhere")}):
+        with mock.patch.dict(os.environ, {"FLUX_BANK_DIR": str(self.root / "elsewhere")}):
             self.assertEqual(store.bank_dir(), self.root / "elsewhere")
             r = bank.ingest(EMAIL, "msg:9", "email")
             self.assertTrue(r["path"].startswith(str(self.root / "elsewhere")))

@@ -21,7 +21,7 @@ What is on the Mac's Apple Calendar. "What's on my calendar tomorrow?", "What do
 
 ## May look
 
-Apple Calendar on this Mac (the calendar named in `MUSE_CALENDAR`, read through `applecal`).
+Apple Calendar on this Mac (the calendar named in `FLUX_CALENDAR`, read through `applecal`).
 
 ## May not look
 

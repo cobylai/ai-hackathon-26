@@ -41,7 +41,7 @@ uv run python -m reason         # chat loop: empty line = talk
 uv run python -m reason.web     # window at http://localhost:8765: hold to talk
 ```
 
-- **Other binary:** set `MUSE_VOICE_BIN` to use a built `argmax-voice` from another path, for example another checkout (`reason/speech.py`). The default is `voice/swift/.build/release/argmax-voice`.
+- **Other binary:** set `FLUX_VOICE_BIN` to use a built `argmax-voice` from another path, for example another checkout (`reason/speech.py`). The default is `voice/swift/.build/release/argmax-voice`.
 - **Model folder:** set `ARGMAX_MODEL_FOLDER` if the model isn't at the default path above.
 - **Turning voice off:** `--no-voice` on either command means typing only.
 

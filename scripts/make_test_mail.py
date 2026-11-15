@@ -1,8 +1,8 @@
 """Many-sender fake mail for testing reason.answer, and a checker that scores it.
 
     uv run python scripts/make_test_mail.py write OUT_DIR            # N emails + truth.json
-    MUSE_BANK_DIR=FRESH uv run python -m bank.load OUT_DIR --kind email
-    MUSE_BANK_DIR=FRESH uv run python scripts/make_test_mail.py check OUT_DIR [--offline]
+    FLUX_BANK_DIR=FRESH uv run python -m bank.load OUT_DIR --kind email
+    FLUX_BANK_DIR=FRESH uv run python scripts/make_test_mail.py check OUT_DIR [--offline]
 
 Every name, address and course here is made up (example.edu / example.com). Write
 OUT_DIR and FRESH outside the repo. Today defaults to Sat 2026-11-14 (--today YYYY-MM-DD
@@ -14,7 +14,7 @@ Reuse: build() -> list of dicts, one per email, with key, sender (id), name, fir
 address, sent (YYYY-MM-DD), sent_at (YYYY-MM-DDTHH:MM, -0500), subject, body (no header
 lines), text (header lines + body), due (YYYY-MM-DD or None), phrase, ask_kw, facts.
 The questions and expected answers live in check(); it scores whatever bank
-$MUSE_BANK_DIR points at against truth.json in OUT_DIR.
+$FLUX_BANK_DIR points at against truth.json in OUT_DIR.
 """
 from __future__ import annotations
 

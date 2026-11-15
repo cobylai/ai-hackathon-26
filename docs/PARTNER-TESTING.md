@@ -68,10 +68,10 @@ the repo, with "today" set to the day you test (dates are offsets from it):
 
 ```bash
 DAY=$(date +%F)   # today
-rm -rf ~/muse-demo-mail ~/muse-demo-bank
-uv run python scripts/make_test_mail.py write ~/muse-demo-mail --today $DAY
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m bank.load ~/muse-demo-mail --kind email
-MUSE_BANK_DIR=~/muse-demo-bank uv run python scripts/make_test_mail.py check ~/muse-demo-mail --today $DAY --offline
+rm -rf ~/flux-demo-mail ~/flux-demo-bank
+uv run python scripts/make_test_mail.py write ~/flux-demo-mail --today $DAY
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m bank.load ~/flux-demo-mail --kind email
+FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/make_test_mail.py check ~/flux-demo-mail --today $DAY --offline
 ```
 
 The check scores 38 questions. Ours: **37/38** (the one miss is listed below).
@@ -83,8 +83,8 @@ See "Demo bank" in `docs/integration.md`. Same emails, same score.)
 ## Run the app
 
 ```bash
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web      # http://localhost:8765
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason          # chat loop in the terminal; empty line = talk
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.web      # http://localhost:8765
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason          # chat loop in the terminal; empty line = talk
 ```
 
 Voice needs `ARGMAX_API_KEY` in the same shell. Without it, typing still

@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # Build Flux.app (menu-bar panel + Fn-Space). No Xcode project.
 #   app/build.sh            # -> app/build/Flux.app, runs servers from the main checkout
-#   MUSE_APP_OUT=app/dist MUSE_NO_REPO=1 app/build.sh   # for the DMG: no path baked in
+#   FLUX_APP_OUT=app/dist FLUX_NO_REPO=1 app/build.sh   # for the DMG: no path baked in
 # Signing: "Developer ID Application: Coby Lai (XD7QDRDR78)" with the hardened runtime when that
 # identity is in the keychain, so macOS keeps Flux's permissions across rebuilds; else ad hoc.
-# MUSE_SIGN=adhoc forces ad hoc; MUSE_SIGN="<identity>" picks another.
+# FLUX_SIGN=adhoc forces ad hoc; FLUX_SIGN="<identity>" picks another.
 # The app runs the servers from the main checkout (models live only there);
-# MUSE_REPO at build time, or `defaults write local.ai-hackathon-26.flux MuseRepo <path>`, points it elsewhere.
+# FLUX_REPO at build time, or `defaults write local.ai-hackathon-26.flux FluxRepo <path>`, points it elsewhere.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TOP="$(cd "$HERE/.." && pwd)"
-REPO="${MUSE_REPO:-${TOP%%/.claude/worktrees/*}}"
-[ -n "${MUSE_NO_REPO:-}" ] && REPO=""
-OUT="${MUSE_APP_OUT:-$HERE/build}"
+REPO="${FLUX_REPO:-${TOP%%/.claude/worktrees/*}}"
+[ -n "${FLUX_NO_REPO:-}" ] && REPO=""
+OUT="${FLUX_APP_OUT:-$HERE/build}"
 mkdir -p "$OUT"; OUT="$(cd "$OUT" && pwd)"
 APP="$OUT/Flux.app"
 DEVID="Developer ID Application: Coby Lai (XD7QDRDR78)"
-SIGN="${MUSE_SIGN:-}"
+SIGN="${FLUX_SIGN:-}"
 if [ -z "$SIGN" ]; then
   if security find-identity -v -p codesigning | grep -q "$DEVID"; then SIGN="$DEVID"; else SIGN="adhoc"; fi
 fi
@@ -43,10 +43,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>$(date +%Y%m%d%H%M)</string>
   <key>LSMinimumSystemVersion</key><string>15.0</string>
   <key>LSUIElement</key><true/>
-  <key>NSAppleEventsUsageDescription</key><string>Flux reads your Muse demo calendar, and adds events, reminders or opens an email when you ask.</string>
+  <key>NSAppleEventsUsageDescription</key><string>Flux reads your Flux demo calendar, and adds events, reminders or opens an email when you ask.</string>
   <key>NSMicrophoneUsageDescription</key><string>Flux listens only while you hold the hotkey or the talk button.</string>
   <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
-  <key>MuseRepo</key><string>$REPO</string>
+  <key>FluxRepo</key><string>$REPO</string>
 </dict></plist>
 PLIST
 if [ "$SIGN" = "adhoc" ]; then
@@ -55,4 +55,4 @@ else
   codesign --force --options runtime --timestamp --entitlements "$HERE/Flux.entitlements" -s "$SIGN" "$APP"
 fi
 codesign --verify --strict "$APP"
-echo "Built $APP (signed: $SIGN; servers from ${REPO:-~/ai-hackathon-26 or defaults MuseRepo})"
+echo "Built $APP (signed: $SIGN; servers from ${REPO:-~/ai-hackathon-26 or defaults FluxRepo})"

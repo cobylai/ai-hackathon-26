@@ -4,7 +4,7 @@
     events(date(2026, 11, 15), date(2026, 11, 21))   # start and end days, both included
     -> [{"title", "start": datetime, "end": datetime, "location", "all_day"}], sorted by start
 
-Only one calendar is read: MUSE_CALENDAR, default "Muse demo" (docs/calendar.md).
+Only one calendar is read: FLUX_CALENDAR, default "Flux demo" (docs/calendar.md).
 Not named `calendar`, which would shadow Python's own `calendar` module.
 """
 from __future__ import annotations
@@ -15,7 +15,7 @@ import threading
 import time as _time
 from datetime import date, datetime, time, timedelta
 
-DEFAULT_CALENDAR = "Muse demo"
+DEFAULT_CALENDAR = "Flux demo"
 TIMEOUT = 45  # a cold read is 5-6 s, slower when the Mac is busy
 
 
@@ -24,7 +24,7 @@ class CalendarError(RuntimeError):
 
 
 def calendar_name() -> str:
-    return os.environ.get("MUSE_CALENDAR") or DEFAULT_CALENDAR
+    return (os.environ.get("FLUX_CALENDAR") or os.environ.get("MUSE_CALENDAR")) or DEFAULT_CALENDAR
 
 
 # Dates come back as numbers (iso()), so the Mac's date format doesn't matter.
@@ -118,8 +118,8 @@ def _fetch(name: str) -> list[dict]:
 
 def _fetch_locked(name: str) -> list[dict]:
     """Every event in the calendar. Calendar.app scripting takes ~3 s, so the result is kept
-    for MUSE_CALENDAR_CACHE seconds (default 60): later questions answer at once."""
-    ttl = float(os.environ.get("MUSE_CALENDAR_CACHE") or CACHE_SECONDS)
+    for FLUX_CALENDAR_CACHE seconds (default 60): later questions answer at once."""
+    ttl = float((os.environ.get("FLUX_CALENDAR_CACHE") or os.environ.get("MUSE_CALENDAR_CACHE")) or CACHE_SECONDS)
     hit = _CACHE.get(name)
     if hit and _time.monotonic() - hit[0] < ttl:
         return hit[1]

@@ -66,13 +66,13 @@ class Store(unittest.TestCase):
                 chats.load(bad, self.root)
 
     def test_folder_is_outside_the_repo(self):
-        with mock.patch.dict(os.environ, {"MUSE_CHATS_DIR": "", "MUSE_BANK_DIR": "/tmp/somewhere/muse-demo-bank"}):
-            os.environ.pop("MUSE_CHATS_DIR")
-            self.assertEqual(chats.folder(), Path("/tmp/somewhere").resolve() / "muse-demo-bank-chats")
-        with mock.patch.dict(os.environ, {"MUSE_BANK_DIR": str(chats.REPO / "data" / "bank")}):
-            os.environ.pop("MUSE_CHATS_DIR", None)
-            self.assertEqual(chats.folder(), Path.home() / "muse-chats")
-        with mock.patch.dict(os.environ, {"MUSE_CHATS_DIR": "/tmp/x-chats"}):
+        with mock.patch.dict(os.environ, {"FLUX_CHATS_DIR": "", "FLUX_BANK_DIR": "/tmp/somewhere/flux-demo-bank"}):
+            os.environ.pop("FLUX_CHATS_DIR")
+            self.assertEqual(chats.folder(), Path("/tmp/somewhere").resolve() / "flux-demo-bank-chats")
+        with mock.patch.dict(os.environ, {"FLUX_BANK_DIR": str(chats.REPO / "data" / "bank")}):
+            os.environ.pop("FLUX_CHATS_DIR", None)
+            self.assertEqual(chats.folder(), Path.home() / "flux-chats")
+        with mock.patch.dict(os.environ, {"FLUX_CHATS_DIR": "/tmp/x-chats"}):
             self.assertEqual(chats.folder(), Path("/tmp/x-chats"))
 
     def test_saved_turn_keeps_the_words_said(self):
@@ -180,7 +180,7 @@ class Window(unittest.TestCase):
     def test_page_has_chat_hooks(self):
         from reason.web import PAGE
         self.assertIn('<nav id="chats" aria-label="Chats">', PAGE)
-        for hook in ("window.museChats", "'newchat'", "/chats/", "chdel"):
+        for hook in ("window.fluxChats", "'newchat'", "/chats/", "chdel"):
             self.assertIn(hook, PAGE)
 
 

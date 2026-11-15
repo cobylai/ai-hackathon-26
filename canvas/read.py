@@ -7,7 +7,7 @@
 
 The class names and data-testids are the ones a real Canvas page uses (saved
 from the student view, Nov 2026). Due times come from each <time datetime>
-(UTC), shown in $MUSE_TZ (default America/New_York); on the dashboard they come
+(UTC), shown in $FLUX_TZ (default America/New_York); on the dashboard they come
 from the planner link's label, which is already local. Links are resolved
 against the page's own location, so a saved page gives file:// links.
 """
@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo
 
 import lxml.html
 
-TZ = ZoneInfo(os.environ.get("MUSE_TZ", "America/New_York"))
+TZ = ZoneInfo(os.environ.get("FLUX_TZ") or os.environ.get("MUSE_TZ", "America/New_York"))
 
 
 def _cls(name: str) -> str:

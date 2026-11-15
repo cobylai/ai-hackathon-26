@@ -10,15 +10,15 @@ Flux answers calendar questions from the macOS Calendar app, offline:
 
 ## Setup
 
-1. **Make the calendar.** In Calendar.app: File > New Calendar. Put it under **On My Mac** if that's offered, and name it **Muse demo**. Add made-up events (title, time, location). Flux reads only this calendar, so a video shows no real appointments.
-   - Another name: set `MUSE_CALENDAR="Other name"` in the shell that runs Flux. The name is expected to change later.
+1. **Make the calendar.** In Calendar.app: File > New Calendar. Put it under **On My Mac** if that's offered, and name it **Flux demo**. Add made-up events (title, time, location). Flux reads only this calendar, so a video shows no real appointments.
+   - Another name: set `FLUX_CALENDAR="Other name"` in the shell that runs Flux. The name is expected to change later.
 2. **Allow access.** The first question makes macOS ask: **"Terminal" wants access to control "Calendar"** (or iTerm, VS Code: whichever app runs Python). Click **OK**.
    - If you clicked Don't Allow: System Settings > Privacy & Security > Automation > your terminal app > turn on **Calendar**. Flux then answers "I couldn't read Apple Calendar (no permission to control Calendar ...)".
 3. Ask through either front end:
 
 ```bash
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.web
 ```
 
 ## The route
@@ -42,14 +42,14 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web
 On your calendar this week (Nov 14 to Nov 22):
 - Sat Nov 14 10am–11am  Brunch with Ivy (Collegetown Bagels)
 - Mon Nov 16 9:30am–10am  Team standup
-Source: Apple Calendar (Muse demo)
+Source: Apple Calendar (Flux demo)
 ```
 
 For a single day the day is left off each line. If there are no events, it says "Nothing on your calendar <range>." If Calendar can't be read (no such calendar, no permission, a 45 s timeout), it says "I couldn't read Apple Calendar (<reason>)."
 
 ## Speed
 
-Calendar.app's scripting is slow: about 3 s to read one calendar, and 5–6 s for the first read after launch. A `whose` date filter costs about 1.5 s for each property it fetches, so `applecal` fetches every event of the calendar in one bulk call and filters the dates in Python. It keeps the result for 60 s (`MUSE_CALENDAR_CACHE=<seconds>`), so only the first calendar question in a minute waits. An event you add in Calendar shows up within 60 s.
+Calendar.app's scripting is slow: about 3 s to read one calendar, and 5–6 s for the first read after launch. A `whose` date filter costs about 1.5 s for each property it fetches, so `applecal` fetches every event of the calendar in one bulk call and filters the dates in Python. It keeps the result for 60 s (`FLUX_CALENDAR_CACHE=<seconds>`), so only the first calendar question in a minute waits. An event you add in Calendar shows up within 60 s.
 
 Both front ends call `applecal.warm()` at launch. It does that first read in a background thread, so a calendar or catch-up question asked a few seconds after start answers at once (0.0 s, vs 7.6 s cold). A question asked during the warm-up waits for it instead of starting a second read. The osascript timeout is 45 s: a read can pass 20 s when the Mac is busy. A timeout gives the "couldn't read Apple Calendar" line.
 

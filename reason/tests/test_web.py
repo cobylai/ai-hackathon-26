@@ -62,7 +62,7 @@ class Web(unittest.TestCase):
 
     def test_page_hooks(self):
         html = self.get("/")
-        for hook in ('id="send"', 'id="status"', "window.museTalk", "window.museFocus", "r.pending"):
+        for hook in ('id="send"', 'id="status"', "window.fluxTalk", "window.fluxFocus", "r.pending"):
             self.assertIn(hook, html)
 
     def test_listen_without_voice(self):

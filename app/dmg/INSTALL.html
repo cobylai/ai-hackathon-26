@@ -30,7 +30,7 @@
 <h2>Path 1: one command</h2>
 <p><code>setup.sh</code> does the steps in Path 2 in order. Read it first; it's short. It prints each command before it runs it, asks before every download or install, skips what's already there, and never uses <code>sudo</code>.</p>
 <pre>bash /Volumes/Flux/setup.sh</pre>
-<p>It installs into <code>~/ai-hackathon-26</code>. To use another folder: <code>MUSE_DIR=~/somewhere bash /Volumes/Flux/setup.sh</code>. Then go to step 10 below.</p>
+<p>It installs into <code>~/ai-hackathon-26</code>. To use another folder: <code>FLUX_DIR=~/somewhere bash /Volumes/Flux/setup.sh</code>. Then go to step 10 below.</p>
 
 <h2>Path 2: do it yourself</h2>
 <ol>
@@ -69,12 +69,12 @@ swift package-registry login https://api.argmaxinc.com/v1/sdk/login --token axst
 
   <li><b>Demo bank and demo calendar</b>, so nobody's real mail or appointments show.
     <pre>scripts/serve_bonsai.sh 4B &amp;     # needed for filing; stop it after
-uv run python scripts/make_test_mail.py write ~/muse-demo-mail --today $(date +%F)
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m bank.load ~/muse-demo-mail --kind email</pre>
-    In Calendar.app: File &gt; New Calendar, name it <b>Muse demo</b>, and add a few made-up events.</li>
+uv run python scripts/make_test_mail.py write ~/flux-demo-mail --today $(date +%F)
+FLUX_BANK_DIR=~/flux-demo-bank uv run python -m bank.load ~/flux-demo-mail --kind email</pre>
+    In Calendar.app: File &gt; New Calendar, name it <b>Flux demo</b>, and add a few made-up events.</li>
 
   <li><b>Open Flux.</b> Copy <code>Flux.app</code> to Applications. If the code isn't in <code>~/ai-hackathon-26</code>, tell Flux where it is:
-    <pre>defaults write local.ai-hackathon-26.flux MuseRepo /path/to/ai-hackathon-26</pre>
+    <pre>defaults write local.ai-hackathon-26.flux FluxRepo /path/to/ai-hackathon-26</pre>
     Flux is signed with a Developer ID and notarized by Apple, so it opens with a double-click.
     <p>At first launch, "Set Up Flux" walks you through one step per screen: privacy, your <code>ax_</code> key (kept in your login Keychain), <b>Accessibility</b> (for Fn-Space), the <b>microphone</b>, then <b>Calendar</b>, <b>Reminders</b> and <b>Mail</b>. Then Flux starts Bonsai and its window server and lists anything still missing, each with its fix.</p>
     <p><b>Use it:</b> tap Fn-Space (the Globe key and Space) to show or hide the panel; hold it to talk and let go to ask. Waveform icon in the menu bar: Open, Sync mail, Discover, Check setup, Quit.</p></li>

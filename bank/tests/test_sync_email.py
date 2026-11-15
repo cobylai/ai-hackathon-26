@@ -41,16 +41,16 @@ class TestSyncEmail(unittest.TestCase):
 
     def test_live_sync_refuses_demo_and_test_banks(self):
         from pathlib import Path
-        for name in ("muse-demo-bank", "bank-test", "Demo"):
+        for name in ("flux-demo-bank", "bank-test", "Demo"):
             with self.assertRaises(SystemExit) as cm:
                 S.check_live_bank(Path("/tmp") / name)
-            self.assertIn("muse-bank", str(cm.exception.code))
-        S.check_live_bank(Path("/tmp/muse-bank"))  # no error
+            self.assertIn("flux-bank", str(cm.exception.code))
+        S.check_live_bank(Path("/tmp/flux-bank"))  # no error
 
     def test_main_refuses_demo_bank_before_touching_gmail(self):
         import os
         from unittest import mock
-        with mock.patch.dict(os.environ, {"MUSE_BANK_DIR": "/tmp/muse-demo-bank"}), \
+        with mock.patch.dict(os.environ, {"FLUX_BANK_DIR": "/tmp/flux-demo-bank"}), \
              mock.patch.object(S, "sync") as sync:
             with self.assertRaises(SystemExit):
                 S.main(["7"])
@@ -61,7 +61,7 @@ class TestSyncEmail(unittest.TestCase):
         # discover/session.py calls sync() directly, without main().
         import os
         from unittest import mock
-        with mock.patch.dict(os.environ, {"MUSE_BANK_DIR": "/tmp/muse-demo-bank"}):
+        with mock.patch.dict(os.environ, {"FLUX_BANK_DIR": "/tmp/flux-demo-bank"}):
             with self.assertRaises(SystemExit):
                 S.sync(7, lambda *a, **k: None)
         from pathlib import Path

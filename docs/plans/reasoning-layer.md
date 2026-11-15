@@ -49,7 +49,7 @@ Answer: `Due Tue Nov 17:` then one line per row, `- 11:59pm  Submit your final n
 
 ## Live check
 
-`reason/live_check.py`: loads the 16 bank fixtures' text into a scratch `MUSE_BANK_DIR` (outside the repo) with `bank.ingest`, then in a child process with `socket.connect` blocked for everything except localhost, asks: a due question for one day, a due question for a week, a person question, a bank-search question, and one the bank can't answer (expects the offline message). Then online, one web question through gather and the partner's browser, and checks its page landed in the bank. Answers, routes and seconds go into `docs/reasoning-layer.md`. Reuses worker 8's Bonsai on :8080.
+`reason/live_check.py`: loads the 16 bank fixtures' text into a scratch `FLUX_BANK_DIR` (outside the repo) with `bank.ingest`, then in a child process with `socket.connect` blocked for everything except localhost, asks: a due question for one day, a due question for a week, a person question, a bank-search question, and one the bank can't answer (expects the offline message). Then online, one web question through gather and the partner's browser, and checks its page landed in the bank. Answers, routes and seconds go into `docs/reasoning-layer.md`. Reuses worker 8's Bonsai on :8080.
 
 ## Not in scope
 

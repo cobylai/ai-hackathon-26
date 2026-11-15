@@ -1,6 +1,6 @@
 """File generated Canvas pages into a test or demo bank, then check them. No network.
 
-    MUSE_BANK_DIR=data/bank-canvas-test uv run python scripts/sync_test_canvas.py [data/test-canvas]
+    FLUX_BANK_DIR=data/bank-canvas-test uv run python scripts/sync_test_canvas.py [data/test-canvas]
 
 Each course's assignments.html (from make_test_canvas.py) is read with
 canvas.read, each assignment page is opened for its description, and the
@@ -44,7 +44,7 @@ def main(argv=None) -> int:
     want = {t["url"]: t for t in truth["assignments"]}
     root = bank_dir()
     if not ("test" in root.name or "demo" in root.name):
-        raise SystemExit(f"MUSE_BANK_DIR is {root}; point it at a test or demo bank")
+        raise SystemExit(f"FLUX_BANK_DIR is {root}; point it at a test or demo bank")
     print(f"bank: {root}")
     t0 = time.monotonic()
     n = added = match = 0
