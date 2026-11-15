@@ -1,6 +1,6 @@
 # Muse interfaces: guide for the partner's agents
 
-Last updated: 2026-11-14, after the partner code review. Each item below is marked **built**, **planned** or **undecided**. "Planned" means a worker has written a plan that hasn't been built yet, so names can still change. Update this file when you change an interface.
+Last updated: 2026-11-14 late, when everything was landed on `main`. Each item below is marked **built**, **planned** or **undecided**. Everything is now built and merged on `main`. The old feature branches (sufficiency-check, context-store, reasoning-layer, voice-input, integration) are history. Update this file when you change an interface. To set up and test, see `docs/PARTNER-TESTING.md`; for what changed in `harness/`, see `docs/PARTNER-UPDATE.md`.
 
 ## 1. Ground rules
 
@@ -28,7 +28,13 @@ Last updated: 2026-11-14, after the partner code review. Each item below is mark
 | Reasoning layer (decision tree) | Coby | `reason/` |
 | UI, voice input | Coby | not started |
 
-## 2. Browser contract — **agreed shape, adapters not built yet** (thinker ruling 2026-11-14; Coby to confirm with partner)
+## 2. Browser contract — **built** (adapters on Coby's side, merged on `main`)
+
+Built as described below, with two differences from the original sketch:
+- **Search:** `sufficiency/websearch.py` is the `search_fn`. It tries `harness.search.engine.search` and, when that comes back BLOCKED/empty, reads Bing in the same hidden browser.
+- **Email sync:** `scripts/sync_email.py` (uses `read.open_thread` + `read.read_messages`). `harness/llm.py` calls `llm.client.chat`.
+
+The web route is being reworked now (worker 10, size-limit fix).
 
 The partner's code already exists in `harness/` (Python 3.12, uv, Playwright). Coby's side uses it as it is, through small adapters on Coby's side. The partner doesn't need to change his return types.
 
@@ -104,7 +110,7 @@ trim_to_budget(text, budget_tokens) -> str
 
 If the browser side needs a model call (for example, choosing which link to click), use this client. Never call a cloud model from the app.
 
-## 4. Sufficiency check — **built** (`sufficiency/`, branch `sufficiency-check`)
+## 4. Sufficiency check — **built** (`sufficiency/`, on `main`)
 
 Decides whether a page answers the question, and if not, searches again with a reworded query. This is the main consumer of the browser contract (§2). Details and numbers are in `docs/sufficiency-check.md` on that branch.
 
@@ -132,7 +138,7 @@ gather(question: str, search_fn, open_fn, max_results: int = 10, max_rephrases: 
 - **Time limit.** `max_seconds` (default 60, `None` for no limit) stops the loop and returns the normal not-found result, with a message starting "Ran out of time". A judge call already running is not cut off.
 - **Known weak spot.** A page that only says where the answer is ("posted on our Instagram") can be accepted as the answer.
 
-## 5. Context store — **built** (`bank/`, branch `context-store`)
+## 5. Context store — **built** (`bank/`, on `main`)
 
 A store of everything Muse has read, kept as markdown files. This is what the Wi-Fi-off demo answers from. Full details are in `docs/context-store.md`.
 
@@ -162,9 +168,9 @@ rebuild_index()                  # -> path of data/bank/index.md (every ingest a
 - **Data location:** `data/bank/` by default, or `$MUSE_BANK_DIR` if that is set. It is gitignored (`data/`) because it will hold real email.
 - **Preload:** `python -m bank.load <folder> --kind email|page`.
 
-## 6. Reasoning layer — **built** (`reason/`, branch `reasoning-layer`)
+## 6. Reasoning layer — **built** (`reason/`, on `main`)
 
-One entry point for typed (and later spoken) questions. Code picks the route, never the model. Full details are in `docs/reasoning-layer.md`.
+One entry point for typed and spoken questions. Code picks the route, never the model. Full details are in `docs/reasoning-layer.md`.
 
 ```python
 from reason import answer
@@ -174,13 +180,19 @@ answer(question, today=None) -> Answer
 ```
 
 - **Due:** the question says due/deadline. Code picks the date range, calls `bank.due` and writes the list. No model call.
-- **Person:** a question word is a sender's name. `bank.by_person` runs, then Bonsai answers from those entries only.
+- **Person:** a question word is a sender's name.
+  - "What did <name> ask / want / need": code lists that sender's newest 8 entries as date, subject and ask (or "no ask" and the summary). No model call.
+  - Other person questions: `bank.by_person`, then Bonsai answers from those entries only.
+  - A "what did <name> ..." question with no matching sender answers "I have nothing from <name>." and stops.
+- **Due rows** carry each entry's summary, so amounts come along. On Sat/Sun, "this week" means today through Sunday.
 - **Else:** `bank.search` then `sufficiency.judge`.
   - If that isn't enough and the Mac is online, `gather` runs with `sufficiency.websearch.search` (partner search, then Bing) and `tools.open_page`, and the answer is filed with `bank.ingest(kind="page", source=url)`.
   - If offline, the answer says plainly that it isn't saved and the Mac is offline.
-- Chat loop: `python -m reason [--today YYYY-MM-DD]`. Voice should call `answer()` directly.
+- **Chat loop:** `python -m reason [--today YYYY-MM-DD]`. An empty line records voice; the next Enter stops it.
+- **Chat window:** `python -m reason.web [--today] [--port 8765]` serves one local page from the standard library, with no remote assets. It has a type box, hold-to-talk, a source line under each answer, and an "online/offline · N items in bank" label. Clicking the label lists the bank (`GET /bank`).
+- **Bank to use:** set `MUSE_BANK_DIR`. The demo uses `~/muse-demo-bank` (sample mail, see `docs/integration.md`).
 
-## 7. Voice input — **built** (`voice/`, branch `voice-input`)
+## 7. Voice input — **built** (`voice/`, on `main`)
 
 Argmax runs only from Swift, so voice is a small Swift program, `voice/swift/` → `argmax-voice`. It stays running, and Python drives it through `voice/listen.py`. Push to talk: it records only between start and stop. Details are in `docs/voice-input.md`; the offline findings are in `docs/argmax.md`.
 
@@ -189,13 +201,11 @@ Argmax runs only from Swift, so voice is a small Swift program, `voice/swift/` �
 - **Needs:** `ARGMAX_API_KEY` in the environment (from the vault, loaded before Wi-Fi off), and the built binary (`swift build -c release` in `voice/swift`).
 - **Speed:** stop to text is about 1.1–1.25 s for a spoken question. It works with all network denied.
 - **Protocol** (if you drive the binary directly): stdin `start`/`stop`/`file <wav>`/`quit`. stdout JSON lines: `ready`, `recording`, `text` (`{"event":"text","text":"...","seconds":2.4}`), `error`.
-- **Chat loop:** replace `input()` with `voice.listen()`. These are the two lines in `docs/voice-input.md`, added after the reasoning layer lands.
+- **Wired in:** the chat loop and the window use it, via `reason/speech.py` (`MUSE_VOICE_BIN` overrides the binary path). If voice can't start, typing still works.
+- **Names:** Whisper spells names its own way ("Coby" came back as "Kobe"), so spoken person questions need easy, single-spelling names.
 
 ## 8. Not decided yet
 
-- **Integration, planned for tonight:** once sufficiency-check and context-store land, one worker merges main and the partner's branches into an integration branch. The partner flags a `registry.py` conflict. Done means:
-  - a typed question runs `gather()` against his real browser on Bonsai 4B
-  - one real email goes through `read_messages` into the bank
-- The app's name: "Muse" vs "Hearth" (Coby's call; no code depends on it).
-- The UI (built last). Typed and spoken questions go into `reason.answer` (§6).
-- Canvas sync, later, on the same pattern as email.
+- The app's name: "Muse" vs "Hearth" (Coby's call; no code depends on it; the partner prefers not "Muse").
+- Canvas sync: not started. It would follow the same pattern as email.
+- Not used by the app: the partner's computer-control, `email_asks` and draft tools, and `research()`.
