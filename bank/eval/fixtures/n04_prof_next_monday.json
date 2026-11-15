@@ -1,0 +1,24 @@
+{
+  "id": "n04_prof_next_monday",
+  "kind": "email",
+  "note": "course code only in body; 'next Monday'",
+  "text": "From: Prof. Lena Ortiz <lo23@univ.example.edu>\nDate: Wed, 11 Nov 2026 14:10:30 -0500\nSubject: Quiz reminder\n\nHi all,\n\nA reminder that the PHYS 1112 quiz on rotational motion is next Monday at the start of lecture. Please bring a calculator. Practice problems are on the course page.\n\nLena Ortiz",
+  "expected": {
+    "sender_address": "lo23@univ.example.edu",
+    "sender_name": "Lena Ortiz",
+    "sent_date": "2026-11-11",
+    "ask_keywords": [
+      [
+        "calculator",
+        "quiz",
+        "practice"
+      ]
+    ],
+    "deadline_dates": [
+      "2026-11-16"
+    ],
+    "folder": "course",
+    "course": "PHYS 1112"
+  },
+  "source": "fixture:n04_prof_next_monday"
+}

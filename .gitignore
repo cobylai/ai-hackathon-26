@@ -4,3 +4,9 @@ __pycache__/
 .pytest_cache/
 *.gguf
 .DS_Store
+data/
+voice/swift/.build/
+voice/swift/.swiftpm/
+voice/swift/Package.resolved
+app/build/
+app/dist/

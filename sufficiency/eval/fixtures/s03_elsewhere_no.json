@@ -1,0 +1,9 @@
+{
+  "id": "s03_elsewhere_no",
+  "task": "sufficiency",
+  "note": "right page, answer is elsewhere",
+  "question": "When does the chess club meet this week?",
+  "url": "https://clubs.example.edu/chess",
+  "page": "Cornell Chess Club\nAll skill levels welcome! We play casual and rated games, run a ladder, and travel to two collegiate tournaments each year.\nOfficers: President Aaron Patel, Treasurer Lucy Huang.\nMeeting times are posted on our Instagram, @chessclub_example. Dues are $10 per semester.",
+  "expected": "not enough"
+}

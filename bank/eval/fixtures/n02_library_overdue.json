@@ -1,0 +1,22 @@
+{
+  "id": "n02_library_overdue",
+  "kind": "email",
+  "note": "automated notice, numeric date 11/18",
+  "text": "From: Olin Library <library-notices@univ.example.edu>\nDate: Fri, 13 Nov 2026 06:00:00 -0500\nSubject: Overdue item reminder\n\nThe following item is overdue: \"Signals and Systems\" (2nd ed.).\n\nPlease return it by 11/18 to avoid a replacement fee.\n\nThis is an automated message. Do not reply.",
+  "expected": {
+    "sender_address": "library-notices@univ.example.edu",
+    "sender_name": "Olin Library",
+    "sent_date": "2026-11-13",
+    "ask_keywords": [
+      [
+        "return"
+      ]
+    ],
+    "deadline_dates": [
+      "2026-11-18"
+    ],
+    "folder": "other",
+    "course": null
+  },
+  "source": "fixture:n02_library_overdue"
+}
