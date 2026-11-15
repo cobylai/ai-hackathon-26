@@ -156,6 +156,9 @@ def reminder_for(entry: dict, when: str = "", today: date | None = None) -> dict
         remind = due - timedelta(hours=2)
     else:
         remind = datetime.combine(d, time(REMIND_HOUR))
+    now = datetime.now()
+    if remind <= now:  # "the day before" a deadline that is already here would fire in the past
+        remind = now + timedelta(minutes=5)
     name = (entry.get("ask") or entry.get("subject") or "").strip().rstrip(".") or "Reminder"
     who = entry.get("sender_name") or entry.get("sender_address") or ""
     note = f"From {who}: {entry.get('subject') or ''}".strip() if who else (entry.get("subject") or "")
