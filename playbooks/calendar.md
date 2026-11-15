@@ -21,7 +21,7 @@ What is on the Mac's Apple Calendar. "What's on my calendar tomorrow?", "What do
 
 ## May look
 
-Apple Calendar on this Mac (the calendar named in `FLUX_CALENDAR`, read through `applecal`).
+Apple Calendar on this Mac, read through `applecal`: by default only the calendar named in `FLUX_CALENDAR` ("Flux demo"); with `FLUX_CALENDARS=all`, every real calendar except subscribed/holiday/birthday ones and any the user's `~/.flux/calendars.json` denies, with repeating events expanded. With `all`, each row ends with its calendar in brackets and the source line names the calendars used.
 
 ## May not look
 
@@ -33,6 +33,7 @@ The model, the web, the bank.
 - head_range: On your calendar {label} ({start} to {end}):
 - next_head: Your next event:
 - row: - {when}  {title}{where}
+- row_cal: [{calendar}]
 - source: Source: Apple Calendar ({calendar})
 
 `{where}` is " (location)" or nothing.
@@ -46,7 +47,7 @@ The model, the web, the bank.
 ## Never
 
 - Never call the model. Times and ranges are worked out in code.
-- Never add, move or delete an event.
+- Never add, move or delete an event. (Writes elsewhere stay on the "Flux demo" calendar only, whatever `FLUX_CALENDARS` says.)
 
 ## Prompt
 

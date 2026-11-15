@@ -14,7 +14,7 @@ import os
 import subprocess
 from datetime import datetime
 
-from . import TIMEOUT, CalendarError, _CACHE, calendar_name
+from . import DEFAULT_CALENDAR, TIMEOUT, CalendarError, _CACHE, calendar_name, read_all
 
 REMINDER_LIST = "Flux demo"
 
@@ -104,6 +104,8 @@ def _run(script: str, args: list[str], app: str) -> str:
 def add_event(title: str, start: datetime, end: datetime, location: str = "",
               all_day: bool = False, calendar: str | None = None) -> None:
     name = calendar or calendar_name()
+    if read_all() and name != DEFAULT_CALENDAR:  # reading every calendar never widens writes
+        raise CalendarError(f'Flux only writes to the "{DEFAULT_CALENDAR}" calendar')
     _run(_ADD_EVENT, [name, title, _d(start), _d(end), location or "", "1" if all_day else "0"], "Calendar")
     _CACHE.pop(name, None)  # the next read sees the new event
 

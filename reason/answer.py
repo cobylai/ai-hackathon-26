@@ -147,21 +147,23 @@ def _event_line(e: dict, with_day: bool) -> str:
         if e.get("end") and e["end"] > e["start"]:
             when += "\u2013" + _time(f"{e['end']:%H:%M}")
     where = f" ({e['location']})" if e.get("location") else ""
-    return say("calendar", "row", when=" ".join(x for x in (day, when) if x),
+    line = say("calendar", "row", when=" ".join(x for x in (day, when) if x),
                title=e.get("title") or "(no title)", where=where)
+    return f"{line} {say('calendar', 'row_cal', calendar=e['calendar'])}" if e.get("calendar") else line
 
 
 def _calendar(question: str, today: date, now: datetime, events_fn) -> Answer:
     """Apple Calendar events, listed by code. No model call."""
     import applecal
     events_fn = events_fn or applecal.events
-    src = say("calendar", "source", calendar=applecal.calendar_name())
+    src = say("calendar", "source", calendar=applecal.source_label())
     try:
         if route.is_next_event(question):
             evs = [e for e in events_fn(today, today + timedelta(days=NEXT_EVENT_DAYS))
                    if (e["start"] >= now if not e.get("all_day") else e["start"].date() >= now.date())]
             if not evs:
                 return Answer(f"{say('calendar', 'none_next', days=NEXT_EVENT_DAYS)}\n{src}", "calendar")
+            src = say("calendar", "source", calendar=applecal.source_label(evs[:1]))
             line = _event_line(evs[0], True)
             return Answer(f"{say('calendar', 'next_head')}\n{line}\n{src}", "calendar",
                           rows=[{"kind": "event", "event": evs[0], "line": line}])
@@ -175,6 +177,7 @@ def _calendar(question: str, today: date, now: datetime, events_fn) -> Answer:
             say("calendar", "head_range", label=label, start=_short_date(start.isoformat()),
                 end=_short_date(end.isoformat())))
     items = [{"kind": "event", "event": e, "line": _event_line(e, start != end)} for e in evs]
+    src = say("calendar", "source", calendar=applecal.source_label(evs))
     lines = [head] + [r["line"] for r in items]
     return Answer("\n".join(lines) + "\n" + src, "calendar", rows=items)
 
