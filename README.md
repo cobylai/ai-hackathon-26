@@ -1,6 +1,6 @@
 # Flux
 
-Flux is a Mac assistant for students that answers from your own mail, deadlines, calendar and notes, entirely on your Mac. You hold a key and ask out loud ("catch me up", "what's due this week", "what did Felix ask me"), and it answers in about a second with Wi-Fi off, because every model call goes to a local Bonsai 2 4B and speech-to-text runs on-device with Argmax.
+Flux is a Mac assistant for students that answers from your own mail, deadlines, calendar and notes, entirely on your Mac. You hold a key and ask out loud ("catch me up", "what's due this week", "what did someone ask me"), and it answers in about a second with Wi-Fi off, because every model call goes to a local Bonsai 2 4B and speech-to-text runs on-device with Argmax.
 
 By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 
@@ -67,7 +67,6 @@ cd voice/swift && swift build -c release && cd ../..
 ```
 
 - **Your data (live mode, the default):** `scripts/flux-mode live --calendar "<your calendar>"`, sign the hidden browser in to Gmail once (`uv run python -m harness login https://mail.google.com`), then Sync mail from the menu (or `uv run python scripts/sync_email.py 7`).
-- **Demo data (demo mode):** `uv run python scripts/demo/demo_reset.py --today <day> --full` builds the sample bank (`~/flux-demo-bank`), writes the "Flux demo" calendar week and turns demo mode on (Bonsai running). Every demo generator, fixture and the reset live in `scripts/demo/`; the app never imports them.
 
 ## Run
 
@@ -86,21 +85,19 @@ app/build.sh && open app/build/Flux.app     # menu bar; Fn-Space shows it, hold 
 app/make_dmg.sh                             # app/dist/Flux.dmg: drag-to-Applications; Set Up Flux installs the rest
 ```
 
-The app is signed with a Developer ID (hardened runtime); notarization is pending. On first launch an 8-screen setup window walks through the Argmax key (kept in the Keychain), Accessibility (for Fn-Space), the microphone, and Calendar, Reminders and Mail. It starts Bonsai and the window server itself if they aren't running. The first voice start on a new Mac takes several minutes (one-time Neural Engine compile).
+The app is signed with a Developer ID (hardened runtime) and notarized. On first launch a setup window walks through the Argmax key (kept in the Keychain), Accessibility (for Fn-Space), the microphone, and Calendar, Reminders and Mail. It starts Bonsai and the window server itself if they aren't running. The first voice start on a new Mac takes several minutes (one-time Neural Engine compile).
 
 **Tests** (no model server, no network):
 
 ```bash
-for d in reason bank sufficiency applecal canvas discover; do uv run python -m unittest discover $d/tests; done
+for d in reason bank sufficiency applecal discover; do uv run python -m unittest discover $d/tests; done
 uv run pytest -q                                              # harness
-FLUX_BANK_DIR=~/flux-demo-check-bank uv run python -m reason.playbook_check   # every playbook example, network blocked
 ```
 
 ## Results on record
 
-- Many-sender check on the demo bank (20 sample emails, 13 made-up senders), offline: **37/38** (person 14/14, unknown person 2/2, due 16/16, bank 5/6).
+- Many-sender check on a sample bank (20 made-up emails, 13 made-up senders), offline: **37/38** (person 14/14, unknown person 2/2, due 16/16, bank 5/6). The sample generators are not in this repo.
 - Sample coursework: 24/24 assignments match course, title, due date and link.
-- Playbook examples: 111/111 with the network blocked, on a copy of the demo bank.
 - Tests on main: reason 203, bank 77, sufficiency 54, applecal 10, canvas 11, discover 20, all OK; harness pytest 292 passed, 3 skipped (275 in Antranig's full round).
 - Antranig's full test round found and fixed 11 issues, each with a test; the Fn-Space and voice rows and the Wi-Fi-off voice run still need a person at the Mac.
 - Antranig's first test round on another Mac: setup from the guide, all test suites, 11/11 typed demo questions, and a real Wi-Fi-off run where every typed answer matched the online one.
@@ -110,7 +107,7 @@ FLUX_BANK_DIR=~/flux-demo-check-bank uv run python -m reason.playbook_check   # 
 
 - **Sample data only.** Answers were checked on made-up mail and coursework, not a real inbox. Live Gmail sync works on a test account (at most 10 threads per sync); Canvas is read from saved pages, not live.
 - **The full Wi-Fi-off run with voice has not been recorded yet.** Typed answers were checked with real Wi-Fi off (Antranig); voice was checked with the network denied by `sandbox-exec`, which isn't the same as Wi-Fi off. The calendar can't be read under `sandbox-exec`, so calendar-offline rests on the real Wi-Fi-off run.
-- **Names by voice:** Whisper can misspell a name ("Coby" → "Kobe"); the answer is then "I have nothing from Kobe." Easy names work: Felix, Hugo, Ivy, Jonah, Greta, Omar, Lena, Milo.
+- **Names by voice:** Whisper can misspell a name ("Coby" → "Kobe"); the answer is then "I have nothing from Kobe."
 - **Bank summaries lose details:** "What are the team name options for the hackathon?" misses, because the summary dropped the options.
 - **Web search** depends on Bing and Wikipedia's public search answering the hidden browser (Google and DuckDuckGo bot-wall it; no bot check is bypassed). Only web questions run and checked beforehand are used in the demo. One known wrong web answer is on record (Cornell's founding year).
 - **Calendar:** one calendar (reading every calendar on a busy Mac took over a minute); repeating events show only once.

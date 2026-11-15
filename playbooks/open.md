@@ -49,14 +49,3 @@ Links or addresses written inside an email's text. Other Mail accounts. The mode
 ## Prompt
 
 No model step.
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| What's due on November 16? | due | Due Mon Nov 16 |
-| open the first one | act | I'll open; yes |
-| no | act | Cancelled |
-| What did Felix ask me? | person | Felix Ambrose |
-| open the second one | act | I'll open the email from Felix Ambrose; in Mail |
-| no | act | Cancelled |

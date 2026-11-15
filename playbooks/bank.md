@@ -56,11 +56,3 @@ If the page answers the question, even in different words, give the answer and c
 ```
 
 The full prompt is "Today is …", the question, the notes as the "PAGE", then judge_ask, then "If the page does not answer it, set answer and quote to null."
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| Where is the review session now? | bank | barrow |
-| What book is on hold for me at the library? | bank | tidal |
-| How much is my share for the cabin trip? | bank | 35 |

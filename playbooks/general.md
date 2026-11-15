@@ -62,15 +62,3 @@ This is small talk. Reply warmly in one or two sentences.
 ```text
 Time is up. Using your notes so far, give your final answer now, in two or three sentences, in the format asked for above.
 ```
-
-## Examples
-
-The checker runs with the network blocked, so these are answered offline.
-
-| question | route | answer contains |
-|---|---|---|
-| Why is the sky blue? | general | From general knowledge, not from your mail or the web. |
-| How do I cook rice? | general | water; From general knowledge |
-| What is the capital of Peru? | general | Lima; From general knowledge |
-| What's the weather in Ithaca today? | general | I can't check that right now; From general knowledge |
-| Hey, can you hear me okay? Hope you're doing well. | general | From general knowledge |

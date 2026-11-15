@@ -60,14 +60,3 @@ The calendar rows and source line are the calendar playbook's `row` and `source`
 ## Prompt
 
 No model step.
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| Catch me up | catchup | Due today through Tue Nov 17; Asks in mail from the last 7 days |
-| What's my day? | catchup | Source: saved mail and Canvas |
-| What's going on today? | catchup | Source: email received in the last 7 days |
-| Brief me | catchup | Calendar |
-| What does this week look like? | catchup | Calendar |
-| How does my week look? | catchup | Calendar |

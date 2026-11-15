@@ -60,19 +60,3 @@ The model, the web, the mail. Nothing is added to the notes that the user didn't
 ## Prompt
 
 No model step.
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| What do you know about me? | about_me | Nothing yet |
-| Who am I? | about_me | Nothing yet |
-| Remember that my lab is Tuesdays at 2. | remember | I'll remember: my lab is Tuesdays at 2. |
-| Flux, remember I'm vegetarian | remember | I'm vegetarian |
-| Remember I'm vegetarian | remember | I already have that |
-| What do you know about me? | about_me | my lab is Tuesdays at 2; I'm vegetarian; Source: your notes |
-| When is my lab? | bank | Tuesday; your note |
-| Forget my bike lock code | forget | I don't have a note like that. |
-| Forget that my lab is Tuesdays at 2 | forget | Forgotten: my lab is Tuesdays at 2. |
-| Forget that | forget | Forgotten: I'm vegetarian. |
-| What do you know about me? | about_me | Nothing yet |

@@ -75,10 +75,10 @@ class Overview(Base):
         self.assertIn("Try asking:", a.text)
         self.assertTrue(a.text.rstrip().splitlines()[-1].startswith("Source:"))
         qs = [c[1] for c in a.choices]
-        # examples come from the routes' playbooks, kept when the bank has their name, else the bank's own
-        self.assertIn("What did Felix ask me?", qs)            # Felix is a sender here: kept
-        self.assertIn("Set me up for Problem set 7", qs)      # no "lab report" here: the bank's due item
-        self.assertIn("- Remember that my lab is Tuesdays at 2\n", a.text)  # no closing full stop
+        # {name} and {item} are filled from the bank
+        self.assertIn("What did Felix ask me?", qs)            # the newest sender with an ask
+        self.assertIn("Set me up for Problem set 7", qs)      # the nearest coursework due item
+        self.assertIn("What do you know about me?", qs)
         self.assertEqual(self.run_.asked, [])  # the overview runs nothing
 
     def test_whole_question_only(self):
@@ -129,12 +129,11 @@ class Tour(Base):
         self.assertIn(f"1 of {n}: Catch me up", a.text)
         self.assertEqual(self.s.tour, 0)
         self.assertEqual([c[1] for c in a.choices], ["next", "stop"])
-        self.assertEqual(self.run_.asked, [playbook.load("catchup").examples[0]["question"]])
+        self.assertEqual(self.run_.asked, ["Catch me up"])
 
-        a = self.ask("next")  # due, then its follow-up, from followup.md
+        a = self.ask("next")  # due, then its follow-up
         self.assertIn(f"2 of {n}", a.text)
-        fu = playbook.load("followup").examples
-        self.assertEqual(self.run_.asked[-2:], [fu[0]["question"], fu[2]["question"]])
+        self.assertEqual(self.run_.asked[-2:], ["What's due tomorrow?", "the first one"])
 
         a = self.ask("next")  # person, with the newest sender who asked something
         self.assertIn('Example: "What did Felix ask me?"', a.text)
@@ -142,8 +141,8 @@ class Tour(Base):
 
         before = len(self.run_.asked)
         a = self.ask("next")  # remember: shown, never run
-        self.assertIn("Remember that my lab is Tuesdays at 2.", a.text)
-        self.assertNotIn("Remember that my lab is Tuesdays at 2.", self.run_.asked[before:])
+        self.assertIn("Remember that …", a.text)
+        self.assertNotIn("Remember that …", self.run_.asked[before:])
 
         with mock.patch("reason.act.reset") as act_reset, mock.patch("reason.compose.reset") as comp_reset:
             self.ask("next")   # suggestion + draft
@@ -200,7 +199,7 @@ class EmptyBank(Base):
     def test_overview_still_works(self):
         a = self.ask("What's Flux?")
         qs = [c[1] for c in a.choices]
-        self.assertNotIn("What did Felix ask me?", qs)  # no staged names on an empty bank
+        self.assertNotIn("What did Felix ask me?", qs)  # nothing to fill {name} with on an empty bank
         self.assertNotIn("Felix", a.text)
         self.assertIn("Catch me up", qs)
 

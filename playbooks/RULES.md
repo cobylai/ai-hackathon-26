@@ -37,22 +37,13 @@ Every route's file has these sections, with these headings, in this order:
 - `## Not found`: same format; what it says when it finds nothing.
 - `## Never`: what it must never do.
 - `## Prompt`: only for routes with a model step. A `### key` heading, then the exact prompt text in a fenced block. Code reads it.
-- `## Examples`: a table `| question | route | answer contains |`. The checker runs them. `answer contains` is one or more pieces of text separated by `;`, all of which must be in the answer (any case); leave it empty to check only the route.
 
 Edits take effect the next time Flux starts.
 
 ## Keep rule
 
-Run the checker after editing any playbook or prompt:
+Run the tests after editing any playbook or prompt, and keep a change only if they still pass:
 
 ```bash
-FLUX_BANK_DIR=~/flux-demo-check-bank uv run python -m reason.playbook_check --today 2026-11-15
+uv run python -m unittest discover reason/tests
 ```
-
-It runs every example on a temporary copy of the bank, with the network blocked, so it never changes the bank. Keep a change only if the checker still passes every example and brief M's score does not drop:
-
-```bash
-FLUX_BANK_DIR=~/flux-demo-check-bank uv run python scripts/demo/make_test_mail.py check ~/flux-demo-threads --today 2026-11-15 --offline
-```
-
-(37/38 on 2026-11-15; the one miss is the hackathon team-name options.)

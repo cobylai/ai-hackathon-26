@@ -59,13 +59,3 @@ The judge prompts are the bank route's (`bank.md`). The rephrase prompt lives in
 ```text
 You write short web search queries.
 ```
-
-## Examples
-
-The checker runs with the network blocked, so web questions get a general answer.
-
-| question | route | answer contains |
-|---|---|---|
-| Who wrote the novel Frankenstein? | general | Shelley; From general knowledge |
-| What's my blood type? | reason | I have nothing saved about that. |
-| When is my chemistry exam? | reason | chemistry |

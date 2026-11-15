@@ -106,18 +106,3 @@ Return {{"subject": "...", "body": "..."}}. The subject is under 8 words. The bo
 ```text
 {"subject": "string", "body": "string"}
 ```
-
-## Examples
-
-Run in order as one conversation. The first and last rows add and remove a name note, so the other playbooks' "Nothing yet" examples still hold. The checker blocks the network; Bonsai on localhost writes the bodies.
-
-| question | route | answer contains |
-|---|---|---|
-| remember my name is Coby | remember | |
-| Draft a reply to Milo | compose | draft to Milo Fenn; Yes, Thursday; Coby |
-| Draft a reply to Greta | compose | I have Lab then |
-| write an email | compose | Who is this to? |
-| Felix | compose | What should it say? |
-| about the cabin trip money | compose | draft to Felix Ambrose; Used: |
-| write an email to Zed about lunch | compose | I don't have anyone called Zed |
-| forget my name is Coby | forget | |

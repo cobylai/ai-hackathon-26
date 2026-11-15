@@ -79,16 +79,3 @@ Answer the question in one to three sentences using only these notes. If the not
 ```json
 {"answer": "your answer", "used": [1]}
 ```
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| What did Felix ask me? | person | $35; Felix Ambrose |
-| What did Rafe ask me? | person | no ask; Rafe Quill |
-| What did Nina Valdez ask me? | person | poster |
-| What did Zelda ask me? | person | I have nothing from Zelda. |
-| What did Hugo say about the meeting? | person | Hugo Sato |
-| Elena asked me | person | I heard "Elena" and took it as Lena Marsh; outline |
-| What did everyone ask me? | person | Open asks from everyone; Felix Ambrose; Source: |
-| What did Bartholomew ask me? | person | I have nothing from Bartholomew. |

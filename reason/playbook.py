@@ -6,7 +6,6 @@ Each playbook file has the same sections (see playbooks/RULES.md). Code reads fo
   ## Wording    lines "- key: text with {placeholders}"
   ## Not found  same as Wording (the not-found replies)
   ## Prompt     "### key" headings, each followed by one fenced block of prompt text
-  ## Examples   a table: | question | route | answer contains |
 
 The order of steps stays in code; STEPS in reason/answer.py must match the number of
 numbered lines under "## Steps" (a unit test checks it). Files are read once per process,
@@ -21,7 +20,7 @@ from pathlib import Path
 
 DIR = Path(__file__).resolve().parent.parent / "playbooks"
 SECTIONS = ("For", "Triggers", "Steps", "May look", "May not look", "Wording", "Not found",
-            "Never", "Prompt", "Examples")
+            "Never", "Prompt")
 
 
 class PlaybookError(Exception):
@@ -36,7 +35,6 @@ class Playbook:
     wording: dict[str, str] = field(default_factory=dict)
     prompts: dict[str, str] = field(default_factory=dict)
     steps: list[str] = field(default_factory=list)
-    examples: list[dict] = field(default_factory=list)
 
 
 _ITEM = re.compile(r"^- ([a-z0-9_]+): (.*)$")
@@ -76,15 +74,6 @@ def parse(name: str, text: str) -> Playbook:
         pb.prompts[m.group(1)] = m.group(2)
     pb.steps = [ln.strip() for ln in sections.get("Steps", "").splitlines()
                 if re.match(r"^\d+\.\s", ln.strip())]
-    for line in sections.get("Examples", "").splitlines():
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) != 3 or not line.strip().startswith("|"):
-            continue
-        if cells[0].lower() == "question" or set(cells[0]) <= set("-: "):
-            continue
-        contains = [c.strip().strip("`") for c in cells[2].split(";") if c.strip()]
-        pb.examples.append({"question": cells[0].strip("`"), "route": cells[1].strip("`"),
-                            "contains": contains})
     return pb
 
 

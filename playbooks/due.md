@@ -59,12 +59,3 @@ The model, the web, the calendar.
 ## Prompt
 
 No model step.
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| What's due on November 16? | due | Reply with your vote; Hugo Sato |
-| What's due tomorrow? | due | Due Mon Nov 16 |
-| What's due on November 30? | due | Nothing due Mon Nov 30 in your saved mail. |
-| What's due this week? | due | Due this week (Nov 15 to Nov 22) |

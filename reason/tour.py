@@ -4,9 +4,9 @@ handle(question, today, root, session=, run=answer, events=) -> Answer | None
   - overview ("what's Flux", "help", ...): about.md's intro, one line per ## Overview row, buttons.
   - "show me" starts the tour; while it's on (session.tour), next / back / skip / stop move it.
     Any other question returns None and is answered as usual; the tour waits.
-Each step runs real example questions, taken from the routes' own Examples tables and filled
-with a sender or due item from the bank, through answer() on a scratch session, and shows the
-real answers. Remember examples are shown, not run. Anything an example left waiting for a yes
+Each step runs real questions from about.md, with {name} and {item} filled from the bank
+(a sender and a due item), through answer() on a scratch session, and shows the real answers.
+A question marked (show) is shown, not run. Anything an example left waiting for a yes
 (act) or for more words (compose) is cleared, so nothing is saved, opened or sent.
 """
 from __future__ import annotations
@@ -32,17 +32,13 @@ def _items(section: str) -> list[tuple[str, str]]:
     return out
 
 
-def _refs(spec: str) -> list[tuple[str, int, str]]:
-    """'followup 1, followup 3' -> [("followup", 1, ""), ...]; a third word is name | item | show."""
+def _refs(spec: str) -> list[tuple[str, str]]:
+    """'What did {name} ask me? | Remember that … (show)' -> [(question, "" | "show"), ...]."""
     out = []
-    for part in [p.strip() for p in spec.split(",") if p.strip()]:
-        w = part.split()
-        out.append((w[0], int(w[1]), w[2] if len(w) > 2 else ""))
+    for part in [p.strip() for p in spec.split("|") if p.strip()]:
+        show = part.endswith("(show)")
+        out.append((part[:-len("(show)")].strip() if show else part, "show" if show else ""))
     return out
-
-
-def _example(book: str, n: int) -> str:
-    return playbook.load(book).examples[n - 1]["question"]
 
 
 def _whole(question: str, key: str) -> bool:
@@ -71,31 +67,12 @@ def _item(today: date, root: Path | None) -> str | None:
     return None
 
 
-def _senders(root: Path | None) -> set[str]:
-    from bank import store
-    return {(e.get("sender_name") or "").split()[0].lower() for e in store.all_entries(root)
-            if (e.get("sender_name") or "").strip()}
-
-
-def _course_subjects(root: Path | None) -> list[str]:
-    from bank import store
-    return [(e.get("subject") or "").lower() for e in store.all_entries(root) if e.get("folder") == "course"]
-
-
-def _fill(question: str, how: str, name: str | None, item: str | None, root: Path | None = None) -> str | None:
-    """The example as its playbook wrote it when the bank has its name or item, else with the
-    bank's own (name: newest sender with an ask; item: nearest coursework due item). None: neither."""
-    if how == "name":
-        m = re.search(r"\b(?:did|to) ([A-Z][a-z]+)", question)
-        if m and m.group(1).lower() in _senders(root):
-            return question
-        return re.sub(r"\b(did|to) [A-Z][a-z]+", lambda m: f"{m.group(1)} {name}", question) if name else None
-    if how == "item":
-        m = re.search(r"\bfor (?:the )?(.+?)[.?]?$", question)
-        if m and any(m.group(1).lower() in s for s in _course_subjects(root)):
-            return question
-        return re.sub(r"\bfor .+$", f"for {item}", question) if item else None
-    return question
+def _fill(question: str, name: str | None, item: str | None) -> str | None:
+    """The question with {name} (newest sender with an ask) and {item} (nearest coursework due
+    item) filled from the bank. None when the bank can't fill a placeholder it uses."""
+    if ("{name}" in question and not name) or ("{item}" in question and not item):
+        return None
+    return question.replace("{name}", name or "").replace("{item}", item or "")
 
 
 # ---- the overview ----------------------------------------------------------------
@@ -105,9 +82,8 @@ def overview(today: date, root: Path | None):
     name, item = _sender(root), _item(today, root)
     lines, choices = [say(BOOK, "intro"), say(BOOK, "intro2"), say(BOOK, "can_head")], []
     for _label, spec in _items("Overview"):
-        book, n, how = _refs(spec)[0]
-        q = _fill(_example(book, n), how, name, item, root)
-        if q is None:  # the example names a sender or item this bank doesn't have: no staged names
+        q = _fill(_refs(spec)[0][0], name, item)
+        if q is None:  # the bank has no sender or due item to put in
             continue
         q = q.rstrip(".")
         lines.append(say(BOOK, "can_row", question=q))
@@ -138,7 +114,7 @@ def step(i: int, today: date, root: Path | None, run, events, *, skipped: list[s
     while i < len(steps):
         key, spec = steps[i]
         refs = _refs(spec)
-        filled = [(_fill(_example(b, n), how, name, item, root), how) for b, n, how in refs]
+        filled = [(_fill(q, name, item), how) for q, how in refs]
         missing = any(q is None for q, _ in filled) or (key == "catchup" and not _bank_has(root)) \
             or (key == "due" and not _due_tomorrow(today, root))
         if missing:

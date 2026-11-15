@@ -94,20 +94,3 @@ Reply as {{"relation": "..."}}
 ```
 {"relation": "lab partner"}
 ```
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| What have you learned? | discover | Nothing learned yet |
-| Discover | discover | Question 1 of; Are you taking CHEM 1583 Kitchen Chemistry?; Lab 7: Emulsions; Say yes, no or skip; Source: CHEM 1583 Kitchen Chemistry, Nov 15 |
-| yes | discover | Saved: I'm taking CHEM 1583 Kitchen Chemistry.; Question 2 of; Are you taking HIST 2147 Maps and Empires? |
-| no | discover | Okay, I won't ask that again.; Question 3 of |
-| stop | discover | Stopped: 1 saved, 1 no |
-| What do you know about me? | about_me | I'm taking CHEM 1583 Kitchen Chemistry |
-| Discover | discover | Question 1 of |
-| stop | discover | Stopped: 0 saved, 0 no |
-| What have you learned? | discover | 1. I'm taking CHEM 1583 Kitchen Chemistry (from CHEM 1583 Kitchen Chemistry, Nov 15); unlearn 1 |
-| Unlearn 1 | discover | Removed: I'm taking CHEM 1583 Kitchen Chemistry. |
-| What have you learned? | discover | Nothing learned yet |
-| What do you know about me? | about_me | Nothing yet |

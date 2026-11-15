@@ -62,14 +62,3 @@ The model, the web, the rest of the bank, any other calendar day.
 ## Prompt
 
 No model step.
-
-## Examples
-
-The checker reads the suggestion lines after the answer text. These need the demo bank with Milo's, Greta's and Ivy's meeting emails and the "Lab" event on "Flux demo" (Wed Nov 18, 1:30–3:30pm).
-
-| question | route | answer contains |
-|---|---|---|
-| What did Milo ask me? | person | You're free; Draft a yes to Milo; to your calendar: Thu Nov 19 7pm |
-| What did Greta ask me? | person | You have Lab then; another time |
-| What did Ivy ask me? | person | Draft a reply to Ivy |
-| What's due tomorrow? | due | Open the assignment page; Remind me |

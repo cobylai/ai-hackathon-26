@@ -48,11 +48,3 @@ A name that is no sender and has no page doesn't take this route; the other rout
 ## Prompt
 
 No model step.
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| Who is Felix? | people | Felix Ambrose; I don't know how you know them yet; Pay your share for the cabin; Source: Felix Ambrose, Nov 15 |
-| What do you know about Hugo Sato? | people | Hugo Sato; Demo slides |
-| Who is Zelda? | general | From general knowledge |

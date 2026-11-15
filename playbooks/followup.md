@@ -57,27 +57,3 @@ The model. Earlier answers than the last one. Anything written to disk.
 ## Prompt
 
 No model step.
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| What's due tomorrow? | due | Due Mon Nov 16 |
-| who sent that? | followup | Which one? |
-| the first one | followup | Submit reading quiz; Source: INFO 3361 Data Stories |
-| who sent that? | followup | It's from INFO 3361 Data Stories on Canvas |
-| when is it due? | followup | Due Mon Nov 16 9am |
-| open it | act | I'll open this page; yes |
-| no | act | Cancelled |
-| the third one | followup | Reply with your vote; Hugo Sato |
-| and Friday? | due | Due Fri Nov 20; Felix Ambrose |
-| what about next week? | due | Due next week |
-| - And Tuesday? | due | Due Tue Nov 17 |
-| What did Felix ask me? | person | $35; Felix Ambrose |
-| and Hugo? | person | Hugo Sato |
-| and Zelda? | person | I have nothing from Zelda. |
-| What's on my calendar tomorrow? | calendar | calendar |
-| and Friday? | calendar | calendar; Fri Nov 20 |
-| and next week? | calendar | calendar; next week |
-| What is the capital of Peru? | general | Lima; From general knowledge |
-| the first one | general | From general knowledge |

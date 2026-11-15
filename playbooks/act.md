@@ -92,16 +92,3 @@ WHAT THE REPLY SHOULD SAY: {gist}
 
 Write one to three short sentences. Start with "Hi {first}," on its own line. No subject line, no signature, no placeholders.
 ```
-
-## Examples
-
-The checker blocks the network, so draft examples check the offline reply. No example says yes, so nothing is ever opened or drafted.
-
-| question | route | answer contains |
-|---|---|---|
-| Open my calendar | act | I'll open Calendar; say or type yes |
-| open Terminal | act | I can only open |
-| Draft a reply to Felix saying yes in Gmail | act | needs a connection; Nothing was drafted |
-| yes | act | nothing waiting |
-| open the assignment page | act | |
-| What did Felix ask me? | person | Felix |

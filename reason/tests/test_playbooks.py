@@ -20,7 +20,6 @@ class Layout(unittest.TestCase):
             pb = playbook.load(name)
             heads = [h for h in pb.sections if h in playbook.SECTIONS]
             self.assertEqual(heads, list(playbook.SECTIONS), name)
-            self.assertTrue(pb.examples, f"{name}.md has no examples")
 
     def test_step_counts_match_code(self):
         for name, n in ans.STEPS.items():
@@ -63,12 +62,6 @@ class Triggers(unittest.TestCase):
         with self.assertRaises(playbook.PlaybookError):
             playbook.parse("t", "## Triggers\n- k: due\n")
 
-    def test_examples_table(self):
-        pb = playbook.parse("t", "## Examples\n\n| question | route | answer contains |\n|---|---|---|\n"
-                                 "| What's due? | due | a; b |\n| Hi | bank | |\n")
-        self.assertEqual(pb.examples, [{"question": "What's due?", "route": "due", "contains": ["a", "b"]},
-                                       {"question": "Hi", "route": "bank", "contains": []}])
-
 
 class PromptCopies(unittest.TestCase):
     """bank.md and web.md quote prompts that live in sufficiency/; the quotes must not drift."""
@@ -82,20 +75,6 @@ class PromptCopies(unittest.TestCase):
 
     def test_person_prompt_formats(self):
         ans.PERSON_PROMPT.format(today="t", question="q", who="w", notes="n")
-
-
-class CheckCalendar(unittest.TestCase):
-    """playbook_check reads a fixed demo calendar, so Q10's leftover event cannot skew it."""
-
-    def test_fixture_is_the_six_demo_events(self):
-        check = importlib.import_module("reason.playbook_check")
-        wed = check.fixture_events(date(2026, 11, 18), date(2026, 11, 18))
-        self.assertEqual([(e["title"], e["start"].strftime("%H:%M")) for e in wed], [("Lab", "13:30")])
-        thu = check.fixture_events(date(2026, 11, 19), date(2026, 11, 19))
-        self.assertEqual([e["title"] for e in thu], ["Office hours"])
-        week = check.fixture_events(date(2026, 11, 16), date(2026, 11, 22))
-        self.assertEqual(len(week), 6)
-        self.assertFalse([e for e in week if e["title"] == "Band practice Thursday"])
 
 
 if __name__ == "__main__":

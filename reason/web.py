@@ -290,7 +290,7 @@ const log = $('log'), q = $('q'), send = $('send'), talk = $('talk'), statusEl =
 const NL = String.fromCharCode(10);
 const MIC = '<svg width="12" height="16" viewBox="0 0 12 16"><rect x="3.25" y=".75" width="5.5" height="9.5" rx="2.75" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1 7.5a5 5 0 0 0 10 0M6 12.5V15" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
 const CHEV = '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
-// From the playbooks' Examples tables (due.md, calendar.md, person.md).
+// Starter questions for an empty chat.
 const EXAMPLES = ["What's Flux?", "What's due tomorrow?", "When is my next meeting?", "What did everyone ask me?"];
 const ASK_YES = /^say or type yes/i;
 let rows = [], busy = false, recording = false, voiceOk = false, pending = null;

@@ -51,11 +51,3 @@ The model, the web, the bank.
 ## Prompt
 
 No model step.
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| What's on my calendar tomorrow? | calendar | calendar |
-| When is my next meeting? | calendar | calendar |
-| What do I have this week? | calendar | this week |

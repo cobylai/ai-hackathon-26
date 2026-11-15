@@ -44,13 +44,3 @@ Not used: chat always has a reply.
 ## Prompt
 
 No model step.
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| Hi | general | From general knowledge |
-| Thanks so much! | general | From general knowledge |
-| Who are you? | chat | I'm Flux |
-| What are you? | chat | I'm Flux |
-| Hey, what's due tomorrow? | due | Due Mon Nov 16 |

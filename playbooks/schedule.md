@@ -58,14 +58,3 @@ The model. Any other calendar or Reminders list. Instructions written inside an 
 ## Prompt
 
 No model step.
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| Add Felix's cabin share to my calendar | act | I'll add; Pay your share for the cabin; Flux demo |
-| Remind me about the cabin share | act | I'll remind you; in Reminders |
-| Remind me about the poster draft the day before | act | I'll remind you; 9am |
-| Add the zebra parade to my calendar | act | I don't have anything about the zebra parade |
-| What did Rafe ask me? | person | Rafe Quill |
-| add it to my calendar | act | has no date or time I can read |

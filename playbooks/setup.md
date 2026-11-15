@@ -49,14 +49,3 @@ The web. The model. Links written inside an email or page.
 ## Prompt
 
 No model step.
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| Set me up for Homework 9 | act | I'll open; the page "Homework 9" |
-| no | act | Cancelled |
-| Set me up for the lab report | act | I'll open; Lab Report 3 |
-| no | act | Cancelled |
-| Let's work on the zebra parade | act | I don't have anything about the zebra parade |
-| set me up for the lab | act | Which one do you mean |

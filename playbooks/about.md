@@ -30,7 +30,7 @@ Each must be the whole question (after a leading "Flux," or "please"); "help me 
 
 ## May look
 
-The playbooks' own Examples tables, and the bank (sender names with an ask, coursework due items) to fill them. Each example then looks where its own route may look.
+The bank (sender names with an ask, coursework due items), to fill `{name}` and `{item}` in the questions below. Each example then looks where its own route may look.
 
 ## May not look
 
@@ -38,24 +38,24 @@ The model, the web (an example that needs the web is not in the tour).
 
 ## Overview
 
-Each line: a label (for this file only), then the playbook and the example row (1 = first row) whose question is shown and offered as a button. `name` / `item`: the example's own name or item is kept when the bank has it; otherwise the bank's newest sender with an ask, or its nearest coursework due item, is put in; with neither, the line is left out.
+Each line: a label (for this file only), then the question shown and offered as a button. `{name}` is the bank's newest sender with an ask and `{item}` is its nearest coursework due item; a line whose placeholder the bank can't fill is left out.
 
-- Your day: catchup 1
-- What's due: due 4
-- What someone asked you: person 1 name
-- Set you up to work: setup 3 item
-- Remember something: remember 3
+- Your day: Catch me up
+- What's due: What's due this week?
+- What someone asked you: What did {name} ask me?
+- Set you up to work: Set me up for {item}
+- What Flux knows about you: What do you know about me?
 
 ## Tour
 
-Each line: step key, then the examples it runs, as playbook and row. `name` or `item` swaps in the bank's sender or due item; `show` writes the question without running it.
+Each line: step key, then the questions it runs, separated by `|`. `{name}` and `{item}` are filled from the bank as above; a step whose placeholder can't be filled is skipped. `(show)` writes the question without running it.
 
-- catchup: catchup 1
-- due: followup 1, followup 3
-- person: person 1 name
-- remember: remember 3 show, remember 1
-- suggest: suggest 1 name, compose 2 name
-- setup: setup 1 item
+- catchup: Catch me up
+- due: What's due tomorrow? | the first one
+- person: What did {name} ask me?
+- remember: Remember that … (show) | What do you know about me?
+- suggest: What did {name} ask me? | Draft a reply to {name}
+- setup: Set me up for {item}
 - voice:
 - never:
 
@@ -120,34 +120,8 @@ Each line: step key, then the examples it runs, as playbook and row. `name` or `
 
 - Never let the model write the overview or a step.
 - Never run an action: drafts and "set me up" stop before the yes, and remember examples are shown, not saved.
-- Never show an example question that its own route no longer answers: examples come from the routes' Examples tables.
+- Never show a question with a name or item the bank doesn't have: `{name}` and `{item}` come from the bank, or the line is left out.
 
 ## Prompt
 
 None. No step calls the model; the examples run through their own routes.
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| What is Flux? | about | I'm Flux, a personal assistant that lives on your Mac.; Try asking:; - Catch me up |
-| Do you need the internet? | about | No. I read your mail and coursework while you're online; You're offline right now, and I still work. |
-| How did you get my mail? | about | Through my own hidden browser |
-| What model are you running? | about | Bonsai 2, the 4B model; Argmax |
-| Will you send that? | about | No. I write the draft and you send it. |
-| What's Flux? | about | Everything runs on this Mac; - What's due this week? |
-| What is flock? | about | I'm Flux, a personal assistant |
-| What can you do? | about | - Set me up for the lab report |
-| help | about | - Remember that my lab is Tuesdays at 2 |
-| next | about | There's no tour going on |
-| show me | about | 1 of 8: Catch me up; Example: "Catch me up"; Asks in mail |
-| next | about | 2 of 8; Example: "What's due tomorrow?"; Due Mon Nov 16; Example: "the first one" |
-| next | about | 3 of 8; ask me?" |
-| back | about | 2 of 8 |
-| skip | about | 3 of 8 |
-| next | about | 4 of 8; Remember that my lab is Tuesdays at 2.; doesn't |
-| next | about | 5 of 8; Example: "What did; Draft a reply to |
-| next | about | 6 of 8; Example: "Set me up for |
-| next | about | 7 of 8; Fn-Space |
-| next | about | 8 of 8; won't send; That's the tour |
-| stop | about | Tour ended |

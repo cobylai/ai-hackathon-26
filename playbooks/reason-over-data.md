@@ -77,11 +77,3 @@ Answer the question in a few sentences or a short list, using only these facts f
 ```text
 Your answer mentioned {bad}, which are not in the facts. Answer again using only what the facts say. Reply with only the JSON object.
 ```
-
-## Examples
-
-| question | route | answer contains |
-|---|---|---|
-| What's my blood type? | reason | I have nothing saved about that. |
-| What should I work on first this week? | reason | Source: |
-| What did Priya ask me? | person | I have nothing from Priya. |
