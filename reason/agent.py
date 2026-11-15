@@ -50,6 +50,8 @@ SAMPLING = {"temperature": 0.0}       # greedy: the same task gives the same pla
 CANT = "I can't do that reliably."
 ITEM_ID = re.compile(r"\b([mdewp]\d{1,2})\b")
 FIRST_PERSON = re.compile(r"\b(i|i'm|i've|me|my|mine|we|us|our)\b", re.I)
+# Questions about the student's own things even without "my" ("What changed since yesterday?").
+PERSONAL_CUE = re.compile(r"\b(changed|since yesterday|owe|get ready|both free|draft|remind|each)\b", re.I)
 WRITE_WORDS = re.compile(r"\b(draft|reply|write|answer|respond|add|put|schedule|book|remind|reminder|"
                          r"open|set me up|ready|prepare|yes|no)\b", re.I)
 
@@ -579,7 +581,7 @@ def _options(run: Run) -> list[dict]:
             what = {"draft": f"draft a reply to {who}", "calendar": "add to my calendar",
                     "remind": "set a reminder", "open": "open"}[kind]
             props.append({"action": "propose", "arg": f"{kind} {it['id']}" + (f" {gist}" if gist else ""),
-                          "label": f"{kind}: {what}: [{it['id']}] {title} (I confirm it before anything happens)",
+                          "label": f"change: {what}: [{it['id']}] {title} (I confirm it before anything happens)",
                           "free_arg": False})
             break
     props = props[:2]
@@ -752,7 +754,7 @@ def _finish(run: Run, llm, proposal: dict | None, t0: float) -> Result:
                         f"{it['obj'].get('source', '')} {it['obj'].get('url', '')}" for it in used).lower()
         stray = [a for a in ADDRESS.findall(ans) if a.lower().rstrip(".,)") not in held]
         if stray:
-            why = f"the answer named {stray[0]}, which nothing I used holds"
+            why = "the answer named an address or link that nothing I used holds"
     run.trace.append(_step(len(run.trace) + 1, "finish", "", why or note, used_tokens,
                            time.monotonic() - t1, why is None))
     if why:
@@ -903,7 +905,8 @@ def wants(question: str) -> bool:
     from . import route
     if not enabled():
         return False
-    return not (route.web_ok(question) and not FIRST_PERSON.search(question or ""))
+    q = question or ""
+    return not (route.web_ok(q) and not FIRST_PERSON.search(q) and not PERSONAL_CUE.search(q))
 
 
 def trace_lines(trace: list[dict]) -> list[str]:
