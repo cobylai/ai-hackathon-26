@@ -8,7 +8,8 @@ The chat page (`reason/web.py`) and the Mac app that shows it.
 
 ### Layout
 
-- **Bar:** the name, Discover, one status line (online or offline, items in the bank), and the bank button at the far right. Clicking the status line also shows the bank.
+- **Bar:** the chats button at the far left, the name, Speak, Discover, one status line (online or offline, items in the bank), and the bank button at the far right. Clicking the status line also shows the bank.
+- **Chats (left):** saved conversations, grouped under day headings (Today, Yesterday, then the date) with the open chat tinted. The pencil button starts a new chat. Delete is two clicks: hover a chat and click ×, which turns into a red "Delete" for 3 seconds, and click it again to delete. In wide windows the chats column shows by default and is remembered. In the compact panel it starts hidden, and when opened it covers the whole panel with a **Done** button; Escape, opening a chat or starting a new one closes it.
 - **Conversation:** it reads like a document. Each question is a small grey line, and the answer is plain text under it. Answer lines of the form `- when  what` (two spaces) become a table with the dates aligned. Other `- ` lines become a list. A short line ending in `:` becomes a heading. An indented line becomes a note under the row above it.
 - **Under each answer:** a muted line with the source and the route and time. A bank source opens that entry in the bank. A web source opens the page.
 - **Actions:** when `/ask` returns `pending`, the first line of the answer (what will happen) and **Cancel / Yes, do it** sit in one row under the answer. The result replaces the buttons in that row. Escape is Cancel.
@@ -52,7 +53,7 @@ Keep these working:
 - `window.museFocus()`: puts the cursor in the text field (it does nothing while listening).
 - `POST /ask` → `pending: true` shows Cancel / Yes. Yes and Cancel send `yes` / `no` to `/ask`.
 - `POST /ask` → `choices: [[label, word]]` (discovery) shows those buttons instead; each sends its word to `/ask`. `#discover` is the Discover button.
-- `#chats`: the left column, the saved chats (worker 18, brief T2). It holds `#newchat` (New chat), day headings (`.chday`: Today, Yesterday, then the date) and one `.chat[data-id]` per chat, newest first, titled by its first question (`.chtitle`), with `.on` on the open chat and a delete control (`.chdel`: the first click shows "Delete?", the second deletes the file). `window.museChats.refresh() / .open(id) / .new() / .remove(id)`. It is a 240 px column, hidden in the compact panel (there is no control to show it there yet; worker 15 places and styles it).
+- `#chats`: the left column, the saved chats (worker 18, brief T2). The bar's `#chatsbtn` and `body.chatsopen` show it; `#chatsclose` is Done in the panel. The list draws into `#chatlist`; `#newchat` (the pencil) sits in its head. It holds day headings (`.chday`: Today, Yesterday, then the date) and one `.chat[data-id]` per chat, newest first, titled by its first question (`.chtitle`), with `.on` on the open chat and a delete control (`.chdel`: the first click shows "Delete", the second deletes the file). `window.museChats.refresh() / .open(id) / .new() / .remove(id)`. It is a 232 px column in wide windows, and a full-panel overlay in the compact panel.
 - Saved chats: `GET /chats`, `GET /chats/<id>`, `POST /chats/new`, `POST /chats/<id>/open`, `POST /chats/<id>/delete` (`reason/web.py` docstring). A reopened chat redraws its answers as they were given, with no rerun; a follow-up runs fresh against the current bank. Each launch starts a new chat.
 - `#side` / `#sidebtn` / `#sideclose` and `body.bankopen`: the bank slide-over and its toggles.
 - `GET /bank` rows carry `folder` (course, person, other, me) and `id`, which the sidebar groups by and the source line links by.
@@ -69,6 +70,9 @@ At the 640 pt panel size, light and dark (the before shots are from before the r
 | after, long due list | ![](window/after-panel-list-light.png) | ![](window/after-panel-list-dark.png) |
 | after, bank open | ![](window/after-panel-bank-light.png) | ![](window/after-panel-bank-dark.png) |
 | after, bank hidden | ![](window/after-panel-hidden-light.png) | ![](window/after-panel-hidden-dark.png) |
+| after, bar | ![](window/after-panel-bar-light.png) | ![](window/after-panel-bar-dark.png) |
+| after, chats open | ![](window/after-panel-chats-light.png) | ![](window/after-panel-chats-dark.png) |
+| after, chats, delete armed | | ![](window/after-panel-chats-delete-dark.png) |
 
 At 420 px, rows stack: ![](window/after-narrow-light.png)
 
@@ -79,6 +83,7 @@ Full width, bank open and hidden:
 | before | ![](window/before-wide-light.png) | ![](window/before-wide-dark.png) |
 | after | ![](window/after-wide-light.png) | ![](window/after-wide-dark.png) |
 | after, bank hidden | ![](window/after-wide-hidden-light.png) | ![](window/after-wide-hidden-dark.png) |
+| after, chats | ![](window/after-wide-chats-light.png) | ![](window/after-wide-chats-dark.png) |
 
 The approved mock is `window/mock.html`, with its screenshots in `window/mock-*.png`.
 

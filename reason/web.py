@@ -73,19 +73,28 @@ PAGE = """<!doctype html>
   svg { display: block; flex: none; }
   [hidden] { display: none !important; }
 
-  /* left slot: kept empty for a chats list (past conversations, worker 18); show it by removing [hidden] */
-  #chats { width: 240px; flex: none; background: var(--side); border-right: 1px solid var(--line); overflow-y: auto; }
-  /* chats list (worker 18): plain placement; worker 15 owns the look */
-  #chats { padding: 10px 8px; }
-  #newchat { width: 100%; margin-bottom: 8px; }
-  #chats .chday { padding: 10px 8px 4px; font-size: 11px; font-weight: 600; color: var(--text2); }
+  /* saved chats: a column on the left (worker 18's list; hooks #chats #newchat .chday .chat[data-id].on .chtitle .chdel) */
+  #chats { width: 232px; flex: none; background: var(--side); border-right: 1px solid var(--line); display: none;
+           flex-direction: column; min-height: 0; }
+  body.chatsopen #chats { display: flex; }
+  #chats .head { display: flex; align-items: center; gap: 4px; min-height: 38px; flex: none; padding: 0 8px 0 16px;
+                 font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--line); }
+  #chats .head span { flex: 1; }
+  #chatlist { flex: 1; overflow-y: auto; padding: 4px 8px 12px; }
+  #chatsclose { display: none; height: 22px; padding: 0 10px; font-size: 12px; font-weight: 400; }
+  #chats .chday { padding: 12px 8px 4px; font-size: 11px; font-weight: 600; color: var(--text3); }
+  #chats .chempty { padding: 12px 8px; font-size: 12px; color: var(--text3); }
   #chats ul { list-style: none; margin: 0; padding: 0; }
   #chats .chat { display: flex; align-items: center; border-radius: 6px; }
-  #chats .chat.on { background: var(--fieldline); }
-  #chats .chtitle { flex: 1; min-width: 0; text-align: left; padding: 5px 8px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #chats .chdel { padding: 2px 8px; font-size: 12px; color: var(--text3); visibility: hidden; }
-  #chats .chat:hover .chdel, #chats .chdel.armed, #chats .chdel:focus { visibility: visible; }
-  #chats .chdel.armed { color: #d70015; }
+  #chats .chat:hover { background: var(--hover); }
+  #chats .chat.on { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  #chats .chtitle { flex: 1; min-width: 0; text-align: left; padding: 5px 4px 5px 8px; font-size: 13px;
+                    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #chats .chdel { flex: none; height: 22px; min-width: 22px; margin-right: 3px; padding: 0 5px; border-radius: 5px;
+                  font-size: 14px; line-height: 22px; color: var(--text3); visibility: hidden; }
+  #chats .chdel:hover { background: var(--hover); color: var(--text2); }
+  #chats .chat:hover .chdel, #chats .chdel.armed, #chats .chdel:focus-visible { visibility: visible; }
+  #chats .chdel.armed { font-size: 12px; color: var(--red); }
   /* the bank: a slide-over from the right */
   #side { position: fixed; z-index: 3; top: 0; right: 0; bottom: 0; width: 320px; max-width: 100%; background: var(--side);
           border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(0,0,0,.10); display: flex; flex-direction: column;
@@ -95,7 +104,7 @@ PAGE = """<!doctype html>
   #side .head { display: flex; align-items: center; justify-content: space-between; min-height: 38px; flex: none;
                 padding: 0 12px 0 16px; font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
   #sideclose { height: 22px; padding: 0 10px; font-size: 12px; font-weight: 400; color: var(--text); }
-  #sidebtn[aria-pressed="true"] { background: var(--hover); color: var(--text); }
+  #sidebtn[aria-pressed="true"], #chatsbtn[aria-pressed="true"] { background: var(--hover); color: var(--text); }
   #groups { flex: 1; overflow-y: auto; padding: 0 8px 12px; }
   .group > button { width: 100%; display: flex; align-items: center; gap: 4px; padding: 6px 8px 4px;
                     font-size: 11px; font-weight: 600; color: var(--text2); text-align: left; }
@@ -190,9 +199,11 @@ PAGE = """<!doctype html>
      The page lets the panel's material show through. */
   @media (max-width: 760px) {
     body { background: transparent; }
+    #chats { position: fixed; z-index: 3; inset: 0; width: 100%; border-right: 0; }
+    #chatsclose { display: block; }
+    body.chatsopen main { visibility: hidden; }
     #side { width: 100%; border-left: 0; box-shadow: none; }
     body.bankopen main { visibility: hidden; }
-    #chats { display: none; }
     .turn, .empty { padding-left: 18px; padding-right: 18px; }
     .hint { display: none; }
   }
@@ -204,9 +215,15 @@ PAGE = """<!doctype html>
   }
 </style></head>
 <body>
-<nav id="chats" aria-label="Chats"></nav>
+<nav id="chats" aria-label="Chats">
+  <div class="head"><span>Chats</span>
+    <button type="button" class="iconbtn" id="newchat" title="New chat" aria-label="New chat"><svg width="15" height="15" viewBox="0 0 15 15"><path d="M7 2H3.5A1.5 1.5 0 0 0 2 3.5v8A1.5 1.5 0 0 0 3.5 13h8a1.5 1.5 0 0 0 1.5-1.5V8M11.3 1.7l2 2L7.5 9.5H5.5v-2z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></button>
+    <button type="button" class="btn" id="chatsclose" title="Close (Escape)">Done</button></div>
+  <div id="chatlist"></div>
+</nav>
 <main>
   <div class="bar">
+    <button class="iconbtn" type="button" id="chatsbtn" title="Show chats" aria-pressed="false"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
     <h1>Muse</h1>
     <button type="button" class="btn" id="speak" aria-pressed="false" title="Read answers aloud">Speak</button>
     <button type="button" class="btn" id="discover" title="Let Muse ask you a few questions about yourself">Discover</button>
@@ -461,6 +478,7 @@ document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape') {
     if (recording) { altTalk = false; stopTalk(true); }
     else if (sideShown()) toggleSide(false);
+    else if (!isWide() && chatsShown()) toggleChats(false);
     else if (pending) pending.cancel();
     ev.preventDefault(); return;
   }
@@ -566,7 +584,7 @@ talkState('idle');
    Hooks for the layout: #newchat, .chat[data-id] (.on = the open chat), .chtitle, .chdel;
    window.museChats.refresh() / .open(id) / .new() / .remove(id). A reopened chat shows its
    answers as they were given; nothing is asked again. Delete takes two clicks. */
-const chatsEl = $('chats');
+const chatsEl = $('chatlist');
 let currentChat = null;
 function dayLabel(iso) {
   const d = new Date((iso || '').slice(0, 10) + 'T12:00:00'); if (isNaN(d)) return '';
@@ -577,8 +595,7 @@ function dayLabel(iso) {
 }
 function drawChats(list) {
   chatsEl.textContent = '';
-  const nb = el('button', 'btn', 'New chat'); nb.id = 'newchat'; nb.type = 'button'; nb.onclick = () => newChat();
-  chatsEl.appendChild(nb);
+  if (!list.length) chatsEl.appendChild(el('div', 'chempty', 'Your chats will show here.'));
   let day = null, ul = null;
   for (const c of list) {
     const d = dayLabel(c.updated);
@@ -597,7 +614,7 @@ function clearLog() { log.textContent = ''; pending = null; }
 async function newChat() {
   if (busy) return;
   try { await post('/chats/new'); } catch (e) { return; }
-  clearLog(); showEmpty(); loadChats(); q.focus();
+  clearLog(); showEmpty(); loadChats(); chatsDone(); q.focus();
 }
 async function openChat(id) {
   if (busy) return;
@@ -606,11 +623,11 @@ async function openChat(id) {
   clearLog();
   for (const t of r.turns || []) showAnswer(newTurn(t.question, false), { text: t.text, route: t.route, sources: t.sources, seconds: t.seconds || 0 });
   if (!(r.turns || []).length) showEmpty();
-  bottom(); loadChats(); q.focus();
+  bottom(); loadChats(); chatsDone(); q.focus();
 }
 async function removeChat(id, btn) {
   if (btn && !btn.classList.contains('armed')) {  // first click asks; the second deletes
-    btn.classList.add('armed'); btn.textContent = 'Delete?';
+    btn.classList.add('armed'); btn.textContent = 'Delete';
     setTimeout(() => { btn.classList.remove('armed'); btn.textContent = '×'; }, 3000);
     return;
   }
@@ -618,6 +635,23 @@ async function removeChat(id, btn) {
   if (id === currentChat) { clearLog(); showEmpty(); }
   loadChats();
 }
+$('newchat').onclick = () => newChat();
+// Show / hide the chats column: the bar's left button or Done / Escape in the panel. Wide windows show it by
+// default and remember the choice; the compact panel starts with it hidden and shows it over the whole panel.
+function chatsShown() { return document.body.classList.contains('chatsopen'); }
+function toggleChats(show) {
+  const on = show ?? !chatsShown();
+  document.body.classList.toggle('chatsopen', on);
+  if (isWide()) store('muse.chats', on ? '1' : '0');
+  const b = $('chatsbtn'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.title = on ? 'Hide chats' : 'Show chats';
+  if (!recording) q.focus();
+}
+function chatsDone() { if (!isWide() && chatsShown()) toggleChats(false); }  // compact: back to the conversation
+$('chatsbtn').onclick = () => toggleChats();
+$('chatsclose').onclick = () => toggleChats(false);
+if (isWide() && store('muse.chats') !== '0') document.body.classList.add('chatsopen');
+toggleChats(chatsShown());
+window.matchMedia('(min-width: 761px)').addEventListener('change', (e) => { if (!e.matches) toggleChats(false); });
 window.museChats = { refresh: loadChats, open: openChat, new: newChat, remove: (id) => removeChat(id, null) };
 
 showEmpty();
