@@ -1,11 +1,11 @@
-# Live demo: Flux on your own data
+# Live demo: Flux on real data
 
 Flux has two states that never mix:
 
 | | Demo (staged, for the video) | Live (your data) |
 |---|---|---|
 | Bank | `~/flux-demo-bank` (sample mail and sample coursework) | `~/flux-bank` (what Sync mail and the web route filed) |
-| Calendar | "Flux demo" | the one calendar you name |
+| Calendar | "Flux demo" | the one calendar you name ("Flux live" for the live demo) |
 | Reminders | the "Flux demo" list | your default list |
 | Status | the window's status line and the menu say **Demo data** | **Your data** |
 
@@ -21,41 +21,69 @@ scripts/flux-mode                            # print the current mode
 
 Live mode reads **one** calendar. Reading every calendar on a Mac with many of them took over a minute per question, so there's no "all calendars" option.
 
+## The live calendar: "Flux live"
+
+A new calendar used only for the live demo: not "Flux demo", and none of the Mac's own calendars. Flux reads only the one calendar it's set to, so every other calendar stays out of its answers. To hide the others in Calendar.app too, untick them in the sidebar.
+
+Create it once (On My Mac, so it never syncs anywhere), then point live mode at it:
+
+```bash
+osascript -e 'tell application "Calendar" to make new calendar with properties {name:"Flux live"}'
+scripts/flux-mode live --calendar "Flux live"
+```
+
+Then add three or four real events you're happy to show (this week, with times and places), in Calendar.app.
+
 ## Before going offline (online, once)
 
-1. `scripts/flux-mode live --calendar "<your calendar>"`, then relaunch Flux. The menu's first line says **Your data · ~/flux-bank**.
-2. **Mail:** menu → **Sync mail** (or `FLUX_BANK_DIR=~/flux-bank uv run python scripts/sync_email.py 7`). It reads the Gmail account signed in on the hidden browser's profile (`uv run python -m harness login https://mail.google.com` once), at most 10 threads per sync, read-only.
-3. **Coursework:** there is no live Canvas sync yet (see "What doesn't work live"). Coursework that arrives by email is synced with the mail.
-4. **Calendar:** Calendar.app keeps a local copy of iCloud and Google calendars, so let it finish syncing while online.
-5. **Web answers you want offline:** ask them online and say yes to "save that to your notes".
-6. **Confirm the bank has content:** click the status line ("N items in the bank") or run `ls ~/flux-bank/*/`. Ask "What did everyone ask me?" to see what's there.
+1. `scripts/flux-mode live --calendar "Flux live"`, then relaunch Flux. The menu's first line and the window's status line say **Your data**.
+2. **Mail:** menu → **Sync mail** (or `FLUX_BANK_DIR=~/flux-bank uv run python scripts/sync_email.py 7`). It reads the **test Gmail account** signed in on the hidden browser's profile, the last 7 days, at most 10 threads per sync, read-only. No personal inbox.
+3. **Confirm the bank:** click the status line, or `find ~/flux-bank -name "*.md" ! -name index.md | wc -l`. On 2026-11-15 after one sync it held **9 emails** from 4 senders.
+4. **Coursework:** there is no live Canvas path (see "What doesn't work live"), so the live run leaves coursework questions out. No staged pages go into the live bank.
+5. **Calendar:** the "Flux live" events are in Calendar.app (local, so nothing to sync).
+6. **Web answers you want offline:** ask them online and say yes to "save that to your notes".
 7. **Permissions already granted:** microphone, Accessibility (Fn-Space), and Automation for Calendar, Reminders and Mail. Menu → **Check setup** lists any that are missing.
-8. **Launch once with voice** so the speech model is loaded. The first launch on a Mac compiles for several minutes. Ask one question by voice.
+8. **Launch once with voice** so the speech model is loaded (the first launch on a Mac compiles for several minutes). Ask one question by voice.
 9. Bonsai is running on 127.0.0.1:8080 (Flux starts it).
 10. Turn **Wi-Fi off**.
 
-## Questions (no staged names)
+### Mail the test account still needs
 
-Pick names from your own bank: the bank list on the right shows who wrote to you.
+The 9 emails cover a plain ask (ramen recommendation, chem lab notes, potluck dessert), deadlines (HIST 2290 essay Mon 11:59pm, housing form Fri noon, robotics parts order Wed 5pm) and a bill. Two gaps:
 
-| Capability | Ask |
-|---|---|
-| Chat | "Hey, can you hear me okay?" |
-| Catch me up | "Catch me up" |
-| Due | "What's due this week?" → "and next week?" → "the first one" → "who sent that?" |
-| Open it | "open it" → yes (the email opens in Mail if it's in the mail account, else its saved copy) |
-| Person | "What did <someone who emailed you> ask me?" → "and <another sender>?" |
-| Everyone | "What did everyone ask me?" |
-| People | "Who is <sender>?" |
-| Calendar | "What's on my calendar this week?", "When is my next meeting?", "Am I free Monday?" |
-| Memory | "Remember that my lab is Tuesdays at 2." → "What do you know about me?" → "When is my lab?" → "Forget that" |
-| Notes and mail | a question about something in your mail, e.g. "Where is <an event someone mentioned>?" |
-| Web, offline | a factual question you saved online, asked again ("Who wrote the novel Frankenstein?") |
-| Drafts | "Draft a reply to <sender>" → Open in Mail (nothing is sent) |
-| Add to calendar | "Add <an item with a date> to my calendar" → yes (goes into your calendar) |
-| Remind me | "Remind me about <an item with a due date>" → yes (goes into your default Reminders list) |
-| Set me up | "Set me up for <an item>" → yes |
-| Discovery | "Discover" → yes / no / skip / stop |
+- **No email proposes a meeting time,** so the "You're free … Draft a yes?" suggestion can't show.
+- **The bill email doesn't carry its amount into the bank,** so "How much is my bill?" misses.
+
+Send these to the test account, then Sync mail again:
+
+| From | Subject | Body |
+|---|---|---|
+| Antranig | Study session Thursday? | Are you free Thursday at 4pm to go over the chem lab? We could meet in the library. |
+| Coby | Phone bill: $42.18 due Friday | Your phone bill is $42.18 and it's due Friday, November 20. Pay it in the app. |
+
+**Names by voice:** the senders are "Coby Lai" and "Antranig Baghdassarian". Whisper has heard "Coby" as "Kobe", and "Antranig" hasn't been tried. Type the person questions in the live run, or try each name by voice once before.
+
+## Questions (from what's really in the live bank, 2026-11-15)
+
+| Capability | Ask | Expect |
+|---|---|---|
+| Chat | "Hey, can you hear me okay?" | a short reply, no search |
+| Catch me up | "Catch me up" | Flux live's events today, due through Tuesday, asks from the last 7 days |
+| Due | "What's due this week?" → "and next week?" → "the first one" → "who sent that?" | the essay (Mon 11:59pm), robotics parts (Wed 5pm), housing form (Fri noon), the potluck (Sun 6pm) |
+| Open it | "open it" → yes | the email opens in Mail (test account) |
+| Person | "What did Antranig ask me?" → "and Coby?" | lab notes, potluck dessert; then essay, housing, ramen, bill |
+| Everyone | "What did everyone ask me?" | every open ask |
+| People | "Who is Antranig?" | his newest emails |
+| Calendar | "What's on my calendar this week?", "When is my next meeting?", "Am I free Thursday?" | from Flux live |
+| Memory | "Remember that my lab is Tuesdays at 2." → "What do you know about me?" → "When is my lab?" → "Forget that" | saved, listed, answered from the note, removed |
+| Drafts | "Draft a reply to Antranig" → Open in Mail (close it unsent) | a draft from his newest ask |
+| Suggestion (after the study-session email) | "What did Antranig ask me?" | "You're free Thursday … Draft a yes to Antranig?" |
+| Bill (after the bill email) | "How much is my phone bill?" | $42.18 |
+| Add to calendar | "Add the housing renewal form to my calendar" → yes | an event in Flux live |
+| Remind me | "Remind me about the housing renewal form" → yes | a reminder in your default Reminders list |
+| Set me up | "Set me up for the essay" → yes | the essay email opens |
+| Discovery | "Discover" → yes / no / stop | questions from the live bank |
+| Web, offline | a factual question saved online, asked again | answered from the bank |
 
 ## Live check (2026-11-15, Coby's Mac, live mode, network blocked in the process)
 
@@ -74,7 +102,7 @@ Bank: a copy of `~/flux-bank` after a real Sync mail from the test Gmail account
 | Drafts (reply and new email) | works: a draft box from the bank, Open in Mail not clicked |
 | Add to calendar, Remind me, Set me up, Open my calendar | works up to the yes (each shows what it will do; cancelled) |
 | Discovery | works: 4 questions from the live bank |
-| Bank question "How much is my phone bill?" | **miss**: "I don't have that in your notes or mail." The bill email is in the bank, but the bank search didn't match "phone" to it. |
+| Bank question "How much is my phone bill?" / "my Brightline bill?" | **miss**: "I don't have that in your notes or mail." The bill email's summary has no amount (bank summaries lose details); the bill email above fixes the demo. |
 | Suggestions | shown under due, person and catch-me-up answers |
 | Voice, real Wi-Fi off | not run here (needs a person at the mic) |
 
