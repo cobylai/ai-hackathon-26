@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from .judge import Verdict, judge
+from .junk import blocked_page, looks_blocked
 from .rephrase import rephrase
 
 
@@ -127,11 +128,13 @@ def gather(question: str, search_fn, open_fn, max_results: int = 10,
                 page = _page(open_fn(h.url))
             except Exception:
                 page = Page("", "")
-            if not page.text.strip():
-                unreadable += 1
+            if not page.text.strip() or blocked_page(page.text):
+                unreadable += 1  # empty, not OK (BLOCKED/LOGIN/ERR), or a bot-check page
                 continue
             v = judge(question, page.text, url=h.url, today=today)
             res.verdicts.append(v)
+            if v.enough and looks_blocked(f"{v.answer or ''}\n{v.evidence or ''}"):
+                v.enough, v.reason = False, "blocked_page"
             if v.enough:
                 res.found, res.answer, res.evidence, res.source = True, v.answer, v.evidence, h
                 res.message = (f"Found on {h.url} after {len(res.queries)} search(es) "
