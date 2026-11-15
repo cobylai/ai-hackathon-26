@@ -87,3 +87,7 @@
 ## Full-suite verification (2026-11-15)
 - Fleet load fell below ~70, so the full suite ran clean on branch head 1f59a04: 311 passed, 4 skipped (opt-in live tests), 2m53s.
 - Last round's 7-min timeout was fleet contention (load >600), not a regression.
+
+## Act-route integration proposal (2026-11-15)
+- notes-computer-control.md gains a concrete proposal: find/click/type kinds in reason/act.py, built on ui_click/ui_type/file_find.
+- Verified zero file overlap between all five agent-* branches and harness/computer/*, so the tools side is ready whenever reason/ settles.
