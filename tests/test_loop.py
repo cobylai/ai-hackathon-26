@@ -191,6 +191,37 @@ def test_survives_a_blocked_page():
     assert "Sources: 1. round12.example" in outcome.answer
 
 
+def test_stops_after_one_search_when_the_engine_is_walled(monkeypatch):
+    queries: list[str] = []
+
+    def walled(query: str):
+        queries.append(query)
+        return []
+
+    monkeypatch.setattr(loop.engine, "search", walled)
+    monkeypatch.setattr(loop.engine, "last_status", "BLOCKED")
+    fake = llm.FakeLLM(["a better query", "another query"])
+    outcome = loop.research("anything", ask=fake.ask)
+    assert len(queries) == 1
+    assert outcome.rounds == 1
+    assert "1 search round" in outcome.answer
+    assert not any("better search query" in prompt for prompt in fake.prompts)
+
+
+def test_empty_results_from_a_working_engine_still_rewrite(monkeypatch):
+    queries: list[str] = []
+
+    def empty(query: str):
+        queries.append(query)
+        return []
+
+    monkeypatch.setattr(loop.engine, "search", empty)
+    monkeypatch.setattr(loop.engine, "last_status", "OK")
+    fake = llm.FakeLLM(["query two", "query three"])
+    loop.research("anything", ask=fake.ask)
+    assert len(queries) == loop.MAX_ROUNDS
+
+
 def test_repeating_a_query_stops_the_loop():
     fake = llm.FakeLLM(["1", "One note.", "NO", "   "])
     site = Script()

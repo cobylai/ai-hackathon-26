@@ -95,6 +95,10 @@ def research(
         rounds = round_no
         tried.add(query.lower())
         results = list(find(query))[:MAX_RESULTS]
+        if not results and find is engine.search and engine.last_status in ("BLOCKED", "LOGIN"):
+            # A wall is not a query problem: rewriting will hit the same wall, and
+            # Run 4 spent three searches per question proving that.
+            break
         picks = prompts.pick(question, results, ask)[:MAX_PAGES_PER_ROUND] if results else []
         first_new_note = len(notes)
 
