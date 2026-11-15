@@ -11,6 +11,11 @@ BLOCKED_PHRASES = (
     "verify you are human",
     "captcha",
     "access denied",
+    # DuckDuckGo's HTML endpoint answers with its own puzzle when it sees a bot
+    # (S8: this page used to classify as OK, so search looked empty instead of walled).
+    "bots use duckduckgo too",
+    "confirm this search was made by a human",
+    "select all squares containing",
 )
 
 CHALLENGE_SELECTORS = (
