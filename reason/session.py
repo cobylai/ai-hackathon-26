@@ -74,6 +74,7 @@ class Session:
     rows: list[dict] = field(default_factory=list)
     who: str | None = None      # the name in the last person question, as it was written
     pick: int | None = None     # the row a follow-up picked last
+    tour: int | None = None     # the guided tour's step (reason/tour.py), None when no tour is on
 
     @property
     def title(self) -> str:
@@ -87,7 +88,7 @@ class Session:
         return _jsonable({"id": self.id, "title": self.title, "started": self.started,
                           "turns": self.turns, "state": {"question": self.question, "route": self.route,
                                                          "rows": self.rows, "who": self.who,
-                                                         "pick": self.pick}})
+                                                         "pick": self.pick, "tour": self.tour}})
 
     @classmethod
     def from_dict(cls, d: dict) -> "Session":
@@ -96,6 +97,7 @@ class Session:
         st = d.get("state") or {}
         s.question, s.route, s.who, s.pick = st.get("question"), st.get("route"), st.get("who"), st.get("pick")
         s.rows = [_event_back(r) for r in st.get("rows") or []]
+        s.tour = st.get("tour")
         return s
 
     def record(self, question: str, a, root=None, asked: str | None = None) -> None:

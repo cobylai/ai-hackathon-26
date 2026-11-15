@@ -1,6 +1,6 @@
 """Sync generated thread pages into a test bank (brief N). Offline: no Gmail.
 
-    FLUX_BANK_DIR=data/bank-test uv run python scripts/sync_test_threads.py [data/test-threads]
+    FLUX_BANK_DIR=data/bank-test uv run python scripts/demo/sync_test_threads.py [data/test-threads]
 
 Each page from make_test_threads.py is opened as a local file in the partner's
 hidden browser (his Session class, on a scratch profile under data/ so it never
@@ -17,7 +17,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 

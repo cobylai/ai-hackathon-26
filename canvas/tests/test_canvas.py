@@ -24,7 +24,7 @@ LEAKS = ["ZORK", "Secret Underground", "Grue", "Pat Quimby", "Quimby", "canvas.z
 
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts" / f"{name}.py")
+    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts" / "demo" / f"{name}.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -105,8 +105,8 @@ class Scrub(unittest.TestCase):
             self.assertEqual(list(Path(d).iterdir()), [])
 
     def test_committed_scripts_hold_no_template_strings(self):
-        for p in (ROOT / "scripts" / "make_test_canvas.py", ROOT / "scripts" / "sync_test_canvas.py",
-                  ROOT / "scripts" / "save_canvas_pages.py", ROOT / "canvas" / "read.py"):
+        for p in (ROOT / "scripts" / "demo" / "make_test_canvas.py", ROOT / "scripts" / "demo" / "sync_test_canvas.py",
+                  ROOT / "scripts" / "demo" / "save_canvas_pages.py", ROOT / "canvas" / "read.py"):
             self.assertIsNone(re.search(r"cornell", p.read_text(), re.I), p.name)
 
 

@@ -123,7 +123,7 @@ FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
 
 **What the web route files (a change from the plan).** The plan said to ingest the page itself. But the bank keeps a one or two sentence summary, not the page. cornell.edu's summary came out as a news item, so asking the same question offline got the offline message. The route now files a short text with the question, the answer and the quoted line, with `subject="<question> <answer>"`. ingest's `subject=` keyword wins over the model. With that change, "When did the Berlin Wall fall?" answered from the bank offline (below). The source is still the page url.
 
-## Scores on the many-sender check (`scripts/make_test_mail.py`)
+## Scores on the many-sender check (`scripts/demo/make_test_mail.py`)
 
 20 made-up emails from 13 senders, scored offline (`check --offline`, network blocked except localhost) against what the generator knows is true.
 
