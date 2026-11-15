@@ -7,7 +7,7 @@ Eight made-up emails for the live demo. Send each one to
 MUSE_BANK_DIR=~/muse-bank uv run python scripts/sync_email.py 7
 ```
 
-Nobody here is a real person or real course staff. Courses and groups are
+Apart from the partner's first name (Antranig) on emails 2, 4, 6 and 8, nobody here is a real person or real course staff. Courses and groups are
 invented (e.g. "HIST 2290" does not refer to a real class). Dates assume the
 emails go out on **Sat 2026-11-14**, so "the coming week" is Mon 16 to Sun 22.
 
@@ -40,7 +40,7 @@ If you need anything from the spring parts order, add it to the shared sheet
 by Wednesday, November 18 at 5 PM. After that the order goes in and we can't
 add more. Servos and wheel kits are the big ones this time.
 
-Marco Feld, treasurer
+Antranig, treasurer
 
 ## 3. Deadline, Friday (Coby sends)
 
@@ -65,7 +65,7 @@ send me your notes from it when you get a chance? Mostly the titration part.
 No rush at all.
 
 Thanks so much,
-Priya Okonkwo
+Antranig
 
 ## 5. Direct ask, no deadline (Coby sends)
 
@@ -92,7 +92,7 @@ everyone who came out on Saturday. Photos from the harvest party are up on
 the garden blog.
 
 Happy growing,
-The Campus Garden Team
+Antranig (Campus Garden Team)
 
 ## 7. Bill (Coby sends)
 
@@ -118,13 +118,14 @@ The floor potluck is happening. It's on Sunday, November 22 at 6 PM in the
 third-floor lounge. Could you bring a dessert? Cookies are fine, honestly
 anything. Also has anyone seen my blue umbrella? Okay that's all, see you.
 
-Sam Lindqvist
+Antranig
 
 ---
 
 ## Demo questions and expected answers
 
 All answers should come from the bank (Wi-Fi off), with the email as the source.
+Person questions about Coby's four emails (1, 3, 5, 7) are not used in the video.
 
 | # | Question | Expected answer | From |
 |---|---|---|---|
@@ -132,8 +133,8 @@ All answers should come from the bank (Wi-Fi off), with the email as the source.
 | 2 | What's due on Wednesday? | The robotics club parts order closes Wed 11/18 at 5 PM | 2 |
 | 3 | When is my essay draft due? | Monday, November 16 by 11:59 PM (HIST 2290, PDF, 1,500 words) | 1 |
 | 4 | How much is my phone bill and when is it due? | $42.18, due Thursday, November 19 | 7 |
-| 5 | Who is waiting on me for something? | Priya wants the chem lab notes (titration part); Jordan wants a ramen recommendation; Sam asks you to bring a dessert | 4, 5, 8 |
-| 6 | What did Priya ask me? | To send her notes from Thursday's chem lab, mostly the titration part; no deadline | 4 |
+| 5 | (dropped from the video) | | |
+| 6 | What did Antranig ask me? | To send his notes from Thursday's chem lab, mostly the titration part; no deadline. The person route may also list his other asks: a dessert for the potluck (Sun 11/22) and the parts sheet (Wed 11/18) | 4 (also 8, 2) |
 | 7 | When is the potluck and what should I bring? | Sunday, November 22 at 6 PM, third-floor lounge; bring a dessert (cookies are fine) | 8 |
 | 8 | Do I need to do anything about the garden newsletter? | No. It's news only (garlic planted, beds covered, photos posted), with no ask | 6 |
 | 9 | What's the housing renewal deadline and what does the form need? | Friday, November 20 by noon; preferred building and roommate, if any | 3 |
