@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Form Fixture</title>
+  <script>
+    function showResult(message) {
+      document.getElementById("result").textContent = message;
+    }
+    function onSubmit(event) {
+      event.preventDefault();
+      showResult("Submitted: " + document.getElementById("q").value);
+    }
+  </script>
+</head>
+<body>
+  <h1>Search the archive</h1>
+  <form onsubmit="onSubmit(event)">
+    <input id="q" name="q" type="text" placeholder="Search terms">
+    <select name="section" aria-label="Section">
+      <option>All</option>
+      <option>News</option>
+    </select>
+    <textarea name="notes" placeholder="Notes"></textarea>
+    <button type="submit">Submit</button>
+  </form>
+  <p id="result"></p>
+  <a href="/help">Help page</a>
+  <div style="display:none">
+    <button>Hidden button</button>
+    <a href="/hidden">Hidden link</a>
+  </div>
+</body>
+</html>

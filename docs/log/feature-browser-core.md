@@ -1,0 +1,17 @@
+# Log: feature/browser-core
+
+- B1: scaffolded the `harness` package (pyproject, config with `HOME_DIR`/`PROFILE_DIR`/`MAX_CHARS`, smoke test).
+- B2: `Session` launches full Chromium (`channel="chromium"`, `--headless=new`) on a persistent profile; `get_session()` is a singleton. Test fixtures serve `tests/pages/` and use temp profiles.
+- B3: `blocking.install()` routes every request through adblock-rust (EasyList/EasyPrivacy) and aborts images/media/fonts; stats count blocked URLs. `scripts/fetch_filters.py` fetched 3.6 MB of lists in 0.6 s; engine build ~0.2 s.
+- B3 fix: first navigation passes an empty frame URL to adblock-rust, which then matches stray document filters; fall back to the request URL as source. Tests now build engines from a temp dir so downloads do not change results.
+- B4: `page_text()` runs trafilatura with an lxml body-text fallback; `paginate()` cuts at paragraph > sentence > word boundaries and chunks join back byte-for-byte. Article fixture spans 3 pages.
+- B5: `elements.js` tags visible links/buttons/fields with `data-hn`; labels fall back text > aria-label > placeholder > name > value. `list_elements` caps at 40 lines; click/type use the tag.
+- B6: `classify()` returns ERR first (nav failure, 5xx, then 4xx), then BLOCKED (five phrases or reCAPTCHA/hCaptcha/Turnstile iframe), then LOGIN (visible password field), else OK. Status comes from navigation timing.
+- B7: six tools in `tools.py` all return `OK/BLOCKED/LOGIN/ERR ...` strings capped at 1500 chars; `registry.TOOLS`/`GROUPS["web"]` expose them, `python -m harness <cmd>` works one-shot.
+- Note: CLI runs in a fresh process per command, so `read`/`elements` only see the page loaded by the same process; the agent keeps one session.
+- B3b: `fetch_ubol.py` installs uBOL 2026.1110.1816 under `~/.harness/extensions/ubol` (47 MB unpacked); `extensions.launch_args()` feeds two flags into `Session.start()`. Off by default (`USE_UBOL = False`).
+- B3b finding: uBOL does load headless and blocks network ads (doubleclick -> ERR_BLOCKED_BY_CLIENT), but its default Basic mode does no cosmetic filtering. Complete mode hides EasyList selectors; the literal `div.ad-banner` is in no list and stays visible, so that part of the check cannot pass. See docs/plan/notes-ubol.md.
+- B10: `scripts/bench.py` measured cold start 0.55 s median, warm local `goto`+`read` 0.04 s median (max 0.16 s, target 2 s), 635 MB RSS across 7 Chromium processes, `.venv` 263 MB + Chromium 622 MB on disk.
+- B10 note: whole Playwright cache is 1.3 GB because WebKit and the headless shell are installed too; ~/.harness is 56 MB, 47 MB of it the opt-in uBOL copy. Numbers in docs/plan/notes-bench.md.
+- B9: `scripts/live_check.py` visited 15 sites with Playwright and patchright: 5/15 unusable on Playwright (2 BLOCKED, 3 ERR), 4/15 on patchright (3 BLOCKED, 1 ERR); medians 0.37 s vs 0.32 s. Only weather.com changed from BLOCKED to OK.
+- B9 recommendation: stay on plain Playwright. patchright costs a second 570 MB browser build and removed no real wall. Notes in docs/plan/notes-botwalls.md; "Just a moment" is missing from the B6 phrase list (left open).

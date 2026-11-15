@@ -1,0 +1,18 @@
+[project]
+name = "harness"
+version = "0.1.0"
+description = "Short text tools that let a small local model drive a hidden browser"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "playwright",
+    "trafilatura",
+    "adblock",
+    "rank-bm25",
+    "httpx",
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
