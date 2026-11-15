@@ -4,6 +4,9 @@ Short plain-text Gmail tools for a small local model. The model never sees a
 screenshot or raw HTML: each tool returns at most 1500 characters, starts with
 `OK`, `BLOCKED`, `LOGIN` or `ERR`, and lists things as numbers it can pick.
 
+Proof that each plan task is done, with the test or live run behind it:
+[plan/notes-email-evidence.md](plan/notes-email-evidence.md).
+
 ## One-time sign-in
 
 ```bash
