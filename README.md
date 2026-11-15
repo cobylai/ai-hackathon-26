@@ -125,4 +125,4 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check   # every 
 
 ## Samples
 
-`samples/` is a copy of [iBrushC/local-ai-hackathon-samples](https://github.com/iBrushC/local-ai-hackathon-samples) @ `5c72a8d`, with two fixes so the Argmax sample builds against SDK 3.1.8: `Package.swift` declares tools-version 6.0 (with 5.10, `.macOS(.v15)` fails to compile), and `LiveCommand.swift` awaits `speakerKit.makeStreamSession` with `try await`. The Bonsai sample server (`samples/bonsai-models/mlx/start.sh`) also works, but `scripts/serve_bonsai.sh` is what NAME uses: headless, offline flags, localhost only.
+`samples/` is a copy of [iBrushC/local-ai-hackathon-samples](https://github.com/iBrushC/local-ai-hackathon-samples) @ `5c72a8d`, with two fixes so the Argmax sample builds against SDK 3.1.8: `Package.swift` declares tools-version 6.0 (with 5.10, `.macOS(.v15)` fails to compile), and `LiveCommand.swift` awaits `speakerKit.makeStreamSession` with `try await`. The Bonsai sample server (`samples/bonsai-models/mlx/start.sh`) also works, but `scripts/serve_bonsai.sh` is what Flux uses: headless, offline flags, localhost only.
