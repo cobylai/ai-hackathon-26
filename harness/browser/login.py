@@ -37,11 +37,12 @@ def chromium_path() -> str:
         return p.chromium.executable_path
 
 
-def _verify(url: str, profile: Path, attempts: int = 5) -> str:
+def _verify(url: str, profile: Path, attempts: int = 20) -> str:
     """Open the profile headless and report whether the site looks signed in.
 
-    Chromium can take a moment to release the profile after the visible window
-    closes, so a failed start is retried briefly.
+    Chromium can take several seconds to release the profile after the visible
+    window closes (measured up to ~15 s on an abrupt close), so a failed start is
+    retried for up to ~10 s.
     """
     from harness.browser.session import Session
     from harness.browser.state import classify
