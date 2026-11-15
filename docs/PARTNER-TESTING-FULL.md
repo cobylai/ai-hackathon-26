@@ -1,6 +1,6 @@
 # Flux: full test suite (Antranig, 2026-11-15)
 
-One self-contained pass over everything on `main` (f93ce99 or later). It
+One self-contained pass over everything on `main` (0c74083 or later). It
 replaces rounds 1, 2 and FINAL; those docs stay for detail. Report format is at
 the bottom.
 
@@ -14,9 +14,10 @@ push to main.
 Pick one:
 - **App (preferred):** download Flux.dmg from the private GitHub release
   `v0.1-test`, drag Flux to Applications, and open it. It's notarized, so it
-  opens with a normal double-click. The first-run setup window walks through the
-  rest (an in-app install wizard is being built; if your build doesn't have it,
-  follow INSTALL.html in the DMG).
+  opens with a normal double-click. The first-run **Set Up Flux** window does
+  the rest: it installs the code, Python tools, Bonsai 2 4B, the speech model and
+  the voice program (only what's missing, after one confirm), then asks for your
+  Argmax key and the permissions.
 - **From the repo:** `git fetch && git checkout main && git pull`, then
   `FLUX_REPO="$PWD" app/build.sh && open app/build/Flux.app`.
 
@@ -48,8 +49,8 @@ ls ~/flux-chats | wc -l                    # note the count; the tests must not 
 
 | # | Do | Expect |
 |---|---|---|
-| A1 | Open Flux.dmg | Drag-to-Applications window; the icon is a black waveform on a grey tile |
-| A2 | First launch | Setup window: privacy, Argmax key (kept in Keychain as "Flux Argmax key"), then Accessibility (drag the icon in), Mic, Calendar, Reminders, Mail, each moving on by itself once allowed |
+| A1 | Open Flux.dmg | Only Flux.app → Applications; the icon is a black waveform on a grey tile |
+| A2 | First launch: Set Up Flux | 4 screens: Welcome + privacy; Install checklist (Install runs only missing rows; Details shows the commands, log in ~/Library/Logs/Flux/setup.log; a failure goes red with Try Again); Argmax key (Keychain "Flux Argmax key"); Permissions with Allow per row. Note how long Install took and anything that failed |
 | A3 | Menu bar → Check setup | No problems listed |
 | A4 | Tap **Fn-Space** in another app; type a question; Escape | Panel appears with the cursor in the field, answers, hides |
 | A5 | Hold Fn-Space, say "what's due this week", release | Transcript, then the answer |
