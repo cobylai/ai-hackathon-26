@@ -24,7 +24,11 @@ class Web(unittest.TestCase):
                           ["/x.md"], 0.01)
 
         cls.srv = HTTPServer(("127.0.0.1", 0), make_handler(
-            today="2026-11-14", answer_fn=fake_answer, online_fn=lambda: False, count_fn=lambda: 17))
+            today="2026-11-14", answer_fn=fake_answer, online_fn=lambda: False, count_fn=lambda: 17,
+            entries_fn=lambda: [
+                {"sent_date": "2026-11-12", "sender_name": "Ann Old", "subject": "old", "body": "older one"},
+                {"sent_date": "2026-11-14", "sender_name": "Bo New", "subject": "Phone bill", "body": "Bill $42.18.",
+                 "ask": "Pay it", "deadlines": [{"phrase": "Thursday", "date": "2026-11-19", "time": None}]}]))
         cls.base = f"http://127.0.0.1:{cls.srv.server_address[1]}"
         threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
 
@@ -46,6 +50,13 @@ class Web(unittest.TestCase):
     def test_status(self):
         self.assertEqual(json.loads(self.get("/status")),
                          {"online": False, "items": 17, "voice": False, "voice_why": None})
+
+    def test_bank_list(self):
+        rows = json.loads(self.get("/bank"))
+        self.assertEqual([r["subject"] for r in rows], ["Phone bill", "old"])  # newest first
+        self.assertEqual(rows[0], {"date": "2026-11-14", "sender": "Bo New", "subject": "Phone bill",
+                                   "summary": "Bill $42.18.", "ask": "Pay it",
+                                   "deadlines": "Thursday (2026-11-19)"})
 
     def test_listen_without_voice(self):
         req = urllib.request.Request(self.base + "/listen/start", data=b"", method="POST")

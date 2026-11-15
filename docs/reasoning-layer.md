@@ -25,7 +25,7 @@ Chat window: one local page served by Python's standard library, with nothing lo
 MUSE_BANK_DIR=~/muse-bank uv run python -m reason.web --today 2026-11-14   # opens http://localhost:8765
 ```
 
-The window has the conversation, with each answer's `Source:` line in grey under it, a type box with Send, and a label like "offline · 18 items in bank". The "Hold to talk" button stays disabled until voice input is merged. The server is single-threaded on purpose, because the web route drives one Playwright browser.
+Clicking the "N items in bank" label opens a read-only list of the bank, newest first: date, sender, subject, summary, deadline and ask (`GET /bank`). The window has the conversation, with each answer's `Source:` line in grey under it, a type box with Send, and a label like "offline · 18 items in bank". The "Hold to talk" button stays disabled until voice input is merged. The server is single-threaded on purpose, because the web route drives one Playwright browser.
 
 Window check (2026-11-14, integration, process network blocked except localhost): "what is due Monday" (due, 0.0 s), "what did Marcus ask me" (person, 1.0 s, Source: Marcus Bell, Nov 12) and "what is the capital of Peru" (offline message, 0.0 s) were typed in the in-app browser, and the label read "offline · 18 items in bank". No spoken question yet: brief J step 2 is held.
 

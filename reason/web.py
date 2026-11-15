@@ -7,7 +7,8 @@ Single-threaded on purpose: the web route drives one Playwright browser, which m
 stay on one thread.
 
     GET  /        the page
-    GET  /status  {"online": bool, "items": int}
+    GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None}
+    GET  /bank    [{"date", "sender", "subject", "summary", "ask", "deadlines"}], newest first
     POST /ask     {"question": str} -> {"text", "route", "sources", "seconds"}
 """
 from __future__ import annotations
@@ -33,7 +34,16 @@ PAGE = """<!doctype html>
   header { display: flex; justify-content: space-between; align-items: center;
            padding: 10px 16px; border-bottom: 1px solid #ddd; }
   header h1 { font-size: 18px; margin: 0; }
-  #status { font-size: 13px; color: #666; }
+  #status { font-size: 13px; color: #666; background: none; border: none; padding: 0;
+            cursor: pointer; text-decoration: underline dotted; }
+  #bank { display: none; position: fixed; inset: 46px 0 0 0; background: #fff; overflow-y: auto;
+          padding: 12px 16px; border-top: 1px solid #ddd; }
+  #bank.open { display: block; }
+  #bank h2 { font-size: 16px; margin: 0 0 8px; display: flex; justify-content: space-between; }
+  .item { padding: 8px 0; border-bottom: 1px solid #eee; }
+  .item .top { font-size: 13px; color: #666; }
+  .item .subj { font-weight: 600; }
+  .item .extra { font-size: 13px; color: #444; }
   #log { flex: 1; overflow-y: auto; padding: 16px; }
   .msg { max-width: 75%; margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; white-space: pre-wrap; }
   .you { margin-left: auto; background: #e8eefc; }
@@ -46,7 +56,8 @@ PAGE = """<!doctype html>
   button:disabled { color: #aaa; border-color: #ddd; }
 </style></head>
 <body>
-<header><h1>Muse</h1><span id="status">checking…</span></header>
+<header><h1>Muse</h1><button type="button" id="status" title="Show what's in the bank">checking…</button></header>
+<div id="bank"><h2><span>In the bank</span><button type="button" id="closebank">Close</button></h2><div id="items"></div></div>
 <div id="log"></div>
 <form id="f">
   <input id="q" autocomplete="off" placeholder="Ask a question" autofocus>
@@ -117,13 +128,51 @@ async function release() {
 }
 talk.addEventListener('pointerup', release);
 talk.addEventListener('pointerleave', release);
+const bankEl = document.getElementById('bank'), itemsEl = document.getElementById('items');
+function line(cls, text) { const d = document.createElement('div'); d.className = cls; d.textContent = text; return d; }
+async function showBank() {
+  itemsEl.textContent = 'Loading…'; bankEl.classList.add('open');
+  try {
+    const rows = await (await fetch('/bank')).json();
+    itemsEl.textContent = '';
+    if (!rows.length) itemsEl.appendChild(line('extra', 'The bank is empty.'));
+    for (const r of rows) {
+      const d = document.createElement('div'); d.className = 'item';
+      d.appendChild(line('top', r.date + ' · ' + r.sender));
+      d.appendChild(line('subj', r.subject));
+      d.appendChild(line('', r.summary));
+      if (r.deadlines) d.appendChild(line('extra', 'Due: ' + r.deadlines));
+      if (r.ask) d.appendChild(line('extra', 'Ask: ' + r.ask));
+      itemsEl.appendChild(d);
+    }
+  } catch (e) { itemsEl.textContent = 'Could not load the bank: ' + e; }
+}
+statusEl.addEventListener('click', () => bankEl.classList.contains('open') ? bankEl.classList.remove('open') : showBank());
+document.getElementById('closebank').addEventListener('click', () => bankEl.classList.remove('open'));
 refresh();
 </script>
 </body></html>
 """
 
 
-def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None):
+def bank_rows(entries) -> list[dict]:
+    """What the bank list shows, newest first. Read-only."""
+    rows = []
+    for e in entries:
+        dls = "; ".join(f"{d.get('phrase')}" + (f" ({d['date']}{' ' + d['time'] if d.get('time') else ''})"
+                                                if d.get("date") else "")
+                        for d in e.get("deadlines") or [])
+        rows.append({"date": e.get("sent_date") or "", "subject": e.get("subject") or "(no subject)",
+                     "sender": (e.get("sender_name") or e.get("sender_address")
+                                or (e.get("source") if e.get("kind") == "page" else "") or "unknown"),
+                     "summary": e.get("body") or "", "ask": e.get("ask") or "", "deadlines": dls})
+    rows.sort(key=lambda r: r["date"], reverse=True)
+    return rows
+
+
+def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None,
+                 entries_fn=None):
+    entries_fn = entries_fn or store.all_entries
     answer_fn = answer_fn or _answer
     online_fn = online_fn or _online
     count_fn = count_fn or (lambda: len(store.all_entries()))
@@ -147,6 +196,8 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
             elif self.path == "/status":
                 self._json({"online": online_fn(), "items": count_fn(), "voice": talk is not None,
                             "voice_why": voice_why})
+            elif self.path == "/bank":
+                self._json(bank_rows(entries_fn()))
             else:
                 self._send(404, "not found", "text/plain")
 
