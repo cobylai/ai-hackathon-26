@@ -234,3 +234,65 @@ def test_second_process_on_live_profile_returns_err(monkeypatch, tmp_path):
             holder.wait(timeout=10)
         except subprocess.TimeoutExpired:
             holder.kill()
+
+
+def test_read_on_blocked_page(btools, site):
+    btools.goto(site.url("captcha.html"))
+    out = check(btools.read(1))
+    assert out.startswith("BLOCKED")
+    assert "bot check" in out
+
+
+def test_elements_on_blocked_page(btools, site):
+    btools.goto(site.url("captcha.html"))
+    out = check(btools.elements())
+    assert out.startswith("BLOCKED")
+    assert "list may be incomplete" in out
+
+
+def test_type_into_a_link_is_err(btools, site):
+    btools.goto(site.url("form.html"))
+    link = number_of(btools.elements(), "Help page")
+    out = check(btools.type(link, "nope"))
+    assert out.startswith("ERR")
+    assert "type into" in out
+
+
+def test_back_without_history_is_err(btools, site):
+    btools.goto(site.url("hello.html"))
+    out = check(btools.back())
+    assert out.startswith("ERR")
+    assert "no history" in out
+
+
+def test_goto_rejects_local_and_script_schemes():
+    from harness.browser import tools as tools_mod
+
+    for url in (
+        "file:///etc/passwd",
+        "data:text/html,<h1>hi</h1>",
+        "about:blank",
+        "javascript:alert(1)",
+        "ftp://example.com/",
+        "chrome://settings",
+        "chrome-extension://abc/page.html",
+    ):
+        with pytest.raises(ValueError, match="unsupported URL scheme"):
+            tools_mod._normalize_url(url)
+
+
+def test_goto_builds_https_for_bare_hosts():
+    from harness.browser import tools as tools_mod
+
+    assert tools_mod._normalize_url("example.com/x") == "https://example.com/x"
+    assert tools_mod._normalize_url(" https://example.com ") == "https://example.com"
+    assert tools_mod._normalize_url("127.0.0.1:8000/x") == "https://127.0.0.1:8000/x"
+    assert tools_mod._normalize_url("//example.com/x") == "https://example.com/x"
+    with pytest.raises(ValueError, match="empty URL"):
+        tools_mod._normalize_url("   ")
+
+
+def test_goto_file_url_returns_err(btools):
+    out = check(btools.goto("file:///etc/passwd"))
+    assert out.startswith("ERR local")
+    assert "unsupported URL scheme" in out
