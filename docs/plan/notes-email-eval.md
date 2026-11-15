@@ -54,9 +54,14 @@ both the click path (with the reload path made to fail) and the title guard.
 - Every request is **under 10 seconds**; the slowest read-only one is 5.6 s, and
   search+read is 4.3 s.
 - Characters returned range **336 to 1719**, well under the 4000 budget.
-- The plan's five user-picked requests are covered above; rerun with
-  `uv run python scripts/eval_email.py --sender … --days …` or
-  `--text …`.
+- To regenerate this table in one read-only run:
+
+  ```
+  uv run python scripts/eval_email.py --suite --sender me --text "ECE 4760" --days 7
+  ```
+
+  It writes nothing; use the single-flow mode with `--draft-to <address>` if a
+  draft step is wanted.
 
 ## Drafts in the account after these runs (none deleted)
 

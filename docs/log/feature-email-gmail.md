@@ -23,3 +23,4 @@
 - Incident from that run: the reply draft addressed the thread's other participant (`alp267@cornell.edu`), not the user. It was never sent and is left in Drafts; `email_reply_draft` now returns `OK draft saved | to <address>` so the recipient is never silent.
 - Hardening: `tests/test_email_flow.py` runs search -> read -> asks -> draft -> reply on the fixtures in one session, so the seams between the five tools are covered, not just each tool.
 - Final check: `uv run pytest -q` -> 125 passed (2 min 17 s on a busy machine, 55 s idle). An earlier run during a load spike of ~40 with 16 Chromium processes produced Playwright launch errors only; the same suite passed when the machine calmed down.
+- E9 replay: `scripts/eval_email.py --suite --sender … --text …` regenerates the five-request table in one read-only run (verified with stubbed tools; the live run was blocked because the search agent held the profile). `docs/email.md` now lists the known gaps.

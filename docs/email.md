@@ -67,12 +67,27 @@ into new messages, Gmail saves that signature as a draft — so an occasional
 ## Timings
 
 ```bash
+# the five-request table from the plan, read-only
+uv run python scripts/eval_email.py --suite --sender me --text "ECE 4760" --days 7
+
+# one flow, optionally saving a test draft
 uv run python scripts/eval_email.py --sender me --days 7
 uv run python scripts/eval_email.py --text "lab safety" --days 14 --draft-to you@example.edu
 ```
 
 Live results, the asks speedup, and the safety findings:
 [docs/plan/notes-email-eval.md](plan/notes-email-eval.md).
+
+## Known gaps
+
+- **Attachments** are not listed or read; `email_read` returns message text only.
+- **Outlook web** is not implemented (the plan's fallback if Google refuses sign-in).
+- **No digest job** yet; `email_asks` is the piece it would be built from.
+- A reply is addressed to whoever the thread says (usually the other
+  participant). The result names that address, but the tool will not stop a
+  reply to a stranger.
+- Gmail autosaves an opened compose, so a refused draft or the self-check can
+  leave a signature-only "(no subject)" draft in Drafts.
 
 ## Tests
 
