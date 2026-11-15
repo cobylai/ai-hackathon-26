@@ -108,6 +108,11 @@ def _any_body(page: Page) -> bool:
     return any(selectors.locator(items.nth(i), "message_body").count() for i in range(items.count()))
 
 
+def wait_for_thread(page: Page, timeout_ms: int = 20000) -> bool:
+    """True once a thread's messages and at least one body are rendered."""
+    return _wait_messages(page, timeout_ms=timeout_ms)
+
+
 def _wait_messages(page: Page, timeout_ms: int = 20000) -> bool:
     """Wait for a message container *and* a rendered body (they arrive apart)."""
     waited = 0

@@ -11,7 +11,7 @@ import re
 
 from harness import config
 from harness.browser.session import get_session
-from harness.email import query, read, search
+from harness.email import query, read, search, selectors
 
 TOP_THREADS = 3
 LINE_CHARS = 220
@@ -56,6 +56,66 @@ def extract(text: str) -> list[str]:
     return found
 
 
+def _row_locator(page, row):
+    """The result row for ``row`` on the current page, matched by thread id."""
+    items = search.visible_rows(page)
+    for i in range(len(items)):
+        try:
+            if selectors.locator(items[i], "row_subject").get_attribute("data-legacy-thread-id") == row.thread_id:
+                return items[i]
+        except Exception:
+            continue
+    return None
+
+
+def _is_draft(row) -> bool:
+    """Draft rows open a compose, not a thread; they are not asks either."""
+    return row.sender.strip().lower() == "draft"
+
+
+def _title_matches(page, subject: str) -> bool:
+    """Gmail's tab title starts with the thread subject; guards the click path."""
+    try:
+        title = " ".join(page.title().split(" - ")[0].split()).lower()
+    except Exception:
+        return False
+    wanted = " ".join(subject.split()).lower()
+    return bool(title and wanted) and title[:15] == wanted[:15]
+
+
+def _open_row(page, row) -> bool:
+    """Open a thread by clicking its row: an in-app render, no page reload."""
+    if _is_draft(row):
+        return False
+    item = _row_locator(page, row)
+    if item is not None:
+        try:
+            item.click(timeout=4000)
+            if read.wait_for_thread(page, timeout_ms=5000) and _title_matches(page, row.subject):
+                return True
+        except Exception:
+            pass
+    return read.open_thread(page, row.thread_id)
+
+
+def _back_to_results(page) -> None:
+    """Return to the result list, re-running the search if history lost it."""
+    try:
+        page.go_back(wait_until="domcontentloaded", timeout=15000)
+    except Exception:
+        pass
+    if search.visible_rows(page):
+        return
+    query_text = search.last_query()
+    if not query_text:
+        return
+    try:
+        page.goto(query.search_url(query_text), wait_until="domcontentloaded", timeout=60000)
+    except Exception:
+        return
+    search.wait_results(page, timeout_ms=8000)
+
+
 def email_asks(sender: str | None = None, days: int | None = None) -> str:
     """Search, read the top three threads, and list their questions and dates."""
     page = get_session().start().page
@@ -64,11 +124,11 @@ def email_asks(sender: str | None = None, days: int | None = None) -> str:
     if not result.startswith("OK"):
         return result
 
-    rows = search.last_rows()[:TOP_THREADS]
+    rows = [row for row in search.last_rows() if not _is_draft(row)][:TOP_THREADS]
     lines: list[str] = []
     seen: set[str] = set()
-    for row in rows:
-        if not read.open_thread(page, row.thread_id):
+    for position, row in enumerate(rows):
+        if not _open_row(page, row):
             continue
         for _who, _date, body in read.read_messages(page):
             for sentence in extract(body):
@@ -77,6 +137,8 @@ def email_asks(sender: str | None = None, days: int | None = None) -> str:
                     continue
                 seen.add(key)
                 lines.append(f"{row.n}. {sentence}")
+        if position < len(rows) - 1:
+            _back_to_results(page)
 
     head = f"OK {len(lines)} asks | {label}"
     if not lines:

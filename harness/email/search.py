@@ -32,11 +32,17 @@ class Row:
 
 
 _last: list[Row] = []
+_last_query: str = ""
 
 
 def last_rows() -> list[Row]:
     """Rows from the most recent search, in the order the model saw them."""
     return list(_last)
+
+
+def last_query() -> str:
+    """The query behind the most recent search, so a caller can re-run it."""
+    return _last_query
 
 
 def _text(locator) -> str:
@@ -154,7 +160,9 @@ def search(sender: str | None = None, text: str | None = None, days: int | None 
     if not signed_in(page):
         return LOGIN_LINE
 
+    global _last_query
     query_text = query.build(sender=sender, text=text, days=days)
+    _last_query = query_text
     page.goto(query.search_url(query_text), wait_until="domcontentloaded", timeout=60000)
     wait_results(page)
 

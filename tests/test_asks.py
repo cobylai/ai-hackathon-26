@@ -78,3 +78,46 @@ def test_login_from_search_is_passed_through(wired, monkeypatch):
         asks.search, "search", lambda **kwargs: "LOGIN mail.google.com | sign-in needed"
     )
     assert wired.email_asks(sender="alex").startswith("LOGIN")
+
+
+def test_asks_clicks_rows_instead_of_reloading(session, site, monkeypatch):
+    """The fast path clicks each result row; URL + reload is only the fallback."""
+    monkeypatch.setattr(asks, "get_session", lambda: session)
+
+    def fake_search(**kwargs):
+        session.page.goto(site.url("gmail_list.html"))
+        rows = [
+            search.parse_row(item, n)
+            for n, item in enumerate(search.visible_rows(session.page), 1)
+        ]
+        search._last[:] = rows
+        return "OK 5 results | from:me"
+
+    monkeypatch.setattr(asks.search, "search", fake_search)
+    monkeypatch.setattr(asks.search, "last_query", lambda: "from:me")
+    # The fixture sends every row to one thread page, so stub the title guard.
+    monkeypatch.setattr(asks, "_title_matches", lambda page, subject: True)
+
+    def no_reload(page, thread_id):
+        raise AssertionError("open_thread reload path was used")
+
+    monkeypatch.setattr(asks.read, "open_thread", no_reload)
+
+    out = asks.email_asks(sender="me")
+    assert out.startswith("OK")
+    assert out.splitlines()[0].endswith("| from:me")
+    assert "Could you also bring the sign-in sheet?" in out
+
+
+def test_title_guard_catches_the_wrong_thread():
+    class FakePage:
+        def title(self):
+            return "Re: Lab safety training - a@b.c - Cornell Mail"
+
+    assert asks._title_matches(FakePage(), "Re: Lab safety training")
+    assert not asks._title_matches(FakePage(), "BME 3030 HW5 Oral Defense")
+
+
+def test_draft_rows_are_skipped():
+    assert asks._is_draft(search.Row(1, "Draft", "x", "y", "z", "t"))
+    assert not asks._is_draft(search.Row(1, "me", "x", "y", "z", "t"))
