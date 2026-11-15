@@ -3,6 +3,7 @@
 #   scripts/serve_bonsai.sh          # BONSAI_SIZE or 4B
 #   scripts/serve_bonsai.sh 9B       # 2B | 4B | 9B
 # Env: PORT (8080), BONSAI_MODELS_DIR, BONSAI_VENV.
+# Binds 127.0.0.1 only: mlx_vlm.server defaults to 0.0.0.0, which the local network can reach.
 set -euo pipefail
 
 SIZE="$(echo "${1:-${BONSAI_SIZE:-4B}}" | tr 'b' 'B')"
@@ -35,4 +36,4 @@ fi
 
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_DATASETS_OFFLINE=1
 echo "Serving Bonsai 2 $SIZE from $MODEL on http://localhost:$PORT/v1 (offline)"
-exec "$VENV/bin/python" -m mlx_vlm.server --model "$MODEL" --port "$PORT"
+exec "$VENV/bin/python" -m mlx_vlm.server --model "$MODEL" --host 127.0.0.1 --port "$PORT"
