@@ -4,3 +4,5 @@ __pycache__/
 .pytest_cache/
 *.gguf
 .DS_Store
+.coverage
+htmlcov/
