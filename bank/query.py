@@ -34,23 +34,56 @@ def _text(e: dict, fields) -> str:
     return " ".join(parts).lower()
 
 
+_TOKEN = re.compile(r"[a-z0-9@.\-]+")
+_ABOUT_USER = {"i", "me", "my", "mine", "myself", "i'm", "im", "i've", "ive"}
+
+
+def _words(text: str) -> set[str]:
+    """Whole words of text, plus the parts of joined ones ("felix@x.example" -> felix, x, example)."""
+    out = set()
+    for tok in _TOKEN.findall(text):
+        tok = tok.strip(".-")
+        if not tok:
+            continue
+        out.add(tok)
+        out.update(p for p in re.split(r"[@.\-]+", tok) if p)
+    return out
+
+
+def _hit(term: str, words: set[str]) -> bool:
+    """A whole-word match, allowing plain plural forms both ways ("lab" ~ "labs", "boxes" ~ "box")."""
+    if term in words:
+        return True
+    if term + "s" in words or term + "es" in words:
+        return True
+    return any(term == w + "s" or term == w + "es" for w in words if len(w) >= 3)
+
+
+def about_user(query: str) -> bool:
+    return bool({w.strip("?.!,") for w in query.lower().split()} & _ABOUT_USER)
+
+
 def search(query: str, limit: int = 10, root: Path | None = None) -> list[dict]:
+    """Keyword score over whole words: a term in subject/sender counts 2, elsewhere 1.
+    A question about the user ("my", "I", "me") ranks their own notes (kind "me") first.
+    Ties: newest first."""
     terms = _terms(query)
     if not terms:
         return []
+    mine = about_user(query)
     scored = []
     for e in store.all_entries(root):
-        strong, weak = _text(e, _STRONG), _text(e, _WEAK)
+        strong, weak = _words(_text(e, _STRONG)), _words(_text(e, _WEAK))
         score = 0
         for t in terms:
-            if t in strong:
+            if _hit(t, strong):
                 score += 2
-            elif t in weak:
+            elif _hit(t, weak):
                 score += 1
         if score:
-            scored.append((score, e.get("sent_date") or "", e))
-    scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
-    return [e for _, _, e in scored[:limit]]
+            scored.append((mine and e.get("kind") == "me", score, e.get("sent_date") or "", e))
+    scored.sort(key=lambda x: (x[0], x[1], x[2]), reverse=True)
+    return [e for *_, e in scored[:limit]]
 
 
 def by_person(name: str, root: Path | None = None) -> list[dict]:

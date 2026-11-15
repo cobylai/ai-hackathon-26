@@ -151,8 +151,10 @@ def write(out_dir: Path) -> None:
 
 # ---- check ----------------------------------------------------------------
 
-def _subjects_from(a, entries_by_path) -> set[str]:
-    return {entries_by_path[p]["subject"] for p in a.sources if p in entries_by_path}
+def _subjects_from(a, entries_by_path, kinds=None) -> set[str]:
+    """Subjects of the answer's sources; kinds limits them (the due check counts only mail)."""
+    return {entries_by_path[p]["subject"] for p in a.sources if p in entries_by_path
+            and (kinds is None or entries_by_path[p].get("kind") in kinds)}
 
 
 def check(out_dir: Path) -> int:
@@ -205,7 +207,7 @@ def check(out_dir: Path) -> int:
     def due_check(q, lo, hi):
         a = answer(q, today=TODAY)
         want = {m["subject"] for m in truth if m["due"] and lo <= m["due"] <= hi}
-        got = _subjects_from(a, by_path)
+        got = _subjects_from(a, by_path, kinds=("email",))  # Canvas rows (kind="canvas") may be extra
         record("due", q, a.route == "due" and got == want, a, sorted(want) or "nothing due")
 
     for d in sorted({m["due"] for m in truth if m["due"]}):

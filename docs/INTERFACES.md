@@ -153,7 +153,9 @@ ingest(text, source, kind, *, sender_name=None, sender_address=None, sent_date=N
     # With none of them and no header lines: model sender + first "Name <addr>" + first dated line;
     # no date found -> ingest date, sent_date_guessed=True.
     # -> {"status": "added" | "duplicate", "path": str, "entry": dict, "raw": [model replies]}
-search(query, limit=10)          # -> [entry]; keyword score, subject/sender hits count double, ties newest first
+search(query, limit=10)          # -> [entry]; keyword score over whole words (plain plurals count: lab ~ labs),
+                                 #    subject/sender hits count double, ties newest first; a question about
+                                 #    the user ("my", "I", "me") ranks their notes (kind "me") first
 by_person(name)                  # -> [entry]; part-word match on sender name or address, newest first
 due(start_date, end_date)        # -> [{"date", "time", "phrase", "entry"}]; inclusive, sorted by date then time
 rebuild_index()                  # -> path of data/bank/index.md (every ingest also rebuilds it)
@@ -203,7 +205,7 @@ One entry point for typed and spoken questions. Code picks the route, never the 
 from reason import answer
 answer(question, today=None) -> Answer
     # Answer: text (ends with "Source: sender, Nov 12" or the url), route, sources, seconds
-    # route: "act" | "remember" | "forget" | "about_me" | "people" | "due" | "calendar" | "person"
+    # route: "act" | "remember" | "forget" | "about_me" | "people" | "catchup" | "due" | "calendar" | "person"
     #        | "bank" | "web" | "offline" | "not_found"
 ```
 
@@ -213,6 +215,7 @@ answer(question, today=None) -> Answer
   - "Who is <name>" or "what do you know about <name>", when every word is a sender's or a page's name: their page (relation, facts) and their newest 5 emails.
   - "When is my lab" reaches a note through the bank route; the source reads "your note, Nov 14".
 - **Due:** the question says due/deadline. Code picks the date range, calls `bank.due` and writes the list. No model call.
+- **Catch up** (`reason/catchup.py`, `playbooks/catchup.md`): "catch me up", "what's my day", "what's going on today", "brief me". Checked before due. Code only, three sections, each with its source: today's events (`applecal.events`), due today through today + 2 (`bank.due`, mail and Canvas), and asks in email from the last 7 days (newest 8, then "…and N more"; the bank has no done flag). If Calendar can't be read, its line says why and the other two still answer.
 - **Calendar:** checked after due. Triggers on "calendar", "schedule", "my/next meeting/event/appointment", "what do I have", "am I free". `applecal.events(start, end)` reads one Calendar.app calendar with osascript (`MUSE_CALENDAR`, default "Muse demo"), over the due route's date ranges or the next upcoming event. Code writes the list. No model call, no network. Details are in `docs/calendar.md`.
 - **Person:** a question word is a sender's name.
   - "What did <name> ask / want / need": code lists that sender's newest 8 entries as date, subject and ask (or "no ask" and the summary). No model call.

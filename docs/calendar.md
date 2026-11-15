@@ -45,11 +45,13 @@ On your calendar this week (Nov 14 to Nov 22):
 Source: Apple Calendar (Muse demo)
 ```
 
-For a single day the day is left off each line. If there are no events, it says "Nothing on your calendar <range>." If Calendar can't be read (no such calendar, no permission, a 20 s timeout), it says "I couldn't read Apple Calendar (<reason>)."
+For a single day the day is left off each line. If there are no events, it says "Nothing on your calendar <range>." If Calendar can't be read (no such calendar, no permission, a 45 s timeout), it says "I couldn't read Apple Calendar (<reason>)."
 
 ## Speed
 
 Calendar.app's scripting is slow: about 3 s to read one calendar, and 5–6 s for the first read after launch. A `whose` date filter costs about 1.5 s for each property it fetches, so `applecal` fetches every event of the calendar in one bulk call and filters the dates in Python. It keeps the result for 60 s (`MUSE_CALENDAR_CACHE=<seconds>`), so only the first calendar question in a minute waits. An event you add in Calendar shows up within 60 s.
+
+Both front ends call `applecal.warm()` at launch. It does that first read in a background thread, so a calendar or catch-up question asked a few seconds after start answers at once (0.0 s, vs 7.6 s cold). A question asked during the warm-up waits for it instead of starting a second read. The osascript timeout is 45 s: a read can pass 20 s when the Mac is busy. A timeout gives the "couldn't read Apple Calendar" line.
 
 ## Permission and the offline proof
 
