@@ -1,0 +1,25 @@
+{
+  "id": "n01_ta_explicit_date",
+  "kind": "email",
+  "note": "explicit 'Nov 20 at 11:59pm'; office hours weekday is not a deadline",
+  "text": "From: Wei Zhang <wz88@univ.example.edu>\nDate: Sat, 14 Nov 2026 11:20:05 -0500\nSubject: MATH 2940 HW 9 posted\n\nHi everyone,\n\nHW 9 is posted on the course site. It covers sections 5.1 to 5.3 and is due Nov 20 at 11:59pm on Gradescope. Office hours this week are Tuesday 3-5pm in the usual room.\n\nWei (TA)",
+  "expected": {
+    "sender_address": "wz88@univ.example.edu",
+    "sender_name": "Wei Zhang",
+    "sent_date": "2026-11-14",
+    "ask_keywords": [
+      [
+        "hw",
+        "homework",
+        "submit",
+        "gradescope"
+      ]
+    ],
+    "deadline_dates": [
+      "2026-11-20"
+    ],
+    "folder": "course",
+    "course": "MATH 2940"
+  },
+  "source": "fixture:n01_ta_explicit_date"
+}
