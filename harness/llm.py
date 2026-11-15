@@ -64,6 +64,11 @@ def ask(prompt: str, choices: list[str] | None = None, max_tokens: int = 64) -> 
         "max_tokens": max_tokens,
         "temperature": 0,
     }
+    # Reasoning models (qwen3 and friends) spend ``max_tokens`` on hidden thinking
+    # and return empty content. ``LLM_REASONING_EFFORT=none`` turns that off.
+    effort = os.environ.get("LLM_REASONING_EFFORT")
+    if effort:
+        payload["reasoning_effort"] = effort
     if choices:
         payload["response_format"] = {
             "type": "json_schema",

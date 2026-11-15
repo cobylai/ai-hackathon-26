@@ -186,6 +186,13 @@ def test_ask_returns_empty_on_bad_reply_or_dead_server(monkeypatch):
     assert llm.ask("q") == ""
 
 
+def test_ask_can_turn_off_reasoning(monkeypatch):
+    monkeypatch.setenv("LLM_REASONING_EFFORT", "none")
+    seen = patch_post(monkeypatch, FakeResponse("Ready"))
+    assert llm.ask("hi") == "Ready"
+    assert seen["payload"]["reasoning_effort"] == "none"
+
+
 def test_ask_without_choices_returns_plain_text(monkeypatch):
     patch_post(monkeypatch, FakeResponse("  just words  "))
     assert llm.ask("q") == "just words"
