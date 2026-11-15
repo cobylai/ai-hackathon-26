@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inbox - test@example.edu - Cornell Mail</title>
+<style>
+  body { font: 14px system-ui, sans-serif; margin: 0; }
+  #compose-panel { display: none; position: fixed; right: 24px; bottom: 0; width: 420px;
+                   border: 1px solid #bbb; background: #fff; padding: 8px; }
+  #compose-panel input, #compose-panel [role=textbox] { display: block; width: 100%; margin: 4px 0;
+                   border: 1px solid #ddd; min-height: 24px; }
+  #compose-panel [role=textbox] { min-height: 90px; }
+</style>
+</head>
+<body>
+<!-- Made-up mail. Compose reopens a draft the way Gmail restores one; the text is fiction. -->
+<div class="z0">
+  <div class="T-I T-I-KE L3" role="button" tabindex="0" id="compose">Compose</div>
+</div>
+
+<table role="grid" aria-label="Inbox"><tbody>
+  <tr role="row" class="zA yO">
+    <td class="yX xY" role="gridcell">
+      <span class="bA4"><span class="yP" email="priya.raman@example.edu" name="Priya Raman">Priya Raman</span></span>
+    </td>
+    <td class="xY a4W" role="gridcell">
+      <div class="xS" role="link"><div class="xT"><div class="y6">
+        <span class="bog"><span data-thread-id="#thread-f:1" data-legacy-thread-id="t1">Re: Lab safety training</span></span>
+        <span class="y2">- Yes, Thursday at 2 works for me.</span>
+      </div></div></div>
+    </td>
+    <td class="xW xY" role="gridcell"><span title="Sat, Nov 14, 2026, 9:12 AM"></span></td>
+  </tr>
+</tbody></table>
+
+<!-- A draft Gmail restores: recipients, subject and body are already there. -->
+<div id="compose-panel" role="region" aria-label="New Message">
+  <h2 id="compose-status"></h2>
+  <span email="night.owl@example.edu">night.owl@example.edu</span>
+  <input aria-label="To recipients" id="compose-to">
+  <input name="subjectbox" aria-label="Subject" id="compose-subject" value="Old draft from last night">
+  <div role="textbox" contenteditable="true" aria-label="Message Body"
+       id="compose-body">Half-written note from last night, do not lose this.</div>
+  <button aria-label="Save &amp; close" id="compose-close">Save &amp; close</button>
+</div>
+
+<script>
+  document.getElementById('compose').addEventListener('click', function () {
+    document.getElementById('compose-panel').style.display = 'block';
+  });
+  document.getElementById('compose-close').addEventListener('click', function () {
+    document.getElementById('compose-panel').style.display = 'none';
+  });
+</script>
+</body>
+</html>

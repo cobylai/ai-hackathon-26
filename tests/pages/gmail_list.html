@@ -144,6 +144,20 @@
   }
   [to, subject, body].forEach(function (el) { el.addEventListener('input', touch); });
 
+  // Gmail turns a typed address into a chip; the fixture does the same.
+  to.addEventListener('keydown', function (event) {
+    if (event.key !== 'Enter') { return; }
+    event.preventDefault();
+    var address = to.value.trim();
+    if (!address) { return; }
+    var chip = document.createElement('span');
+    chip.setAttribute('email', address);
+    chip.textContent = address;
+    to.parentElement.insertBefore(chip, to);
+    to.value = '';
+    touch();
+  });
+
   document.getElementById('compose-close').addEventListener('click', function () {
     panel.style.display = 'none';
     statusEl.textContent = '';

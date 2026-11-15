@@ -1,8 +1,10 @@
 """Create Gmail drafts. There is deliberately no send function here.
 
-``new`` starts a fresh compose; ``reply`` answers thread ``n`` from the last
-search. Both save with Gmail's "Save & close" button and report whether Gmail
-confirmed the save with its "Draft saved" label.
+Safety comes first: clicking Compose can surface a draft Gmail restored from an
+earlier session. This module refuses to touch anything that is not a blank
+"New Message", and after typing it checks that the recipient list is exactly
+the one address asked for with no Cc or Bcc. On any doubt it returns ``ERR``
+and leaves the compose alone instead of saving.
 """
 
 from __future__ import annotations
@@ -14,6 +16,27 @@ from harness.email import read, search, selectors
 from harness.email.status import LOGIN_LINE, signed_in
 
 DRAFT_SAVED = "OK draft saved"
+
+# Reads the compose form around a body textbox: recipients, fields and region.
+COMPOSE_STATE_JS = """el => {
+  const region = el.closest('[role=region]');
+  let root = el;
+  while (root && !root.querySelector("input[name='subjectbox']")) root = root.parentElement;
+  if (!root) root = region;
+  if (!root) return null;
+  const copy = el.cloneNode(true);
+  copy.querySelectorAll('.gmail_quote, blockquote').forEach(n => n.remove());
+  const val = sel => { const e = root.querySelector(sel); return e ? e.value : null; };
+  return {
+    region: region ? (region.getAttribute('aria-label') || '') : '',
+    chips: [...root.querySelectorAll('[email]')].map(e => e.getAttribute('email')).filter(Boolean),
+    to: val("input[aria-label='To recipients']"),
+    cc: val("input[aria-label='Cc recipients']"),
+    bcc: val("input[aria-label='Bcc recipients']"),
+    subject: val("input[name='subjectbox']"),
+    body: copy.textContent || ''
+  };
+}"""
 
 
 def _short(exc: Exception) -> str:
@@ -33,6 +56,81 @@ def _wait_visible(page: Page, name: str, timeout_ms: int = 15000):
         page.wait_for_timeout(400)
         waited += 400
     return selectors.first_visible(page, name)
+
+
+def _body_without_signature(text: str) -> str:
+    """What the user typed, ignoring a ``-- `` signature block."""
+    kept: list[str] = []
+    for line in (text or "").splitlines():
+        stripped = line.strip()
+        if stripped in ("--", "-- ") or stripped.startswith("-- "):
+            break
+        if stripped:
+            kept.append(stripped)
+    return " ".join(kept).strip()
+
+
+def compose_state(page: Page, body) -> dict | None:
+    """Recipients, fields and region of the compose form that holds ``body``."""
+    try:
+        return body.evaluate(COMPOSE_STATE_JS)
+    except Exception:
+        return None
+
+
+def blank_problem(state: dict | None) -> str:
+    """Why this compose must not be typed into ("" when it is a fresh message)."""
+    if not state:
+        return "compose form not found"
+    region = (state.get("region") or "").strip().lower()
+    if region and "new message" not in region:
+        return f"compose is not a new message ({state['region']})"
+    found: list[str] = []
+    chips = [chip for chip in (state.get("chips") or []) if chip]
+    if chips:
+        found.append(f"{len(chips)} recipient(s)")
+    for key in ("to", "cc", "bcc", "subject"):
+        if (state.get(key) or "").strip():
+            found.append(key.capitalize())
+    if _body_without_signature(state.get("body") or ""):
+        found.append("body")
+    return ("draft already has " + ", ".join(found)) if found else ""
+
+
+def recipient_problem(state: dict | None, address: str) -> str:
+    """Why the recipients are not exactly ``address`` with empty Cc and Bcc."""
+    if not state:
+        return "compose form not found"
+    want = (address or "").strip().lower()
+    chips = [chip.strip().lower() for chip in (state.get("chips") or []) if chip]
+    typed = (state.get("to") or "").strip().lower()
+    if chips != [want] and not (not chips and typed == want):
+        shown = ", ".join(chips) if chips else (typed or "none")
+        return f"recipients are {shown}; expected only {want}"
+    for key in ("cc", "bcc"):
+        if (state.get(key) or "").strip():
+            return f"{key.upper()} is not empty"
+    return ""
+
+
+def close_open_composes(page: Page, limit: int = 5) -> int:
+    """Save & close every compose that is open, leaving its content unchanged."""
+    closed = 0
+    for _ in range(limit):
+        buttons = selectors.all_in(page, "compose_close")
+        target = None
+        for i in range(buttons.count()):
+            try:
+                if buttons.nth(i).is_visible():
+                    target = buttons.nth(i)
+            except Exception:
+                continue
+        if target is None:
+            break
+        target.click()
+        page.wait_for_timeout(400)
+        closed += 1
+    return closed
 
 
 def open_compose(page: Page) -> None:
@@ -61,17 +159,37 @@ def close_compose(page: Page) -> None:
 
 def new(to: str, subject: str, body: str) -> str:
     """Compose and save a new draft; returns ``OK draft saved`` or ``ERR ...``."""
-    if not (to or "").strip():
+    address = (to or "").strip()
+    if not address:
         return "ERR mail.google.com | no recipient | give a to address"
     page = get_session().start().page
     if not signed_in(page):
         return LOGIN_LINE
     try:
+        close_open_composes(page)
         open_compose(page)
-        _wait_visible(page, "compose_to", timeout_ms=10000).fill(to.strip())
+        box = _wait_visible(page, "compose_body", timeout_ms=10000)
+        if not box.count():
+            return "ERR mail.google.com | compose did not open"
+
+        problem = blank_problem(compose_state(page, box))
+        if problem:
+            close_compose(page)  # saves the restored draft unchanged
+            return f"ERR mail.google.com | refused to edit a restored draft | {problem}"
+
+        _wait_visible(page, "compose_to", timeout_ms=10000).fill(address)
         page.keyboard.press("Enter")  # turn the typed address into a chip
+        page.wait_for_timeout(400)
+        problem = recipient_problem(compose_state(page, box), address)
+        if problem:
+            return f"ERR mail.google.com | stopped before writing | {problem}"
+
         _wait_visible(page, "compose_subject").fill(subject or "")
-        _wait_visible(page, "compose_body").fill(body or "")
+        box.fill(body or "")
+        page.wait_for_timeout(300)
+        problem = recipient_problem(compose_state(page, box), address)
+        if problem:
+            return f"ERR mail.google.com | not saved | {problem}"
         if not wait_saved(page):
             close_compose(page)
             return "ERR mail.google.com | draft did not save | Gmail showed no 'Draft saved'"
@@ -115,6 +233,11 @@ def reply(n: int, body: str) -> str:
         box = _wait_visible(page, "compose_body", timeout_ms=10000)
         if not box.count():
             return "ERR mail.google.com | reply box did not open"
+
+        state = compose_state(page, box)
+        if state and _body_without_signature(state.get("body") or ""):
+            return "ERR mail.google.com | refused to edit a restored reply draft | body is not empty"
+
         box.fill(body or "")
         if not wait_saved(page):
             close_compose(page)
