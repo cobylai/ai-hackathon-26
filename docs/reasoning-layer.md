@@ -11,6 +11,12 @@ a.text      # the answer; ends with its source
 a.route     # "due" | "person" | "bank" | "web" | "offline" | "not_found"
 a.sources   # bank entry paths, or [url] on the web route
 a.seconds
+a.rows      # what a due / calendar / person answer listed, for follow-ups
+
+from reason.session import Session
+s = Session()                                  # one conversation, in memory only
+answer("what's due tomorrow", session=s)
+answer("and Friday?", session=s)               # due again, for Friday
 ```
 
 Both front ends are thin wrappers over `answer()`; neither adds logic.
@@ -21,7 +27,7 @@ Both front ends are thin wrappers over `answer()`; neither adds logic.
 MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason [--today YYYY-MM-DD] [--no-voice]
 ```
 
-Type a question and press Enter. Press Enter on an empty line to talk, and Enter again to stop; the words heard are printed as `you (spoken)>` and answered like typed text. `quit` or Ctrl-D exits.
+Type a question and press Enter. Press Enter on an empty line to talk, and Enter again to stop; the words heard are printed as `you (spoken)>` and answered like typed text. `quit` or Ctrl-D exits. `--speak` reads each answer aloud with the Mac's `say` (no Source line); talking or a new question stops it.
 
 **Chat window** (one local page, standard library only, nothing loaded from the internet, so it opens with Wi-Fi off):
 
@@ -48,10 +54,17 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
 - Code reads the Triggers patterns, the Wording and Not found lines, and the Prompt blocks (`reason/playbook.py`). Edit a file and restart Muse to change how a route answers. Code keeps no second copy of the wording.
 - The steps' order is code. `STEPS` in `reason/answer.py` must match each file's numbered steps (`reason/tests/test_playbooks.py`).
 - The bank/web judge and rephrase prompts live in `sufficiency/prompts.py`; `bank.md` and `web.md` hold copies, and a test fails if they drift.
-- Checker: `MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check` runs every Examples table on a temporary copy of the bank with the network blocked. 27/27 on 2026-11-15 (14 when the playbooks landed, 13 more with remember and people). Brief M's check gave the same output line for line before and after the move (37/38).
+- Checker: `MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check` runs every Examples table on a temporary copy of the bank with the network blocked. 27/27 on 2026-11-15 (14 when the playbooks landed, 13 more with remember and people). Brief M's check gave the same output line for line before and after the move (37/38). 69/69 after follow-ups (`followup.md` adds 19, run in order as one conversation; 50 before).
 
 ## Routes, checked in this order
 
+-2. **Follow-up** (`reason/session.py`, `playbooks/followup.md`), only when the front end passes a `Session` (the chat loop and the window do; `playbook_check` gives each playbook file one) and no discovery question or action waits for a yes. Code only, no model call.
+   - "and tomorrow?", "what about Friday?", "and next week?" (anything the date table below names) after a due or calendar answer: that route again for the new range.
+   - "and <name>?" (one to three name-like words) after a person or "who is" answer: the last question with the name swapped. An unknown name gets "I have nothing from <name>."
+   - "the first one" … "the tenth one", "the last one", "number 2", "that one": the row, its summary and source. "who sent that?" and "when is it due?" (or "… the second one") answer from the row. With no ordinal: the row picked last, else the only row, else "Which one?". These come back as route `followup` and keep the rows, so "the second one" still works next.
+   - "open it" / "open the first one": `act.plan_row` holds an open (the row's link, or Calendar for an event) and asks for a yes; mail without a link says so.
+   - Anything else is a new question, and an answer that listed nothing (bank, offline…) ends the rows, so "the first one" after it is a new question too.
+   - The session is in memory: one per chat loop run, one for the window server (it serves one person; the Mac app shows the same page). Gone on restart. Nothing is written to the bank.
 -1. **Discover** (`discover/`, `playbooks/discover.md`), checked before everything: "discover" starts a run of at most 10 yes/no questions about the user, built by code from the bank and Apple Calendar (Bonsai only guesses a relation). While a question is held, yes / no / skip / stop answer it; any other input ends the run. Only a yes writes (me store or person page). "What have you learned" and "unlearn N" review. The window has a Discover button and Yes / No / Skip / Stop buttons.
 0. **Remember, forget, about_me, people** (`reason/me.py`, `playbooks/remember.md`, `playbooks/people.md`). Code only, no model call, checked before due, so "remember the essay is due Monday" becomes a note.
    - **remember:** the sentence starts with "remember (that)", "note that" or "don't forget (that)". A leading dash from voice, "Muse," and "please" are dropped first. A sentence ending in "?" doesn't count, and neither does "do you remember …". The rest is filed in the user's words (`bank.remember`: kind "me", folder `me/`).
@@ -138,6 +151,8 @@ The web seconds include gather (the partner's engine.search and open_page) and t
 ```bash
 uv run python -m unittest discover -s reason/tests -t .
 ```
+
+110 pass on 2026-11-15 (`test_session.py` adds 15: date, name and row follow-ups after due, calendar and person questions, "open it" through act, unrelated questions not taken as follow-ups, nothing written, `say` start/stop and the Source line dropped, the window's Speak switch and stop on talk, one session for the window, the chat loop's `--speak`). Earlier count:
 
 63 pass (`test_me.py` adds the remember, forget, about_me and people routes with any model call failing the test; bank/tests/test_me.py covers `bank.remember/notes/forget` and `bank.people`; `test_playbooks.py` adds the playbook checks: sections, step counts, every wording key code uses and its placeholders, the sufficiency prompt copies). They cover:
 - every row of the date table, plus Sunday "this weekend"
