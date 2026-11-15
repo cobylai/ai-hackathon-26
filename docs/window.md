@@ -23,7 +23,7 @@ The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it 
 ### First launch (once, online or off)
 
 1. It asks for the Argmax `ax_` key and keeps it in the login Keychain as **"Muse Argmax key"**. It is never written to the repo, the app or a file. Change it with Set Argmax key….
-2. macOS asks for the **microphone**, **Calendar** (Automation) and **Accessibility** (for Fn-Space) for Muse. Allow all three; Accessibility opens System Settings, where you turn Muse on. The hotkey starts working within 2 s, no relaunch. Muse starts the Python server, so macOS charges both allows to Muse; asking at launch means nothing asks mid-demo.
+2. macOS asks for the **microphone**, **Calendar** (Automation) and **Accessibility** (for Fn-Space) for Muse. Allow all three; Accessibility opens System Settings, where you turn Muse on. The hotkey starts working within 2 s, no relaunch. Muse starts the Python server, so macOS charges the microphone and Calendar allows to Muse; asking at launch means nothing asks mid-demo.
 
 ### What it does on every launch
 
