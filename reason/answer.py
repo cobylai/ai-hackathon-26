@@ -250,6 +250,11 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
     if not q:
         return Answer("Ask me something.", "none", [], 0.0)
 
+    from . import act  # actions first: "draft a reply to Felix" names a sender
+    if (a := act.handle(q, today, root)) is not None:
+        a.seconds = round(time.monotonic() - t0, 2)
+        return a
+
     if route.is_due(q):
         a = _due(q, today, root)
     elif (who := route.person_in(q, _senders(root))):
