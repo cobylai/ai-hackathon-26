@@ -397,7 +397,12 @@ def do_add_event(ev: dict) -> str:
 def do_add_reminder(r: dict) -> str:
     from . import computer
     from applecal import write
-    computer.add_reminder(r)
+    try:
+        computer.add_reminder(r)
+    except Exception as e:  # Reminders not running is the usual one: "Connection is invalid. (-609)"
+        if "-609" in str(e) or "Connection is invalid" in str(e):
+            return say("schedule", "reminders_closed")
+        raise
     return say("schedule", "reminder_added", name=r["name"], list=write.REMINDER_LIST)
 
 

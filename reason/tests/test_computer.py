@@ -84,6 +84,14 @@ class Dates(unittest.TestCase):
         self.assertGreater(r["remind_at"], datetime.now())
         self.assertEqual(r["due"], datetime(2026, 11, 15, 12, 0))
 
+    def test_reminders_closed_says_how_to_fix_it(self):
+        r = {"name": "Submit Homework 9", "due": datetime(2026, 11, 20, 23, 59),
+             "remind_at": datetime(2026, 11, 19, 9), "note": ""}
+        boom = RuntimeError("CalendarError: Reminders got an error: Connection is invalid. (-609)")
+        with mock.patch("reason.computer.add_reminder", side_effect=boom):
+            text = act.do_add_reminder(r)
+        self.assertIn("Reminders isn't open", text)
+
     def test_gmail_url_only_for_real_threads(self):
         self.assertIn("authuser=ilovelocalai@gmail.com#all/1a1dd43fcca5e8ee",
                       computer.gmail_url({"source": "gmail:1a1dd43fcca5e8ee#0"}))
