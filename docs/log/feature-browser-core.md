@@ -17,3 +17,4 @@
 - B9 recommendation: stay on plain Playwright. patchright costs a second 570 MB browser build and removed no real wall. Notes in docs/plan/notes-botwalls.md; "Just a moment" is missing from the B6 phrase list (left open).
 - B6 test: challenge-iframe fixture now waits for the frame before classifying; removes a flake seen once in four full-file runs.
 - B8 test-only: sign-in command is checked for no remote-debugging/headless/automation flags, mock keychain parity, and refusal on a locked profile. The human sign-in run is still pending.
+- B6 fix: "captcha" and "access denied" now only count on wall-sized pages (body <= 1500 chars). Wikipedia's CAPTCHA article (29k chars) was BLOCKED, now OK; Reddit and StackOverflow still BLOCKED live.
