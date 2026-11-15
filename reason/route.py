@@ -76,6 +76,26 @@ def due_range(question: str, today: date) -> tuple[date, date, str]:
     return today, today + timedelta(days=6), "in the next 7 days"
 
 
+_CAL = re.compile(r"\b(calendar|schedule)\b"
+                  r"|\b(?:my|any) (?:next |upcoming |first )?(?:meetings?|events?|appointments?)\b"
+                  r"|\bwhat do i have\b|\bwhat am i doing\b|\bam i (?:busy|free)\b", re.I)
+_NEXT_EVENT = re.compile(r"\b(next|upcoming)\s+(meeting|event|appointment|thing)s?\b"
+                         r"|\bwhen is my next\b", re.I)
+
+
+def is_calendar(question: str) -> bool:
+    """Calendar questions: 'what's on my calendar tomorrow', 'when is my next meeting',
+    'what do I have this week'. Checked after due and before person. 'What did <name>
+    say about the meeting' stays a person question."""
+    q = question or ""
+    return bool(_CAL.search(q) or _NEXT_EVENT.search(q)) and not asked_name(q)
+
+
+def is_next_event(question: str) -> bool:
+    """'When is my next meeting' / 'next event': the first upcoming event."""
+    return bool(_NEXT_EVENT.search(question or ""))
+
+
 def _day(d: date) -> str:
     return f"{d:%a} {d:%b} {d.day}"
 
