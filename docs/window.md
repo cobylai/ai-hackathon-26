@@ -75,6 +75,9 @@ At the 640 pt panel size, light and dark (the before shots are from before the r
 | after, bar | ![](window/after-panel-bar-light.png) | ![](window/after-panel-bar-dark.png) |
 | after, chats open | ![](window/after-panel-chats-light.png) | ![](window/after-panel-chats-dark.png) |
 | after, chats, delete armed | | ![](window/after-panel-chats-delete-dark.png) |
+| after, Suggested rows | ![](window/after-panel-suggest-light.png) | ![](window/after-panel-suggest-dark.png) |
+| after, draft from a suggestion | ![](window/after-panel-draft-light.png) | ![](window/after-panel-draft-dark.png) |
+| after, compose answer | ![](window/after-panel-compose-light.png) | ![](window/after-panel-compose-dark.png) |
 
 At 420 px, rows stack: ![](window/after-narrow-light.png)
 
