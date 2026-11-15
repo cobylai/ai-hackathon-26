@@ -1,15 +1,24 @@
 {
-  "run": 1,
+  "run": 2,
+  "variant": [
+    true,
+    false
+  ],
   "size": "4B",
   "model": "/Users/cobylai/code/ai-hackathon-26/samples/bonsai-models/mlx/models/bonsai2-4b-mlx",
   "summary": {
-    "orig": 8,
+    "orig": 7,
     "new": 7,
-    "s09": [
-      true
+    "s09": true,
+    "s10": true,
+    "pointers_right": "2/4",
+    "enough_right": "9/9",
+    "misses": [
+      "p07_partial_no",
+      "s03_elsewhere_no"
     ],
-    "median_s_per_judge": 1.51,
-    "median_s_per_model_call": 1.51
+    "median_s_per_judge": 1.23,
+    "median_s_per_model_call": 1.23
   },
   "rows": [
     {
@@ -19,11 +28,11 @@
       "expected": "enough",
       "enough": true,
       "reason": "answered",
-      "answer": "Rain likely after 1pm",
+      "answer": "Rain likely after 1pm, 80% chance of precipitation",
       "evidence": "Saturday: Rain likely after 1pm, 80% chance of precipitation, high 47F.",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 2.08
+      "seconds": 1.82
     },
     {
       "id": "p02_course_due_yes",
@@ -32,11 +41,11 @@
       "expected": "enough",
       "enough": true,
       "reason": "answered",
-      "answer": "Problem Set 5 (Wed Nov 11, 11:59pm) and Lab 12 checkoff (Fri Nov 13, in section)",
-      "evidence": "- Due: Problem Set 5 (Wed Nov 11, 11:59pm)\n- Due: Lab 12 checkoff (Fri Nov 13, in section)",
+      "answer": "Problem Set 5 (Wed Nov 11, 11:59pm), Lab 12 checkoff (Fri Nov 13, in section)",
+      "evidence": "Due: Problem Set 5 (Wed Nov 11, 11:59pm)\nDue: Lab 12 checkoff (Fri Nov 13, in section)",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 3.62
+      "seconds": 4.08
     },
     {
       "id": "p03_ads_no",
@@ -49,7 +58,7 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.79
+      "seconds": 0.84
     },
     {
       "id": "p04_unrelated_no",
@@ -62,7 +71,7 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.77
+      "seconds": 0.86
     },
     {
       "id": "p05_login_no",
@@ -75,7 +84,7 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.8
+      "seconds": 0.81
     },
     {
       "id": "p06_hours_yes",
@@ -84,24 +93,24 @@
       "expected": "enough",
       "enough": true,
       "reason": "answered",
-      "answer": "NO",
+      "answer": "CLOSED",
       "evidence": "Thu Nov 26 (Thanksgiving): CLOSED",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 1.01
+      "seconds": 1.18
     },
     {
       "id": "p07_partial_no",
       "group": "orig",
-      "correct": true,
+      "correct": false,
       "expected": "not enough",
-      "enough": false,
-      "reason": "no_answer",
-      "answer": null,
-      "evidence": null,
+      "enough": true,
+      "reason": "answered",
+      "answer": "Office hours are posted weekly on the course calendar. Check Ed Discussion for changes.",
+      "evidence": "Office hours are posted weekly on the course calendar. Check Ed Discussion for changes.",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.82
+      "seconds": 1.28
     },
     {
       "id": "p08_recipe_yes",
@@ -110,11 +119,11 @@
       "expected": "enough",
       "enough": true,
       "reason": "answered",
-      "answer": "55 to 65 minutes",
-      "evidence": "Bake 55 to 65 minutes, until a toothpick comes out clean.",
+      "answer": "Bake 55 to 65 minutes",
+      "evidence": "Preheat oven to 350F.\nBake 55 to 65 minutes, until a toothpick comes out clean.",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 1.48
+      "seconds": 1.33
     },
     {
       "id": "s01_paraphrase_yes",
@@ -123,11 +132,11 @@
       "expected": "enough",
       "enough": true,
       "reason": "answered",
-      "answer": "8:30 PM",
+      "answer": "Evening meal service ends at 8:30 PM (opens 5:00 PM).",
       "evidence": "Evening meal service ends at 8:30 PM (opens 5:00 PM).",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 2.37
+      "seconds": 1.3
     },
     {
       "id": "s02_paraphrase_yes",
@@ -136,11 +145,11 @@
       "expected": "enough",
       "enough": true,
       "reason": "answered",
-      "answer": "yes",
+      "answer": "Vehicles left in campus lots between 2am and 6am must display a valid overnight pass, available from the Transportation Office for $5 per night.",
       "evidence": "Vehicles left in campus lots between 2am and 6am must display a valid overnight pass, available from the Transportation Office for $5 per night.",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 1.83
+      "seconds": 1.55
     },
     {
       "id": "s03_elsewhere_no",
@@ -153,7 +162,7 @@
       "evidence": "Meeting times are posted on our Instagram, @chessclub_example.",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 1.51
+      "seconds": 1.01
     },
     {
       "id": "s04_elsewhere_no",
@@ -166,7 +175,7 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.84
+      "seconds": 0.68
     },
     {
       "id": "s05_long_end_yes",
@@ -175,11 +184,11 @@
       "expected": "enough",
       "enough": true,
       "reason": "answered",
-      "answer": "12",
+      "answer": "Each resident receives 12 overnight guest passes per semester; unused passes do not carry over.",
       "evidence": "Each resident receives 12 overnight guest passes per semester; unused passes do not carry over.",
       "chunk": 1,
       "chunks": 2,
-      "seconds": 15.7
+      "seconds": 15.23
     },
     {
       "id": "s06_long_end_yes",
@@ -188,11 +197,11 @@
       "expected": "enough",
       "enough": true,
       "reason": "answered",
-      "answer": "Yes, a basic four-function calculator is allowed; graphing and scientific calculators are not.",
+      "answer": "A basic four-function calculator is allowed; graphing and scientific calculators are not.",
       "evidence": "May I bring a calculator?\nA: A basic four-function calculator is allowed; graphing and scientific calculators are not.",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 2.25
+      "seconds": 2.32
     },
     {
       "id": "s07_similar_no",
@@ -205,7 +214,7 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.81
+      "seconds": 0.9
     },
     {
       "id": "s08_similar_no",
@@ -218,7 +227,7 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 1.82
+      "seconds": 0.96
     },
     {
       "id": "s09_two_items_yes",
@@ -231,7 +240,20 @@
       "evidence": "Bring your Cornell student ID; we will check it at the door.\nYou will also need a pencil; exams written in pen will not be regraded.",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 2.23
+      "seconds": 2.94
+    },
+    {
+      "id": "s10_pointer_no",
+      "group": "new",
+      "correct": true,
+      "expected": "not enough",
+      "enough": false,
+      "reason": "no_answer",
+      "answer": null,
+      "evidence": null,
+      "chunk": 0,
+      "chunks": 1,
+      "seconds": 1.0
     }
   ]
 }

@@ -97,11 +97,12 @@ from sufficiency import judge, rephrase, gather
 
 judge(question: str, page_text: str, url: str | None = None, today: date | str | None = None) -> Verdict
     # Verdict: enough: bool, answer: str | None, evidence: str | None (quote checked to be in the page),
-    #          reason: "answered" | "no_answer" | "quote_not_in_page" | "bad_json",
+    #          reason: "answered" | "no_answer" | "quote_not_in_page" | "bad_json"
+    #                  | "not_this_question" (only with the optional check call, off by default),
     #          url: str | None, chunk: int, chunks: int, seconds: float
 rephrase(question: str, tried_queries: list[str], today=None) -> str | None   # None after two repeats
 gather(question: str, search_fn, open_fn, max_results: int = 10, max_rephrases: int = 2,
-       today=None) -> GatherResult
+       today=None, max_seconds: float | None = 60) -> GatherResult
     # GatherResult: found: bool, answer: str | None, evidence: str | None,
     #               source: Hit(title, url, snippet) | None, queries: list[str],
     #               opened: list[str] (urls), verdicts: list[Verdict], message: str
@@ -112,6 +113,8 @@ gather(question: str, search_fn, open_fn, max_results: int = 10, max_rephrases: 
 - **Sampling.** Judging runs at temperature 0.2, using the new `sampling=` argument in `llm/client.py`.
 - **Gather.** It searches with the question itself, keeps the first 10 hits, and moves hits whose title or snippet shares no word with the question to the end. It opens each URL once and stops at the first page that's enough. If none is, it rephrases at most 2 times, so at most 3 searches and 30 pages. Then it returns `found=False` with every query and URL it tried.
 - **Failed pages.** If `open_fn` raises or returns empty `text`, that URL is skipped.
+- **Time limit.** `max_seconds` (default 60, `None` for no limit) stops the loop and returns the normal not-found result, with a message starting "Ran out of time". A judge call already running is not cut off.
+- **Known weak spot.** A page that only says where the answer is ("posted on our Instagram") can be accepted as the answer.
 
 ## 5. Context store — **planned** (`bank/`, branch `context-store`)
 

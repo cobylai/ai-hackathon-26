@@ -99,6 +99,38 @@ class Judge(unittest.TestCase):
         self.assertEqual(kw["sampling"], prompts.JUDGE_SAMPLING)
 
 
+class CheckCall(unittest.TestCase):
+    def run_with(self, check_text):
+        good = {"answer": "No, it is closed", "quote": "Thu Nov 26 (Thanksgiving): CLOSED"}
+        with mock.patch.object(prompts, "CHECK_ANSWER", True), stub_json(good), \
+                mock.patch.object(client, "chat",
+                                  return_value=client.Reply(text=check_text)) as ch:
+            v = J.judge("Is the gym open on Thanksgiving?", PAGE, today="Friday")
+        return v, ch
+
+    def test_yes_keeps(self):
+        v, ch = self.run_with("A")
+        self.assertTrue(v.enough)
+        self.assertIn("PROPOSED ANSWER: No, it is closed", ch.call_args[0][0][-1]["content"])
+
+    def test_no_rejects(self):
+        v, _ = self.run_with("B")
+        self.assertEqual((v.enough, v.reason, v.evidence), (False, "not_this_question", None))
+
+    def test_off_by_default_no_call(self):
+        good = {"answer": "closed", "quote": "Thu Nov 26 (Thanksgiving): CLOSED"}
+        with stub_json(good), mock.patch.object(client, "chat") as ch:
+            self.assertTrue(J.judge("q", PAGE).enough)
+        ch.assert_not_called()
+
+
+class PromptVariants(unittest.TestCase):
+    def test_pointer_rule_switch(self):
+        self.assertNotIn("is not an answer", prompts.judge_prompt("q", "p", None, "t"))
+        with mock.patch.object(prompts, "USE_POINTER_RULE", True):
+            self.assertIn("is not an answer", prompts.judge_prompt("q", "p", None, "t"))
+
+
 class Chunking(unittest.TestCase):
     def test_stops_at_first_enough_chunk(self):
         sections = [f"Section {i}\n" + ("Filler sentence about nothing much. " * 40) for i in range(6)]

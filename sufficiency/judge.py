@@ -27,7 +27,7 @@ class Verdict:
     enough: bool
     answer: str | None
     evidence: str | None    # the quote, only when it passed the check
-    reason: str             # answered | no_answer | quote_not_in_page | bad_json
+    reason: str             # answered | no_answer | quote_not_in_page | not_this_question | bad_json
     url: str | None = None
     chunk: int = 0          # index of the chunk that answered (or the last one judged)
     chunks: int = 1
@@ -72,7 +72,7 @@ def _judge_one(question: str, page: str, url: str | None, today: str) -> tuple[V
     try:
         got = client.complete_json(
             prompts.judge_prompt(question, page, url, today), system=prompts.JUDGE_SYSTEM,
-            json_schema_hint=prompts.JUDGE_HINT, max_tokens=prompts.JUDGE_MAX_TOKENS,
+            json_schema_hint=prompts.judge_hint(), max_tokens=prompts.JUDGE_MAX_TOKENS,
             sampling=prompts.JUDGE_SAMPLING)
     except client.JSONReplyError:
         return Verdict(False, None, None, "bad_json", url), time.monotonic() - t0
@@ -85,7 +85,17 @@ def _judge_one(question: str, page: str, url: str | None, today: str) -> tuple[V
     quote = _as_text(quote)
     if not quote_in_page(quote, page):
         return Verdict(False, None, None, "quote_not_in_page", url), dt
-    return Verdict(True, _as_text(answer).strip(), quote.strip(), "answered", url), dt
+    answer = _as_text(answer).strip()
+    if prompts.CHECK_ANSWER:
+        t1 = time.monotonic()
+        r = client.chat([{"role": "system", "content": prompts.CHECK_SYSTEM},
+                         {"role": "user", "content": prompts.check_prompt(
+                             question, answer, quote, today)}],
+                        max_tokens=prompts.CHECK_MAX_TOKENS, sampling=prompts.JUDGE_SAMPLING)
+        dt += time.monotonic() - t1
+        if not r.text.strip().lstrip("\"'*`( ").upper().startswith("A"):
+            return Verdict(False, None, None, "not_this_question", url), dt
+    return Verdict(True, answer, quote.strip(), "answered", url), dt
 
 
 def judge(question: str, page_text: str, url: str | None = None,

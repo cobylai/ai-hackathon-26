@@ -8,6 +8,7 @@ assumed only in _hits() and _page() below:
 from __future__ import annotations
 
 import re
+import time
 from dataclasses import dataclass, field
 from datetime import date
 
@@ -85,11 +86,23 @@ def _order(question: str, hits: list[Hit]) -> list[Hit]:
 
 
 def gather(question: str, search_fn, open_fn, max_results: int = 10,
-           max_rephrases: int = 2, today: date | str | None = None) -> GatherResult:
+           max_rephrases: int = 2, today: date | str | None = None,
+           max_seconds: float | None = 60) -> GatherResult:
+    """Stops and returns not-found once max_seconds have passed (None = no limit)."""
     res = GatherResult(False, None, None, None)
+    deadline = None if max_seconds is None else time.monotonic() + max_seconds
+    timed_out = False
+
+    def out_of_time() -> bool:
+        nonlocal timed_out
+        timed_out = timed_out or (deadline is not None and time.monotonic() >= deadline)
+        return timed_out
+
     unreadable = 0
     query: str | None = question
     for round_ in range(max_rephrases + 1):
+        if out_of_time():
+            break
         res.queries.append(query)
         try:
             hits = _hits(search_fn(query))[:max_results]
@@ -98,6 +111,8 @@ def gather(question: str, search_fn, open_fn, max_results: int = 10,
         for h in _order(question, hits):
             if h.url in res.opened:
                 continue
+            if out_of_time():
+                break
             res.opened.append(h.url)
             try:
                 page = _page(open_fn(h.url))
@@ -113,12 +128,13 @@ def gather(question: str, search_fn, open_fn, max_results: int = 10,
                 res.message = (f"Found on {h.url} after {len(res.queries)} search(es) "
                                f"and {len(res.opened)} page(s).")
                 return res
-        if round_ == max_rephrases:
+        if round_ == max_rephrases or out_of_time():
             break
         query = rephrase(question, res.queries, today=today)
         if query is None:
             break
     tried = "; ".join(f'"{q}"' for q in res.queries)
-    res.message = (f"Not found after {len(res.queries)} search(es) and {len(res.opened)} "
+    why = f"Ran out of time ({max_seconds:g}s). " if timed_out else ""
+    res.message = why + (f"Not found after {len(res.queries)} search(es) and {len(res.opened)} "
                    f"page(s) ({unreadable} unreadable). Tried: {tried}.")
     return res

@@ -12,14 +12,15 @@ v = judge("Is the gym open on Thanksgiving?", page_text, url=url, today=date.tod
 
 q = rephrase(question, tried_queries)            # str, or None after two repeats
 
-r = gather(question, search_fn, open_fn, max_results=10, max_rephrases=2)
+r = gather(question, search_fn, open_fn, max_results=10, max_rephrases=2, max_seconds=60)
 # GatherResult: found, answer, evidence, source (Hit: title/url/snippet),
 #               queries, opened, verdicts, message
 ```
 
 - `search_fn(query)` returns `[{"title", "url", "snippet"}, ...]`. `open_fn(url)` returns `{"title", "text"}`. A plain string is also accepted from `open_fn`. These shapes are assumed only in `_hits()` and `_page()` in `sufficiency/gather.py`.
 - If `open_fn` raises or returns empty text, that URL is skipped.
-- `reason` is one of `answered`, `no_answer`, `quote_not_in_page`, `bad_json`.
+- `reason` is one of `answered`, `no_answer`, `quote_not_in_page`, `bad_json`, and `not_this_question` (only when `CHECK_ANSWER` is on).
+- `max_seconds` (default 60, `None` for no limit) is checked before each search, each page and each rephrase. Once the time has passed, gather returns the normal not-found result, and its message starts "Ran out of time (60s)." A judge call that has already started is not cut off, so a slow page can run past the limit by one call.
 
 ## How it judges
 
@@ -28,7 +29,7 @@ r = gather(question, search_fn, open_fn, max_results=10, max_rephrases=2)
 3. Pages over `PAGE_BUDGET = 6000` tokens are split with `split_to_budget` and judged chunk by chunk, stopping at the first chunk that answers.
 4. Judging and rephrasing run at temperature 0.2. The other preset values are unchanged. This uses the new `sampling=` argument on `chat`, `complete` and `complete_json` in `llm/client.py`, which is the only change to `llm/`.
 
-### Final judge prompt (unchanged from the plan)
+### Final judge prompt (the shipped `original` variant)
 
 System: `You answer questions using only the web page you are given. You never use outside knowledge and never guess.`
 
@@ -50,57 +51,59 @@ The last paragraph is added by `complete_json`. Settings: `max_tokens=300`, thin
 
 ## Check on 4B
 
-Run with `python -m sufficiency.eval.run_check --runs 3`, using the venv Python, against `scripts/serve_bonsai.sh 4B`. "Today" is Friday 13 November 2026, the same date as the original check.
+Run `python -m sufficiency.eval.run_check --runs 3 --variant <v>` with the venv Python, against a 4B server. "Today" is Friday 13 November 2026, the same date as the original check.
 
+**Fixtures**
 - **Originals:** p01–p08, read in place from `llm/eval/fixtures/` and unchanged.
-- **New:** s01–s08 in `sufficiency/eval/fixtures/`, written once and not tuned against, plus s09 (an answer that needs two items, added after review).
-- **Scoring:** a fixture marked "enough" passes only if the label is right and the evidence also contains the expected text.
+- **New:** s01–s08, written once and not tuned against.
+- **Added after review:** s09 needs two items in the answer. s10 is a pointer page ("for grading weights … consult the syllabus"), worded unlike s03 and written before any results were seen.
+- **Pointer fixtures:** p07, s03, s04 and s10.
 
-Two sets of runs used the same final prompt. The first was on an idle server. The second happened while worker 5 was also sending requests to the same server, so its times are slower.
+**Scoring**
+- A fixture marked "enough" needs the right label and the expected evidence text.
+- s09 is scored on the answer naming both items.
 
-| set | run | originals p01–p08 | new s01–s08 | s09 (two items) | median s per judge |
-|---|---|---|---|---|---|
-| A (idle server) | 1 | **8/8** | **7/8** | not yet written | 0.83 |
-| A | 2 | **8/8** | **7/8** | — | 0.81 |
-| A | 3 | **8/8** | **7/8** | — | 0.86 |
-| B (shared server) | 1 | **8/8** | **7/8** | pass | 1.51 |
-| B | 2 | **8/8** | **7/8** | pass | 1.12 |
-| B | 3 | **8/8** | **7/8** | pass | 1.08 |
+**Bar (thinker 0):** 8/8 on the originals, every pointer fixture right, and no "enough" fixture lost, on each of 3 runs.
 
-- **Target met on all 6 runs.** The target was all 8 originals and at least 7 of 8 new on each run. On the idle server, the median judge call took 0.83 s.
-- **Old misses now pass.** The old label prompt scored 5/8 on the originals, wrongly calling p01, p02 and p06 "not enough". All three pass on every run.
-- **s09, two items.** The question is "what do I bring to the prelim". It is scored on the answer naming both the ID and the pencil. It passed every run, and the model quoted both lines as a list. p02 also lists both due items and quotes both lines on every run, so multi-item answers already work with this prompt.
-- **The one miss, s03 (every run).** The question is "When does the chess club meet this week?", and the page says "Meeting times are posted on our Instagram". The model gives that pointer as the answer and quotes it. The quote really is in the page, so the quote check can't catch it. I left the scoring as it is. s04 ("room assignments will be emailed") is the same kind of case and passed.
-- **s07 and s08 passed every run.** These are the "similar but different question" fixtures. The pre-agreed fallback, a second yes/no call asking "does this answer this exact question", was therefore not added.
-- **s05, the long page.** It is 7,510 tokens, so it splits into 2 chunks; the plan estimated about 9k. The second chunk answered every run, taking 11–14 s in total.
-- **Short answers.** p06's `answer` was just "NO", while its evidence was the CLOSED line. Show `evidence` with `answer`.
+### Results: 4 variants, 3 runs each, all identical across runs
 
-### Prompt wordings tried and rejected
+| variant (`--variant`) | originals | s01–s08 | s09 | s10 | pointers | enough fixtures | misses | median s / judge* |
+|---|---|---|---|---|---|---|---|---|
+| **original** (shipped default) | **8/8** | 7/8 | pass | pass | 3/4 | **9/9** | s03 | 1.33–1.61 |
+| everyline | 7/8 | **8/8** | pass | pass | 3/4 | **9/9** | p07 | 1.25–1.97 |
+| rule (everyline + pointer sentence) | 7/8 | 7/8 | pass | pass | 2/4 | 9/9 | p07, s03 | 1.23–2.01 |
+| check (everyline + A/B check call) | 5/8 | 8/8 | pass | pass | **4/4** | 6/9 | p01, p02, p06 | 2.23–2.42 |
 
-Both of these were tried on the shared server, 3 runs each. Results are in `results/rejected_*`.
-- **"Give the full answer, including every item if there are several, and copy every line…", with the quote hint as a list.** The originals dropped to 7/8 on every run, because p07 ("Office hours are posted weekly on the course calendar") was accepted as an answer. s01–s08 went to 8/8 and s09 passed. That trades a miss on an original for a miss on a new fixture, which fails the target, and it isn't needed for multi-item answers.
-- **The same, plus "A line that only says where the information can be found is not an answer."** Worse: 7/8 and 7/8, missing both p07 and s03. I stopped tuning there.
+\* These runs shared the server with worker 5's evals, so their times are inflated. On an idle server, the original prompt took a median of **0.83 s** per judge call over 3 runs (8/8 and 7/8; commit bf5630d).
 
-Pointer pages (p07, s03) are the remaining weak spot. The fix that follows from this is the second yes/no call above, aimed at pointers rather than at similar questions. It is not built.
+**No variant meets the bar.** I am shipping `original` (`EVERY_LINE = USE_POINTER_RULE = CHECK_ANSWER = False` in `sufficiency/prompts.py`). It loses no real answers, keeps all 8 originals, and handles multi-item answers: s09 and p02 list every item and quote every line. Its one miss is s03.
 
-Results are in `sufficiency/eval/results/4B_run{1,2,3}.json` (set B, which overwrote set A). Set A's numbers are in the table above and in git history at bf5630d.
+- **The pointer miss.** In s03 ("Meeting times are posted on our Instagram") and p07 ("Office hours are posted weekly on the course calendar"), the model gives the pointer as its answer and quotes it. The quote really is in the page, so the quote check can't catch it. Which of the two fails depends on the wording: the original prompt misses s03, and the every-line wording misses p07. s04 and s10 pass in every variant.
+- **The pointer sentence** (the thinker's wording, my one allowed attempt) didn't help: both p07 and s03 still failed. An earlier attempt with my own wording got the same result (`results/rejected_multiline_pointer_prompt/`). I stopped rewording after that.
+- **The check call** is a second short model call that sees only the question, the answer and the quote.
+  - As a yes/no question it backfired: the model answered the question itself. "Is the gym open?" plus "CLOSED" got the reply "no". It rejected 6 of 9 real answers (`results/rejected_check_yesno/`).
+  - Asked as A/B ("gives the information" vs "only says where to find it, or is about something else"), it gets every pointer right. But it rejects p01, p02 and p06 on every run. Those are the three that need date reasoning: "tomorrow" means Saturday, "this week" means Nov 9–13, and Thanksgiving falls on Thu Nov 26. The checker doesn't connect the date words. It also roughly doubles the time per judge call.
+- **s05, the long page.** It is 7,510 tokens, so it splits into 2 chunks; the plan estimated about 9k. The second chunk answers, taking about 11–14 s in total.
+- **Show `evidence` with `answer`.** For p06 the `answer` is just "NO", while its evidence is the CLOSED line.
+
+All result files are in `sufficiency/eval/results/`: `4B_<variant>_run{1,2,3}.json`, plus the `rejected_*` folders from earlier tries.
 
 ### Live gather and rephrase
 
-`python -m sufficiency.eval.live_gather` uses stub search and open functions over the saved fixture pages, with live 4B for judging and rephrasing. Output is in `sufficiency/eval/results/4B_live_gather.txt`.
+`python -m sufficiency.eval.live_gather` uses stub search and open functions over the saved fixture pages, with live 4B and the shipped prompt. Output is in `results/4B_live_gather.txt`.
 - **Found on the first search:** the gym hours page.
-- **Found after one rephrase:** the dining hall page, reached via the query "What time does the dining hall close for dinner on Friday, November 13, 2026?".
-- **Gave up:** after 3 searches and 4 pages, with every query listed in the message.
+- **Found after one rephrase:** the dining hall page.
+- **Gave up:** after 3 searches and 4 pages, with every query in the message.
 - **Rephrase on its own:** it returned a new query that wasn't a repeat.
 
 ## Tests (no server)
 
-`python -m unittest discover -s sufficiency/tests -t .` runs 30 tests with a stubbed client. They cover:
+`python -m unittest discover -s sufficiency/tests -t .` runs 36 tests with a stubbed client. They cover:
 - the quote check, a list of quotes, and the case where every "..." piece is under 8 characters, which must fail
-- judge verdicts, the date passed in, and the sampling setting
+- judge verdicts, the date passed in, the sampling setting, the check call and the prompt switches
 - chunking and stopping at the first chunk that answers
 - rephrase rejecting repeats
-- the gather loop: found on the first search, found after a rephrase, giving up, never reopening a URL, skipping failed opens, `max_results` and title ordering, and the adapter shapes
+- the gather loop: running out of `max_seconds`, found on the first search, found after a rephrase, giving up, never reopening a URL, skipping failed opens, `max_results` and title ordering, and the adapter shapes
 - the `sampling=` merge in `llm/client.py`
 
 ## Not run

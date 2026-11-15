@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 from llm import client, config
-from sufficiency import judge
+from sufficiency import judge, prompts
 
 HERE = Path(__file__).parent
 ROOT = HERE.parent.parent
@@ -26,6 +26,12 @@ ORIG_EVIDENCE = {"p01_weather_yes": ["rain likely"],
                  "p02_course_due_yes": ["problem set 5", "lab 12"],
                  "p06_hours_yes": ["closed"],
                  "p08_recipe_yes": ["350", "55 to 65"]}
+
+
+POINTERS = ["p07_partial_no", "s03_elsewhere_no", "s04_elsewhere_no", "s10_pointer_no"]
+# variant: (EVERY_LINE, USE_POINTER_RULE, CHECK_ANSWER)
+VARIANTS = {"original": (False, False, False), "everyline": (True, False, False),
+            "rule": (True, True, False), "check": (True, False, True)}
 
 
 def load():
@@ -61,26 +67,36 @@ def run_once(n: int, orig, new) -> dict:
             print(f"  run{n} {f['id']:<22} {'OK  ' if ok else 'MISS'} {v.reason:<18} "
                   f"{v.seconds:5.2f}s  {(v.answer or '')[:50]}", file=sys.stderr)
     per_call = [r["seconds"] / max(1, r["chunk"] + 1) for r in rows]
+    ok = {r["id"]: r["correct"] for r in rows}
+    pointers = [i for i in POINTERS if i in ok]
     summary = dict(orig=sum(r["correct"] for r in rows if r["group"] == "orig"),
                    new=sum(r["correct"] for r in rows if r["group"] == "new"
                            and r["id"] <= "s08~"),
-                   s09=[r["correct"] for r in rows if r["id"].startswith("s09")],
+                   s09=ok.get("s09_two_items_yes"), s10=ok.get("s10_pointer_no"),
+                   pointers_right=f"{sum(ok[i] for i in pointers)}/{len(pointers)}",
+                   enough_right=f"{sum(r['correct'] for r in rows if r['expected'] == 'enough')}"
+                                f"/{sum(r['expected'] == 'enough' for r in rows)}",
+                   misses=[r["id"] for r in rows if not r["correct"]],
                    median_s_per_judge=round(statistics.median(r["seconds"] for r in rows), 2),
                    median_s_per_model_call=round(statistics.median(per_call), 2))
-    return {"run": n, "size": config.BONSAI_SIZE, "model": client.loaded_model(),
+    return {"run": n, "variant": [prompts.EVERY_LINE, prompts.USE_POINTER_RULE, prompts.CHECK_ANSWER],
+            "size": config.BONSAI_SIZE, "model": client.loaded_model(),
             "summary": summary, "rows": rows}
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", type=int, default=3)
+    ap.add_argument("--variant", choices=VARIANTS, default="original",
+                    help="original prompt; everyline wording; rule: everyline + pointer sentence; check: everyline + A/B check call")
     a = ap.parse_args()
+    prompts.EVERY_LINE, prompts.USE_POINTER_RULE, prompts.CHECK_ANSWER = VARIANTS[a.variant]
     orig, new = load()
     out = HERE / "results"
     out.mkdir(exist_ok=True)
     for n in range(1, a.runs + 1):
         res = run_once(n, orig, new)
-        (out / f"{config.BONSAI_SIZE}_run{n}.json").write_text(json.dumps(res, indent=2) + "\n")
+        (out / f"{config.BONSAI_SIZE}_{a.variant}_run{n}.json").write_text(json.dumps(res, indent=2) + "\n")
         print(f"run{n}: {json.dumps(res['summary'])}")
 
 

@@ -100,6 +100,28 @@ class Gather(unittest.TestCase):
         self.assertTrue(r.found)
         self.assertEqual(opened[0], "https://rec.example.edu/hours")  # title match goes first
 
+    def test_max_seconds(self):
+        t = [0.0]
+        def clock():
+            return t[0]
+        def opener(url):
+            t[0] += 25.0          # each page costs 25 "seconds"
+            return PAGES[url]
+        search = lambda q: [{"title": "Deals", "url": "https://ads.example.com"},
+                            {"title": "Rec", "url": "https://rec.example.edu/about"},
+                            {"title": "Rec hours", "url": "https://rec.example.edu/hours"}]
+        with mock.patch.object(G.time, "monotonic", side_effect=clock), \
+                mock.patch.object(G, "rephrase") as rp:
+            r = G.gather("Is the gym open on Thanksgiving?", search, opener, max_seconds=40)
+        self.assertFalse(r.found)
+        self.assertEqual(len(r.opened), 2)          # third page never opened
+        rp.assert_not_called()
+        self.assertTrue(r.message.startswith("Ran out of time (40s). Not found after 1 search(es)"))
+
+    def test_no_time_limit(self):
+        search = lambda q: [{"title": "Rec hours", "url": "https://rec.example.edu/hours"}]
+        self.assertTrue(G.gather("q", search, self.opener, max_seconds=None).found)
+
     def test_adapter_shapes(self):
         self.assertEqual(G._hits([("T", "u", "s"), {"title": "A", "url": "v"}, {"title": "no url"}]),
                          [G.Hit("T", "u", "s"), G.Hit("A", "v", "")])
