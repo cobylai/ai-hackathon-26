@@ -60,4 +60,6 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
+    import applecal
+    applecal.warm()  # read Apple Calendar in the background (docs/calendar.md, Speed)
     raise SystemExit(main())
