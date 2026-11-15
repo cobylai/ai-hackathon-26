@@ -12,6 +12,7 @@ These apply to every kind of question. Each route's own playbook (`due.md`, `per
 6. Never act without showing what it will do and getting a yes. Draft, never send.
 7. Only write something about the user to memory if the user said it or confirmed it.
 8. A question that fits no playbook goes to the bank, then the web with the quote check, and otherwise gets "I don't know". No free answering.
+9. The web is only for clear factual questions: ones that start with a question word or end with "?", and aren't about the user's own things. Chit-chat, misheard names and anything about "my" stay off the web (`chat.md`, `person.md`, `web.md`).
 
 ## Wording
 

@@ -9,11 +9,17 @@ stay on one thread.
     GET  /        the page
     GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None}
     GET  /bank    [{"date", "sender", "subject", "summary", "ask", "deadlines", "folder", "id"}], newest first
-    POST /ask     {"question": str} -> {"text", "route", "sources", "seconds", "pending"}
+    POST /ask     {"question": str, "speak": bool} -> {"text", "route", "sources", "seconds", "pending"}
+                  speak: read the answer aloud with the Mac's `say` (the Speak switch in the bar)
                   pending: an action is held for a yes; the page shows Yes / Cancel
                   choices: [[label, word]] when a discovery question is held; the page shows
                   those buttons instead (Yes / No / Skip / Stop), each reply as a new turn
+    POST /speak/stop  stop reading aloud (the Speak switch turned off)
 The Discover button in the bar sends "discover" to /ask (playbooks/discover.md).
+Follow-ups ("and tomorrow?", "the first one", "open it") lean on the last answer: one
+Session (reason/session.py) for the whole server, since the window serves one person and
+the Mac app shows the same page. It is in memory only and gone on restart.
+Any /ask and /listen/start stop the spoken answer first, so talking cuts it off.
 """
 from __future__ import annotations
 
@@ -27,6 +33,8 @@ from bank import store
 
 from . import act
 from .answer import answer as _answer, online as _online
+from .session import Session
+from .speak import Speaker
 from .speech import HoldToTalk, start_voice
 
 DISCOVER_CHOICES = [["Yes", "yes"], ["No", "no"], ["Skip", "skip"], ["Stop", "stop"]]
@@ -181,6 +189,7 @@ PAGE = """<!doctype html>
 <main>
   <div class="bar">
     <h1>Muse</h1>
+    <button type="button" class="btn" id="speak" aria-pressed="false" title="Read answers aloud">Speak</button>
     <button type="button" class="btn" id="discover" title="Let Muse ask you a few questions about yourself">Discover</button>
     <button type="button" id="status" title="Show what's in the bank"><span class="dot"></span>Checking…</button>
     <button class="iconbtn" type="button" id="sidebtn" title="Show the bank (⌘B)" aria-pressed="false"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
@@ -349,7 +358,7 @@ async function ask(question, spoken, into) {
     w.appendChild(el('span', '', question === 'yes' ? 'Doing it…' : 'Cancelling…')); into.appendChild(w);
   } else t = newTurn(question, spoken);
   try {
-    const res = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }) });
+    const res = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question, speak: speakOn }) });
     const r = await res.json();
     if (into) { into.textContent = ''; into.appendChild(el('span', 'what' + (r.route === 'error' ? ' err' : ' done'), (r.text || '').trim())); }
     else showAnswer(t, r);
@@ -364,6 +373,11 @@ async function ask(question, spoken, into) {
 }
 
 $('discover').addEventListener('click', () => ask('discover', false));
+// Speak switch: off by default, remembered in this browser. Turning it off stops reading.
+let speakOn = store('muse.speak') === '1';
+function speakState() { const b = $('speak'); b.setAttribute('aria-pressed', speakOn ? 'true' : 'false'); b.classList.toggle('primary', speakOn); b.title = speakOn ? 'Reading answers aloud (click to stop)' : 'Read answers aloud'; }
+$('speak').addEventListener('click', () => { speakOn = !speakOn; store('muse.speak', speakOn ? '1' : '0'); speakState(); if (!speakOn) post('/speak/stop').catch(() => {}); q.focus(); });
+speakState();
 $('f').addEventListener('submit', (ev) => { ev.preventDefault(); const v = q.value; q.value = ''; ask(v, false); });
 
 /* ---------- status line ---------- */
@@ -554,9 +568,10 @@ def bank_rows(entries) -> list[dict]:
 
 
 def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None,
-                 entries_fn=None):
+                 entries_fn=None, speaker=None, session=None):
     entries_fn = entries_fn or store.all_entries
-    answer_fn = answer_fn or _answer
+    session = session or Session()  # one conversation for the whole server (single user)
+    answer_fn = answer_fn or (lambda q, today=None: _answer(q, today=today, session=session))
     online_fn = online_fn or _online
     count_fn = count_fn or (lambda: len(store.all_entries()))
 
@@ -585,6 +600,10 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 self._send(404, "not found", "text/plain")
 
         def do_POST(self):
+            if speaker is not None and self.path in ("/ask", "/listen/start", "/speak/stop"):
+                speaker.stop()  # talking, a new question or the switch cuts off the spoken answer
+            if self.path == "/speak/stop":
+                return self._json({"ok": True})
             if self.path in ("/listen/start", "/listen/stop"):
                 if talk is None:
                     return self._json({"error": f"voice is unavailable ({voice_why})"})
@@ -596,8 +615,11 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 return self._send(404, "not found", "text/plain")
             try:
                 n = int(self.headers.get("Content-Length") or 0)
-                question = str(json.loads(self.rfile.read(n) or b"{}").get("question") or "")
+                body = json.loads(self.rfile.read(n) or b"{}")
+                question = str(body.get("question") or "")
                 a = answer_fn(question, today=today)
+                if speaker is not None and body.get("speak") and a.route != "error":
+                    speaker.speak(a.text)
                 held = a.route == "discover" and discover.waiting()
                 self._json({"text": a.text, "route": a.route, "sources": a.sources,
                             "seconds": a.seconds, "pending": held or (a.route == "act" and act.waiting()),
@@ -622,7 +644,7 @@ def main(argv=None) -> int:
     voice, why = (None, "turned off") if args.no_voice else start_voice()
     print("Voice: ready" if voice else f"Voice is unavailable ({why}); typing only.", flush=True)
     srv = HTTPServer(("127.0.0.1", args.port), make_handler(
-        today=args.today, talk=HoldToTalk(voice) if voice else None, voice_why=why))
+        today=args.today, talk=HoldToTalk(voice) if voice else None, voice_why=why, speaker=Speaker()))
     url = f"http://localhost:{args.port}/"
     print(f"Muse window at {url}  (Ctrl-C to stop)", flush=True)
     if not args.no_open:

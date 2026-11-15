@@ -12,6 +12,8 @@ The chat page (`reason/web.py`) and the Mac app that shows it.
 - **Conversation:** it reads like a document. Each question is a small grey line, and the answer is plain text under it. Answer lines of the form `- when  what` (two spaces) become a table with the dates aligned. Other `- ` lines become a list. A short line ending in `:` becomes a heading. An indented line becomes a note under the row above it.
 - **Under each answer:** a muted line with the source and the route and time. A bank source opens that entry in the bank. A web source opens the page.
 - **Actions:** when `/ask` returns `pending`, the first line of the answer (what will happen) and **Cancel / Yes, do it** sit in one row under the answer. The result replaces the buttons in that row. Escape is Cancel.
+- **Speak:** the Speak button beside Discover turns spoken answers on or off (off by default; blue when on; the browser remembers it). When on, `/ask` carries `speak: true` and the server reads the answer with the Mac's `say`, without the Source line. Asking again, starting to talk (button, ⌥ or the Mac app's hotkey) or turning it off stops the speech.
+- **Follow-ups:** "and Friday?", "the first one", "who sent that?", "open it" lean on the last answer (`playbooks/followup.md`). The server keeps one conversation for the page, in memory only.
 - **Discover:** the Discover button in the top bar sends `discover` to `/ask`. While a discovery question is held, `/ask` returns `choices` and the answer gets **Yes / No / Skip / Stop** buttons; each reply (and the next question) is a new turn. Escape is Stop. See `playbooks/discover.md`.
 - **The bank (right):** a slide-over from the right, grouped into Mail, Coursework, Notes about you and People. Each group collapses. Clicking an item shows its summary, ask and due dates. Clicking a person asks "Who is …?". People are the senders of mail in the bank.
 - **Empty state:** three example questions from the playbooks (due, calendar, person). Clicking one asks it.
@@ -45,7 +47,7 @@ Colours follow the system's light and dark modes. The only accent is system blue
 
 Keep these working:
 
-- `#q` (the text field), `#send`, `#talk`, `#status`.
+- `#q` (the text field), `#send`, `#talk`, `#status`, `#speak` (the Speak switch).
 - `window.museTalk.start()` / `window.museTalk.stop()`: start and stop listening, the same as holding and releasing the talk control. These are for the Mac app's hotkey.
 - `window.museFocus()`: puts the cursor in the text field (it does nothing while listening).
 - `POST /ask` → `pending: true` shows Cancel / Yes. Yes and Cancel send `yes` / `no` to `/ask`.
