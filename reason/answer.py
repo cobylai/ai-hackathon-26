@@ -326,13 +326,22 @@ def _web(question: str, today: date, root, search_fn=None, open_fn=None, ingest_
     if looks_blocked(f"{ans}\n{quote}"):  # bot-check or error page: no answer, nothing filed
         return Answer("I couldn't find that on the web.", "not_found", list(r.opened))
     text = ans + (f'\n"{quote}"' if quote and quote.lower() not in ans.lower() else "")
-    try:
-        got = ingest_fn(saved_page(question, ans, quote, url), source=url, kind="page",
-                        subject=f"{question} {ans}"[:200], root=root)
-        note = say("web", "saved") if got.get("status") == "added" else say("web", "already_saved")
-    except Exception as ex:  # the answer still stands
-        note = say("web", "save_failed", error=type(ex).__name__)
-    return Answer(f"{text}\n{say('RULES', 'source', labels=url)}\n{note}", "web", [url])
+
+    def save() -> str:
+        # A web answer is a reference note, not one of the reader's commitments: file it with
+        # today's date and no deadlines, so a page's dates (1797-08-30 for Mary Shelley) never
+        # become due items (finding 17b).
+        try:
+            got = ingest_fn(saved_page(question, ans, quote, url), source=url, kind="page",
+                            subject=f"{question} {ans}"[:200], today=today, sent_date=today,
+                            deadlines=[], root=root)
+            return say("web", "saved") if got.get("status") == "added" else say("web", "already_saved")
+        except Exception as ex:  # the answer still stands
+            return say("web", "save_failed", error=type(ex).__name__)
+
+    from . import act
+    act.hold_save(say("web", "save_ask"), save)  # filed only after a yes (finding 17b)
+    return Answer(f"{text}\n{say('RULES', 'source', labels=url)}\n{say('web', 'save_ask')}", "web", [url])
 
 
 def saved_page(question: str, ans: str, quote: str, url: str) -> str:

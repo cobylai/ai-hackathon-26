@@ -43,7 +43,7 @@ Use the Mac app panel (Fn-Space) or the window. Speak is **off** (no spoken answ
 | Time | On screen | Said (voice-over or into the mic) |
 |---|---|---|
 | 0:00–0:10 | Title over the panel on the desktop. | "Students live in mail, Canvas and a calendar. Flux answers questions about all three, out loud, entirely on this Mac." |
-| 0:10–0:25 | Open the bank on the right: Mail and Coursework groups. Type "Who wrote the novel Frankenstein?" Answer: Mary Shelley, quoted line, "Source: en.m.wikipedia.org/wiki/Frankenstein", "Saved to your notes." (about 10 s; cut the wait.) | "While we're online, it has read sample mail and sample coursework into a local bank. A question it can't answer, it looks up, quotes, cites, and saves." |
+| 0:10–0:25 | Open the bank on the right: Mail and Coursework groups. Type "Who wrote the novel Frankenstein?" Answer: Mary Shelley, quoted line, "Source: en.m.wikipedia.org/wiki/Frankenstein", then "Say or type yes to save that to your notes." Type yes → "Saved to your notes." (about 10 s; cut the wait.) | "While we're online, it has read sample mail and sample coursework into a local bank. A question it can't answer, it looks up, quotes, cites, and saves." |
 | 0:25–0:32 | Control Center: Wi-Fi off. The status line turns to offline. | "Now Wi-Fi off." |
 | 0:32–0:45 | Hold Fn-Space: "Catch me up." Answer: today's calendar (Demo practice run, Hackathon judging), due through Tue Nov 17, asks from the last 7 days, each with its source. | (into mic) "Catch me up." |
 | 0:45–1:05 | Hold: "What's due this week?" → a dated table, mail and coursework together. Hold: "And tomorrow?" → Mon Nov 16, including Hugo's team-name vote at 5pm. Hold: "What did Felix ask me?" → Cabin packing list: bring a sleeping bag; pay your $35 share for the cabin trip. Each shows 0.0 s. | (into mic) the three questions. VO: "No model needed for these: code reads the bank, so they come back instantly." |
@@ -62,7 +62,7 @@ Use the Mac app panel (Fn-Space) or the window. Speak is **off** (no spoken answ
 - [ ] Bonsai server running, restarted since the 127.0.0.1 change (82da364): `pkill -f mlx_vlm.server; scripts/serve_bonsai.sh 4B`; `lsof -iTCP:8080 -sTCP:LISTEN` shows `localhost`/`127.0.0.1`, not `*`.
 - [ ] Demo bank rebuilt for today (DAY=2026-11-15): sample mail ("Demo bank" in `docs/integration.md`), then sample coursework (`docs/canvas.md`). Check: `make_test_mail.py check ... --offline` gives 37/38.
 - [ ] "Flux demo" calendar has today's made-up events (one-off, not repeating), the "Lab" event Wed Nov 18 1:30–3:30pm, and nothing Thu Nov 19 at 7pm (so Milo's practice shows as free).
-- [ ] Delete the "Band practice" event (Thu Nov 19 7–8pm) from "Flux demo" if worker 14's live test step 2 added it, or the video's "You're free… Draft a yes to Milo" beat turns into a clash. Delete any test reminders in the "Flux demo" Reminders list too.
+- [ ] Delete the "Band practice" or "Band practice Thursday" event (Thu Nov 19 7–8pm; Antranig's full test round left one in place) from "Flux demo" if worker 14's live test step 2 added it, or the video's "You're free… Draft a yes to Milo" beat turns into a clash. Delete any test reminders in the "Flux demo" Reminders list too.
 - [ ] The demo bank includes the meeting emails m21–m23 (Milo, Greta, Ivy).
 - [ ] The Frankenstein question is **not** in the bank before recording (it's asked on camera while online, then again offline). Rehearse it on a copy of the bank, not the demo bank.
 - [ ] Mac app built once and launched once beforehand (first voice start compiles for minutes). It's Developer ID signed, so permissions survive a rebuild; without the identity it signs ad hoc and asks again.
@@ -74,9 +74,10 @@ Use the Mac app panel (Fn-Space) or the window. Speak is **off** (no spoken answ
 
 ## Later (not in the demo)
 
+- Built and tested on the branch `feature/agent-integration`, off by default, not in the demo or on main until after the recording: the agent loop, sending mail after a confirmation (never shown), proactive nudges, and real Gmail and Calendar sync.
+
 - Use what I'm looking at: answer about the front window's content (X4).
 - A learned weekly schedule (from calendar and notes).
-- Proactive nudges ("Hugo's vote is due at 5pm").
 - Live Canvas sync (today it reads saved pages).
 
 ## Landed

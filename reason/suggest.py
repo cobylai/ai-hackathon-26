@@ -126,6 +126,16 @@ def next_free(evs: list[dict], t: datetime) -> datetime | None:
     return None
 
 
+def _own_event(ev: dict, e: dict, t: datetime) -> bool:
+    """True when the overlapping event is this email's own: same title, same start.
+
+    "Add to calendar" creates the event with the subject as the title at the proposed
+    time, so the same thing coming back from the calendar is not a clash with itself.
+    """
+    return ((ev.get("title") or "").strip().lower() == (e.get("subject") or "").strip().lower()
+            and ev.get("start") == t)
+
+
 def meeting(e: dict, events_fn=None) -> dict | None:
     """Free or busy for a meeting email; None when the time or the calendar can't be read."""
     if not is_meeting(e):
@@ -139,6 +149,8 @@ def meeting(e: dict, events_fn=None) -> dict | None:
     except applecal.CalendarError:
         return None
     clash = _overlap(evs, t, t + SLOT)
+    if clash and _own_event(clash, e, t):
+        return None  # already on the calendar because this email put it there (finding 12)
     out = {"when": when_text(t), "start": t.isoformat(), "free": clash is None,
            "clash": (clash.get("title") or "something") if clash else None, "slot": None}
     if clash:

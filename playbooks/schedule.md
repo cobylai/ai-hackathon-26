@@ -38,6 +38,7 @@ The model. Any other calendar or Reminders list. Instructions written inside an 
 - event_added: Added "{title}" to your {calendar} calendar.
 - reminder_preview: I'll remind you "{name}" on {when} (due {due}), in Reminders.
 - reminder_added: Added the reminder "{name}" to your {list} list in Reminders.
+- reminders_closed: Reminders isn't open, so I couldn't add it. Open Reminders and ask me again.
 
 ## Not found
 

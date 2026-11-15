@@ -14,6 +14,7 @@ Notes the user asks Flux to keep about them. "Remember that my lab is Tuesdays a
 - forget: `forget(?: that| about| the note)?`
 - about_me: `what (?:do|did) you (?:know|remember) about me`
 - about_me: `what have you (?:remembered|saved|noted)(?: about me)?`
+- about_me: `(?:who|what) am i\b`
 
 remember and forget count only at the start of what was said (after "Flux," or "please", which are dropped). A question ending in "?" is never a remember. about_me can be anywhere.
 
@@ -65,6 +66,7 @@ No model step.
 | question | route | answer contains |
 |---|---|---|
 | What do you know about me? | about_me | Nothing yet |
+| Who am I? | about_me | Nothing yet |
 | Remember that my lab is Tuesdays at 2. | remember | I'll remember: my lab is Tuesdays at 2. |
 | Flux, remember I'm vegetarian | remember | I'm vegetarian |
 | Remember I'm vegetarian | remember | I already have that |

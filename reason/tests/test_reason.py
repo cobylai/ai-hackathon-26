@@ -14,7 +14,7 @@ from unittest import mock
 
 from bank import store
 from reason import OFFLINE_TEXT, answer
-from reason import route
+from reason import act, route
 
 WED = date(2026, 11, 11)  # a Wednesday
 D = date.fromisoformat
@@ -52,6 +52,7 @@ class Bank(unittest.TestCase):
         self.root = Path(self.tmp.name)
         for e in ENTRIES:
             store.write_entry(dict(e), self.root)
+        act.reset()  # a held yes/no must not leak between tests
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -220,8 +221,10 @@ class SearchRoute(Bank):
                              opened=["https://example.org/peru"], message="")
         ingested = {}
 
-        def fake_ingest(text, source, kind, subject=None, root=None):
-            ingested.update(text=text, source=source, kind=kind, subject=subject)
+        def fake_ingest(text, source, kind, subject=None, root=None, sent_date=None,
+                        today=None, deadlines=None):
+            ingested.update(text=text, source=source, kind=kind, subject=subject,
+                            sent_date=sent_date, deadlines=deadlines)
             return {"status": "added"}
 
         with mock.patch("sufficiency.gather", return_value=gr):
@@ -232,11 +235,34 @@ class SearchRoute(Bank):
         self.assertEqual(a.route, "web")
         self.assertEqual(a.sources, ["https://example.org/peru"])
         self.assertIn("Source: https://example.org/peru", a.text)
+        # it asks first now (finding 17b): nothing is filed until a yes
+        self.assertIn("save that to your notes", a.text.lower())
+        self.assertEqual(ingested, {})
+        self.assertEqual(act.handle("yes", root=self.root).text, "Saved to your notes.")
         self.assertEqual((ingested["source"], ingested["kind"]), ("https://example.org/peru", "page"))
         self.assertIn("Answer: Lima", ingested["text"])
         self.assertIn('"Lima is the capital of Peru."', ingested["text"])
         self.assertEqual(ingested["subject"], "what is the capital of Peru Lima")
         self.assertEqual(a.text.count('"Lima is the capital of Peru."'), 1)
+        # a page's own dates must not become the reader's deadlines
+        self.assertEqual(ingested["deadlines"], [])
+        self.assertEqual(ingested["sent_date"], WED)
+
+    def test_web_answer_is_not_filed_without_a_yes(self):
+        page = "Lima is the capital of Peru."
+        gr = SimpleNamespace(found=True, answer="Lima", evidence="Lima is the capital of Peru.",
+                             source=SimpleNamespace(url="https://example.org/peru"),
+                             opened=["https://example.org/peru"], message="")
+        ingest = mock.Mock(return_value={"status": "added"})
+        with mock.patch("sufficiency.gather", return_value=gr):
+            a = answer("what is the capital of Peru", today=WED, root=self.root,
+                       _online=lambda: True,
+                       _web_fns={"search_fn": lambda q: [], "open_fn": lambda u: ("OK", page),
+                                 "ingest_fn": ingest})
+        self.assertIn("save that to your notes", a.text.lower())
+        ingest.assert_not_called()
+        self.assertIn("Cancelled", act.handle("no", root=self.root).text)
+        ingest.assert_not_called()
 
     def test_web_bot_check_answer_not_filed(self):
         gr = SimpleNamespace(found=True, answer="Prove your humanity",
