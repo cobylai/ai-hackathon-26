@@ -112,6 +112,9 @@ def _due(question: str, today: date, root) -> Answer:
         t = _time(r.get("time"))
         stamp = " ".join(x for x in (when, t) if x)
         lines.append(f"- {stamp + '  ' if stamp else ''}{what} ({source_label(e)})")
+        summary = (e.get("body") or "").strip()
+        if summary and summary.rstrip(".") != what:  # the summary carries amounts etc.
+            lines.append(f"    {summary}")
     paths = list(dict.fromkeys(r["entry"]["path"] for r in rows))
     return Answer("\n".join(lines), "due", paths)
 
@@ -226,6 +229,10 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
         a = _due(q, today, root)
     elif (who := route.person_in(q, _senders(root))):
         a = _person(q, who, today, root)
+    elif (name := route.asked_name(q)):
+        # Shaped like a person question but nobody by that name is a sender: stop here.
+        # A wrong answer about a person is worse than none (thinker ruling).
+        a = Answer(f"I have nothing from {name[:1].upper() + name[1:]}.", "person")
     else:
         a = _bank(q, today, root)
         if a is None:

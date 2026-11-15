@@ -79,6 +79,10 @@ class DueRange(unittest.TestCase):
         self.check("what is due 2026-11-20", "2026-11-20", "2026-11-20")
         self.check("what's due?", "2026-11-11", "2026-11-17")
 
+    def test_this_week_on_weekend(self):
+        self.check("what's due this week", "2026-11-14", "2026-11-22", today=D("2026-11-14"))  # Sat
+        self.check("what's due this week", "2026-11-15", "2026-11-22", today=D("2026-11-15"))  # Sun
+
     def test_weekend_from_sunday(self):
         self.check("due this weekend", "2026-11-15", "2026-11-15", today=D("2026-11-15"))
 
@@ -129,7 +133,8 @@ class DueRoute(Bank):
         self.assertTrue(lines[0].startswith("Due next week (Nov 16 to Nov 22)"))
         self.assertIn("Mon Nov 16 11:59pm  Submit your final notebook", lines[1])
         self.assertIn("(Prof. Daniel Reyes, Nov 12)", lines[1])
-        self.assertIn("Tue Nov 17", lines[2])
+        self.assertEqual(lines[2], "    The project deadline moved to Monday 11:59pm.")  # summary row
+        self.assertIn("Tue Nov 17", lines[3])
 
     def test_empty(self):
         a = answer("anything due tomorrow", today=WED, root=self.root)
@@ -151,6 +156,13 @@ class PersonRoute(Bank):
         self.assertNotIn("Reyes", seen["prompt"])  # only Emily's entries go to the model
         self.assertTrue(a.text.endswith("Source: Emily Carter, Nov 10"))
         self.assertEqual(len(a.sources), 1)
+
+    def test_unknown_person_stops(self):
+        with mock.patch("sufficiency.judge", side_effect=AssertionError("must not search")), \
+             mock.patch("llm.client.complete_json", side_effect=AssertionError("no model")):
+            a = answer("What did Priya ask me?", today=WED, root=self.root, _online=lambda: True)
+        self.assertEqual((a.route, a.text, a.sources), ("person", "I have nothing from Priya.", []))
+        self.assertIsNone(route.asked_name("what did you send them"))
 
     def test_bad_used_falls_back_to_all(self):
         with mock.patch("llm.client.complete_json", return_value={"answer": "x", "used": ["z", 9]}):

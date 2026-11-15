@@ -31,7 +31,7 @@ Window check (2026-11-14, integration, process network blocked except localhost)
 
 ## Routes, checked in this order
 
-1. **Due.** The question contains the word `due`, `deadline` or `deadlines`. Code works out the date range, calls `bank.due`, and writes the list itself, with no model call. Each line carries its own source (sender, sent date).
+1. **Due.** The question contains the word `due`, `deadline` or `deadlines`. Code works out the date range, calls `bank.due`, and writes the list itself, with no model call. Each line carries its own source (sender, sent date), and the entry's one-line summary goes under it, indented, so details like a bill amount come along without a model call (thinker ruling).
 
    | Phrase | Range |
    |---|---|
@@ -39,7 +39,7 @@ Window check (2026-11-14, integration, process network blocked except localhost)
    | tomorrow | today + 1 |
    | Monday … Sunday | the next such day, or today if today is that day |
    | next Friday (etc.) | that day in next week (Mon–Sun) |
-   | this week | today to Sunday |
+   | this week | today to Sunday; on Sat/Sun, today to the coming Sunday (thinker ruling) |
    | this weekend | Saturday (or today, if later) to Sunday |
    | next week | next Monday to next Sunday |
    | Nov 20, November 20th, 11/20, 2026-11-20, on the 20th | that day (`bank.dates.resolve_date`) |
@@ -49,6 +49,8 @@ Window check (2026-11-14, integration, process network blocked except localhost)
    - If the question has a capitalized word other than its first word, only capitalized words are tried ("what did Will say" → Will).
    - Otherwise every word is tried except a stoplist of common words that are also names: "will it rain" doesn't match Will, but "what did emily ask" matches Emily.
    - `bank.by_person` returns the entries, and the newest 8 go to Bonsai with the question. The model returns `{"answer", "used": [numbers]}` at temperature 0.2, and the used entries become the sources (all 8 if `used` is bad).
+
+2b. **Unknown person.** A question shaped "what did <name> ask / say / send / want" whose name is no sender in the bank answers "I have nothing from <name>." and stops, never reaching search (thinker ruling: a wrong answer about a person is worse than none). Pronouns ("what did you send") don't count.
 
 3. **Everything else.**
    - `bank.search(question, limit=5)`. The entries are written as numbered note blocks and passed to `sufficiency.judge` once. If it's enough, the route is `bank`, and the source is the block that holds the judge's quote.
