@@ -17,7 +17,8 @@ stay on one thread.
                   suggestions: [{"id", "line", "button", "kind"}], at most 2 (playbooks/suggest.md)
                   draft: {"id", "to", "to_name", "subject", "body", "used", "kind"} for the draft box
     POST /speak/stop  stop reading aloud (the Speak switch turned off)
-    POST /suggest/<id>          a Suggested button: {"draft"} for a reply, {"text"} after opening a page
+    POST /suggest/<id>          a Suggested button: {"draft"} for a reply, {"text"} after opening a page,
+                                adding a calendar event or a reminder (reason/computer.py)
     POST /suggest/<id>/dismiss  it won't be suggested again in this chat
     POST /draft/<id>/write      {"gist"} -> {"draft"} with a new body (Bonsai)
     POST /draft/open            {"to", "subject", "body"} -> {"text"}: `open mailto:...`, never sends
@@ -425,7 +426,7 @@ function suggestRows(t, list) {
     go.onclick = async () => {
       if (busy) return;
       row.textContent = ''; const w = el('div', 'working'); w.appendChild(el('span', 'spin'));
-      w.appendChild(el('span', '', s.kind === 'open' ? 'Opening…' : 'Writing…')); row.appendChild(w);
+      w.appendChild(el('span', '', s.kind === 'open' ? 'Opening…' : (s.kind === 'calendar' || s.kind === 'remind') ? 'Adding…' : 'Writing…')); row.appendChild(w);
       let r; try { r = await postJSON('/suggest/' + s.id, {}); } catch (e) { r = { text: "Couldn't reach Muse." }; }
       if (r.draft) { const d = draftBox(box, r.draft, row); row.remove(); d.querySelector('textarea').focus(); }
       else { row.textContent = ''; row.appendChild(el('span', 'what done', (r.text || '').trim())); }
@@ -780,7 +781,7 @@ def bank_rows(entries) -> list[dict]:
 
 def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None,
                  entries_fn=None, speaker=None, session=None, chats_root=None, mail_fn=None, open_fn=None,
-                 draft_fn=None):
+                 draft_fn=None, run_fn=None):
     entries_fn = entries_fn or store.all_entries
     cur = {"s": session or Session()}  # the open chat (single user); swapped on new / open
     answer_fn = answer_fn or (lambda q, today=None: _answer(q, today=today, session=cur["s"]))
@@ -883,6 +884,8 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                         return self._json({"text": say("suggest", "gone")})
                     if s["kind"] == "open":
                         return self._json({"text": (open_fn or act.open_page)(s["url"])})
+                    if s["kind"] in ("calendar", "remind"):
+                        return self._json({"text": (run_fn or suggest.run)(s)})
                     return self._json({"draft": (draft_fn or compose.reply_draft)(s["entry"])})
                 if parts == ["draft", "open"]:
                     return self._json({"text": compose.open_in_mail(

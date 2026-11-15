@@ -103,9 +103,11 @@ class Suggestions(Base):
     def test_meeting_lines(self):
         a = self.ask("What did Milo ask me?")
         self.assertEqual([s["line"] for s in a.suggestions],
-                         ["You're free Thursday, Nov 19 at 7pm. Draft a yes to Milo?"])
+                         ["You're free Thursday, Nov 19 at 7pm. Draft a yes to Milo?",
+                          'Add "Band practice Thursday" to your calendar: Thu Nov 19 7pm'])
         a = self.ask("What did Greta ask me?")
         self.assertIn("You have Lab then", a.suggestions[0]["line"])
+        self.assertNotIn("calendar", " ".join(s["kind"] for s in a.suggestions))  # busy: no event
 
     def test_no_time_falls_back_to_reply_without_free_busy(self):
         for events in (cal, no_cal):
@@ -117,8 +119,8 @@ class Suggestions(Base):
     def test_due_gives_at_most_two_and_open(self):
         a = self.ask("What's due tomorrow?")
         self.assertEqual(len(a.suggestions), 2)
-        kinds = {s["kind"] for s in a.suggestions}
-        self.assertEqual(kinds, {"open", "reply"})
+        self.assertEqual([s["kind"] for s in a.suggestions], ["open", "remind"])  # the soonest item's two
+        self.assertEqual(a.suggestions[1]["line"], "Remind me: HW 9 (Mon Nov 16 9:59pm)")
         self.assertTrue(all("entry" not in s for s in suggest.public(a.suggestions)))
 
     def test_none_when_nothing_found_or_other_routes(self):
@@ -131,7 +133,7 @@ class Suggestions(Base):
         a = self.ask("What did Milo ask me?", s)
         self.assertTrue(suggest.dismiss(a.suggestions[0]["id"]))
         self.assertEqual(self.ask("What did Milo ask me?", s).suggestions, [])
-        self.assertEqual(len(self.ask("What did Milo ask me?", Session()).suggestions), 1)
+        self.assertEqual(len(self.ask("What did Milo ask me?", Session()).suggestions), 2)
 
     def test_take_hides_it(self):
         s = Session()
@@ -139,6 +141,28 @@ class Suggestions(Base):
         got = suggest.take(a.suggestions[0]["id"])
         self.assertEqual(got["entry"]["id"], GRETA["id"])
         self.assertEqual(self.ask("What did Greta ask me?", s).suggestions, [])
+
+
+    def test_remind_only_on_due_and_catchup(self):
+        a = self.ask("What did Felix ask me?")
+        self.assertEqual([s["kind"] for s in a.suggestions], ["reply"])
+        a = self.ask("What's due Monday?")
+        felix = [s for s in a.suggestions if s["entry"]["id"] == FELIX["id"]]
+        self.assertTrue(all(s["kind"] in ("reply", "remind") for s in felix))
+
+    def test_click_adds_through_computer(self):
+        a = self.ask("What did Milo ask me?")
+        cal_s = next(s for s in a.suggestions if s["kind"] == "calendar")
+        with mock.patch("reason.computer.add_event") as add:
+            out = suggest.run(suggest.take(cal_s["id"]))
+        ev = add.call_args[0][0]
+        self.assertEqual((ev["title"], ev["start"]), ("Band practice Thursday", datetime(2026, 11, 19, 19, 0)))
+        self.assertEqual(ev["location"], "Lincoln Hall 101")
+        self.assertEqual(out, 'Added "Band practice Thursday" to your calendar for Thu Nov 19 7pm.')
+        a = self.ask("What's due tomorrow?")
+        rem = next(s for s in a.suggestions if s["kind"] == "remind")
+        with mock.patch("reason.computer.add_reminder", side_effect=RuntimeError("no Reminders access")):
+            self.assertEqual(suggest.run(suggest.take(rem["id"])), "That didn't work: RuntimeError: no Reminders access")
 
 
 class Drafts(Base):

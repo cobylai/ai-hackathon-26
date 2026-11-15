@@ -170,7 +170,60 @@ def _entries(a, root) -> list[dict]:
 
 
 def _key(kind: str, e: dict) -> str:
-    return f"{'open' if kind == 'open' else 'reply'}:{e.get('path') or e.get('id')}"
+    k = "reply" if kind in ("reply", "meeting") else kind  # a meeting answer is a reply
+    return f"{k}:{e.get('path') or e.get('id')}"
+
+
+REMIND_ROUTES = ("due", "catchup")
+
+
+def _calendar(e: dict, m: dict, today: date | None) -> dict | None:
+    """'Add to calendar' for a free meeting time: worker 14's event_for, only if it is that time."""
+    from . import computer
+    ev = computer.event_for(e, today)
+    if not ev or ev.get("all_day") or ev["start"].isoformat() != m["start"]:
+        return None
+    return {"kind": "calendar", "event": ev,
+            "line": say("suggest", "calendar", title=ev["title"], when=computer.when_text(ev["start"])),
+            "button": say("suggest", "calendar_button")}
+
+
+def _remind(e: dict, today: date | None) -> dict | None:
+    """'Remind me' for a due item: worker 14's reminder_for (alert 2 hours before, or 9am that day)."""
+    from . import computer
+    r = computer.reminder_for(e, "", today)
+    if not r or (today and r["due"].date() < today):
+        return None
+    return {"kind": "remind", "reminder": r,
+            "line": say("suggest", "remind", name=r["name"], when=computer.when_text(r["remind_at"])),
+            "button": say("suggest", "remind_button")}
+
+
+def _candidates(e: dict, route: str, today: date | None, hidden: set, events_fn) -> list[dict]:
+    """This entry's suggestions, best first."""
+    remind = route in REMIND_ROUTES
+    if e.get("kind") == "canvas" and URL_RE.match(str(e.get("source") or "")):
+        out = [{"kind": "open", "line": say("suggest", "open", title=e.get("subject") or "the assignment"),
+                "button": say("suggest", "open_button"), "url": str(e["source"])}]
+        return out + ([r] if remind and (r := _remind(e, today)) else [])
+    if e.get("kind") != "email" or not e.get("sender_address"):
+        return []
+    first = first_name(e)
+    if is_meeting(e) and _key("reply", e) not in hidden:
+        m = meeting(e, events_fn)
+        if m:
+            if m["free"]:
+                out = [{"kind": "meeting", "meeting": m, "line": say("suggest", "free", when=m["when"], first=first),
+                        "button": say("suggest", "free_button")}]
+                return out + ([c] if (c := _calendar(e, m, today)) else [])
+            return [{"kind": "meeting", "meeting": m, "line": say("suggest", "busy", clash=m["clash"], when=m["when"]),
+                     "button": say("suggest", "busy_button")}]
+    out = []
+    if (e.get("ask") or "").strip() or is_meeting(e):
+        out.append({"kind": "reply", "line": say("suggest", "reply", first=first,
+                                                 subject=e.get("subject") or "(no subject)"),
+                    "button": say("suggest", "reply_button")})
+    return out + ([r] if remind and (r := _remind(e, today)) else [])
 
 
 def for_answer(a, session=None, today: date | None = None, root=None, events_fn=None) -> list[dict]:
@@ -178,41 +231,37 @@ def for_answer(a, session=None, today: date | None = None, root=None, events_fn=
     if a.route not in ROUTES:
         return []
     hidden = _hidden.get(_sid(session), set())
-    meets, rest = [], []
-    for e in _entries(a, root):
-        if e.get("kind") == "canvas" and URL_RE.match(str(e.get("source") or "")):
-            s = {"kind": "open", "line": say("suggest", "open", title=e.get("subject") or "the assignment"),
-                 "button": say("suggest", "open_button"), "url": str(e["source"])}
-            rest.append((s, e))
-            continue
-        if e.get("kind") != "email" or not e.get("sender_address"):
-            continue
-        first = first_name(e)
-        if is_meeting(e) and _key("reply", e) not in hidden:
-            m = meeting(e, events_fn)
-            if m:
-                s = ({"line": say("suggest", "free", when=m["when"], first=first),
-                      "button": say("suggest", "free_button")} if m["free"] else
-                     {"line": say("suggest", "busy", clash=m["clash"], when=m["when"]),
-                      "button": say("suggest", "busy_button")})
-                meets.append(({"kind": "meeting", "meeting": m, **s}, e))
-                continue
-        if (e.get("ask") or "").strip() or is_meeting(e):
-            rest.append(({"kind": "reply", "line": say("suggest", "reply", first=first,
-                                                         subject=e.get("subject") or "(no subject)"),
-                          "button": say("suggest", "reply_button")}, e))
+    entries = _entries(a, root)
+    entries = [e for e in entries if is_meeting(e)] + [e for e in entries if not is_meeting(e)]
     out = []
-    for s, e in meets + rest:
-        k = _key(s["kind"], e)
-        if k in hidden or any(x["key"] == k for x in out):
-            continue
-        s = {**s, "id": uuid.uuid4().hex[:10], "key": k, "entry": e, "session": _sid(session)}
-        out.append(s)
+    for e in entries:
+        for s in _candidates(e, a.route, today, hidden, events_fn):
+            k = _key(s["kind"], e)
+            if k in hidden or any(x["key"] == k for x in out):
+                continue
+            out.append({**s, "id": uuid.uuid4().hex[:10], "key": k, "entry": e, "session": _sid(session)})
+            if len(out) == LIMIT:
+                break
         if len(out) == LIMIT:
             break
     for s in out:
         _offered[s["id"]] = s
     return out
+
+
+def run(s: dict) -> str:
+    """A clicked 'Add to calendar' or 'Remind me': worker 14's writes (block list, log). Never sends."""
+    from . import computer
+    try:
+        if s["kind"] == "calendar":
+            ev = s["event"]
+            computer.add_event(ev)
+            return say("suggest", "added_event", title=ev["title"], when=computer.when_text(ev["start"]))
+        r = s["reminder"]
+        computer.add_reminder(r)
+        return say("suggest", "added_reminder", name=r["name"], when=computer.when_text(r["remind_at"]))
+    except Exception as ex:
+        return say("suggest", "add_failed", why=f"{type(ex).__name__}: {ex}")
 
 
 def public(sugs: list[dict]) -> list[dict]:

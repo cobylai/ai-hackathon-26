@@ -110,6 +110,8 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
    - A meeting ask whose day and time were read, with that day of Apple Calendar read: "You're free Thursday, Nov 19 at 7pm. Draft a yes to Milo?" or "You have Lab then (…). Draft a reply proposing another time?".
    - An email with an ask: "Draft a reply to Ivy: Garden plot". If the time or the calendar can't be read, this is what shows, and free/busy isn't mentioned.
    - A Canvas item: "Open the assignment page: Homework 9".
+   - A free meeting also gets "Add "Band practice Thursday" to your calendar: Thu Nov 19 7pm". On due and catch-me-up answers, an upcoming item also gets "Remind me: Submit reading quiz (Mon Nov 16 7am)". A click runs worker 14's `computer.add_event` / `add_reminder` (block list, log), which `computer.event_for` / `reminder_for` work out from the stored date.
+   - Each entry's suggestions come together, best first, so "What's due tomorrow?" offers the soonest item's page and reminder.
    - `Answer.suggestions`; nothing runs until a click. A dismissed, drafted or opened one doesn't come back in that chat. The chat loop prints them as lines.
 
 3. **Everything else.**
