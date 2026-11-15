@@ -117,17 +117,16 @@ due(start_date, end_date)    # entries with a deadline in the range
 - **Data location:** `data/bank/` by default. It's gitignored because it will hold real email.
 - **Status:** the exact entry format and function details will be in `docs/plans/context-store.md` once that plan is written.
 
-## 6. Voice input — **tested** (Argmax, branch `argmax-runtime-test`); handoff to Python **planned**
+## 6. Voice input — **built** (`voice/`, branch `voice-input`)
 
-Argmax runs only from Swift, so voice is a small separate Swift program. It turns speech into text, and the text goes into the same entry point as a typed question. Details are in `docs/argmax.md`.
+Argmax runs only from Swift, so voice is a small Swift program, `voice/swift/` → `argmax-voice`. It stays running, and Python drives it through `voice/listen.py`. Push to talk: it records only between start and stop. Details are in `docs/voice-input.md`; the offline findings are in `docs/argmax.md`.
 
-- **What runs today:** the sample CLI, `samples/argmax-pro-sdk/native/.build/release/meeting-scribe file <wav> --no-speakers`, with `ARGMAX_API_KEY` set. It transcribes a 6.7 s clip correctly.
-  - Warm process time: 4.5 s, most of it loading the model.
-  - Transcription alone: about 1.4 s.
-  - Model: Whisper large-v3 turbo, 615 MB, in `~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/`.
-- **Offline:** each launch contacts `api.argmaxinc.com`, but a failed check did not stop the run. A real Wi-Fi-off run is still to be done by Coby.
-- **Handoff to Python (proposed, not built):** Python starts one long-running Swift process with `subprocess.Popen` and reads its stdout. The Swift side writes one JSON line per finished utterance, for example `{"text": "remind me to buy oat milk", "start": 12.3, "end": 14.1}`, and flushes after each line. Python passes `text` into the same entry point as a typed question. One long-running process avoids paying the ~4.5 s model load per question.
-- **Not decided:** whether voice is push-to-talk or always on.
+- **Python call:** `from voice.listen import Voice; voice = Voice()` once at startup (≈1.5 s warm). Then `question = voice.listen(wait_for_stop=input)` returns the text. `wait_for_stop` is any blocking function; recording stops when it returns.
+- **Errors:** `VoiceError` is raised for a microphone denial, a license or model failure, the process exiting, or a timeout. It never hangs silently.
+- **Needs:** `ARGMAX_API_KEY` in the environment (from the vault, loaded before Wi-Fi off), and the built binary (`swift build -c release` in `voice/swift`).
+- **Speed:** stop to text is about 1.1–1.25 s for a spoken question. It works with all network denied.
+- **Protocol** (if you drive the binary directly): stdin `start`/`stop`/`file <wav>`/`quit`. stdout JSON lines: `ready`, `recording`, `text` (`{"event":"text","text":"...","seconds":2.4}`), `error`.
+- **Chat loop:** replace `input()` with `voice.listen()`. These are the two lines in `docs/voice-input.md`, added after the reasoning layer lands.
 
 ## 7. Not decided yet
 

@@ -51,10 +51,13 @@ question = voice.listen()                          # instead of input(): Enter t
 | `say` clip (6.7 s), 3× in one process, online | correct all 3 times: "Muse, remind me to buy oat milk tomorrow at 9. The quick brown fox jumps over the lazy dog." **1.37–1.55 s** each |
 | Same, with all outbound IP denied for the Python process and its Swift child (`sandbox-exec`) | correct all 3 times, 1.37–1.48 s; ready in 1.5 s |
 | `bw get password` with an existing session, network denied | works |
-| Live microphone (Coby speaking) | **not yet run**, needs Coby |
-| `bw unlock` with no network | **not yet run**, needs Coby (only he types the master password) |
+| Live mic, Coby speaking, online, 3 questions in one session | all right: "What's due this week?" / "Remind me to buy oat milk tomorrow at 9:00." / "Who emailed me about the lab report?" Stop to text **1.18 / 1.25 / 1.15 s**. Ready in 1.7 s. |
+| Live mic, same 3 questions, network denied (`sandbox-exec`) | all right ("...at 9." this time). Stop to text **1.12 / 1.19 / 1.13 s**. Ready in 1.4 s. |
+| `bw unlock` with no network (`sandbox-exec`) | **works** |
 
-The 1.4 s for a 6.7 s clip is the time from stop to text. A shorter spoken question should come back faster.
+Stop to text is about 1.1–1.25 s for a spoken question. "Nine" comes back as "9" or "9:00", and the reasoning layer should treat these the same.
+
+Not verified: a real Wi-Fi-off run. That happens later, once, for the whole app. `sandbox-exec` blocks connections, but macOS still sees a network.
 
 ## Steps for Coby
 
@@ -92,4 +95,4 @@ sandbox-exec -p '(version 1)(allow default)(deny network-outbound (remote ip))' 
 sandbox-exec -p '(version 1)(allow default)(deny network-outbound (remote ip))' bw unlock --raw > /dev/null && echo "bw unlock offline: ok" || echo "bw unlock offline: FAIL"
 ```
 
-**At the demo (Wi-Fi off):** the safe order is to load the key **before** turning Wi-Fi off. Run the `bw unlock` and `export ARGMAX_API_KEY=...` lines above while you're online. Then turn Wi-Fi off and start the app from that same terminal. `bw get` with an existing session works with no network (tested). `bw unlock` with no network is the check above.
+**At the demo (Wi-Fi off):** the safe order is to load the key **before** turning Wi-Fi off. Run the `bw unlock` and `export ARGMAX_API_KEY=...` lines above while you're online. Then turn Wi-Fi off and start the app from that same terminal. `bw get` with an existing session and `bw unlock` both work with no network (tested with `sandbox-exec`), so unlocking after Wi-Fi is off also works.
