@@ -106,6 +106,11 @@ All result files are in `sufficiency/eval/results/`: `4B_<variant>_run{1,2,3}.js
 - the gather loop: running out of `max_seconds`, found on the first search, found after a rephrase, giving up, never reopening a URL, skipping failed opens, `max_results` and title ordering, and the adapter shapes
 - the `sampling=` merge in `llm/client.py`
 
+## Known limits
+
+- **Pointer pages.** A page that only says where the answer is ("Meeting times are posted on our Instagram") can be accepted as the answer. Its quote is real, so the quote check passes. This is s03 with the shipped prompt. Thinker 0 ruled no further prompt work. The A/B check call (`CHECK_ANSWER = True`) catches these pointers but rejects answers that need date reasoning, so it is off.
+- **Short answers.** The `answer` text can be terse ("NO"). Show `evidence` with it.
+
 ## Not run
 
 - Real browser functions. No `search` or `open` exist yet, so gather has only been tested with stubs over saved pages.
