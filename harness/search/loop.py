@@ -109,9 +109,13 @@ def research(
         rounds = round_no
         tried.add(query.lower())
         results = list(find(query))[:MAX_RESULTS]
-        if not results and find is engine.search and engine.last_status in ("BLOCKED", "LOGIN"):
-            # A wall is not a query problem: rewriting will hit the same wall, and
-            # Run 4 spent three searches per question proving that.
+        if not results and find is engine.search and engine.last_status in (
+            "BLOCKED",
+            "LOGIN",
+            "ERR",
+        ):
+            # A wall, a sign-in or a dead engine is not a query problem: rewriting
+            # hits the same thing, and Run 4 spent three searches per question proving it.
             break
         picks = prompts.pick(question, results, ask)[:MAX_PAGES_PER_ROUND] if results else []
         first_new_note = len(notes)
@@ -121,8 +125,12 @@ def research(
             if item.url in seen_urls:
                 continue
             seen_urls.add(item.url)
-            word, text = open_page(item.url)
             pages += 1
+            try:
+                word, text = open_page(item.url)
+            except Exception:
+                # One unreachable page must not throw away the notes already collected.
+                continue
             if word != "OK" or not (text or "").strip():
                 continue
             for chunk in top_chunks(text, question, k=MAX_CHUNKS):

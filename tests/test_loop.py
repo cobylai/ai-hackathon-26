@@ -238,6 +238,42 @@ def test_stops_after_one_search_when_the_engine_is_walled(monkeypatch):
     assert not any("better search query" in prompt for prompt in fake.prompts)
 
 
+def test_stops_after_one_search_when_the_engine_errors(monkeypatch):
+    queries: list[str] = []
+
+    def broken(query: str):
+        queries.append(query)
+        return []
+
+    monkeypatch.setattr(loop.engine, "search", broken)
+    monkeypatch.setattr(loop.engine, "last_status", "ERR")
+    fake = llm.FakeLLM(["a better query", "another query"])
+    outcome = loop.research("anything", ask=fake.ask)
+    assert len(queries) == 1
+    assert outcome.rounds == 1
+    assert not outcome.notes
+
+
+def test_one_broken_page_does_not_end_the_run():
+    results = [
+        Result("A", "https://a.example/1", "a.example", ""),
+        Result("B", "https://b.example/1", "b.example", ""),
+    ]
+
+    def open_page(url: str) -> tuple[str, str]:
+        if "a.example" in url:
+            raise RuntimeError("browser died mid-run")
+        return "OK", ARTICLE
+
+    fake = llm.FakeLLM(["1 2", "The keeper kept a note.", "YES", "Answer [1]."])
+    outcome = loop.research(
+        "q", ask=fake.ask, search=lambda query: results, open_page=open_page
+    )
+    assert outcome.pages == 2
+    assert len(outcome.notes) == 1
+    assert "b.example" in outcome.answer
+
+
 def test_empty_results_from_a_working_engine_still_rewrite(monkeypatch):
     queries: list[str] = []
 
