@@ -107,3 +107,8 @@
 
 ## Live eval re-run (2026-11-15)
 - scripts/eval_computer.py on 69aa939 (includes both new fixes): all 5 jobs pass, unchanged timings; notes-computer-eval.md updated.
+
+## browser-core ff7984b merged in (2026-11-15)
+- Kept the branch current with browser-core's CLI/error-path tests. Conflict: tests/test_state.py, union of both sides' new tests (same as before).
+- Dropped their committed .coverage artifact from the merge and gitignored it; flagged for the browser teammate to remove on their branch.
+- Full suite after merge: 335 passed / 4 skipped.
