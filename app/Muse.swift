@@ -188,19 +188,16 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
     // ---- Panel ----
     func makePanel() {
         panel = Panel(contentRect: NSRect(origin: .zero, size: panelSize),
-                      styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel],
+                      styleMask: [.borderless, .nonactivatingPanel],   // no title strip: the page owns the top
                       backing: .buffered, defer: false)
-        panel.titleVisibility = .hidden
-        panel.titlebarAppearsTransparent = true
-        for b in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-            panel.standardWindowButton(b)?.isHidden = true
-        }
-        panel.isMovableByWindowBackground = true
+        panel.hasShadow = true
+        panel.isMovableByWindowBackground = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear
+        panel.isOpaque = false
         panel.delegate = self
         panel.onEscape = { [weak self] in self?.hide() }
 
