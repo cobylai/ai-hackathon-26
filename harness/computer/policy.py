@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import re
+import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -81,8 +82,8 @@ def _has_confirm_word(text: str, words: list[str]) -> bool:
     return any(re.search(rf"\b{re.escape(w)}\b", text) for w in words)
 
 
-def check(app: str, action: str, label: str = "", home: Path | None = None) -> str:
-    """Decide ALLOW, CONFIRM or DENY for an action, and log the decision.
+def verdict(app: str, action: str, label: str = "", home: Path | None = None) -> str:
+    """Decide ALLOW, CONFIRM or DENY for an action. Pure; logs nothing.
 
     Order: block list first (cannot be overridden), then confirm words in the
     action or label, then the allow list. Anything not allowed is denied.
@@ -93,16 +94,19 @@ def check(app: str, action: str, label: str = "", home: Path | None = None) -> s
     name = app.strip().lower()
 
     if name in blocked:
-        verdict = DENY
-    elif _has_confirm_word(f"{action} {label}", policy["confirm_words"]):
-        verdict = CONFIRM
-    elif name in allowed:
-        verdict = ALLOW
-    else:
-        verdict = DENY
+        return DENY
+    if _has_confirm_word(f"{action} {label}", policy["confirm_words"]):
+        return CONFIRM
+    if name in allowed:
+        return ALLOW
+    return DENY
 
-    log_action(app, action, label, verdict, home)
-    return verdict
+
+def check(app: str, action: str, label: str = "", home: Path | None = None) -> str:
+    """verdict() plus one line in actions.log."""
+    result = verdict(app, action, label, home)
+    log_action(app, action, label, result, home)
+    return result
 
 
 def log_action(
@@ -116,3 +120,51 @@ def log_action(
     line = "\t".join(" ".join(f.split()) for f in fields)
     with (root / "actions.log").open("a") as fh:
         fh.write(line + "\n")
+
+
+# --- one-time confirmation tokens --------------------------------------------
+# Seam with the reasoning layer: a tool answers CONFIRM <what> with a token;
+# the user is asked out of band; the tool is called again with that token.
+# Tokens live in ~/.harness/confirms.json so a replay works across processes,
+# and each is deleted on first use (one-time), whether or not it matched.
+
+CONFIRMED = "CONFIRMED"  # actions.log verdict for a token-authorized replay
+
+
+def _key(app: str, action: str, label: str) -> str:
+    return "\t".join((app.strip().lower(), action.strip(), label.strip()))
+
+
+def _tokens_path(home: Path | None) -> Path:
+    return _home(home) / "confirms.json"
+
+
+def _read_tokens(home: Path | None) -> dict:
+    try:
+        data = json.loads(_tokens_path(home).read_text())
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def issue_token(app: str, action: str, label: str, home: Path | None = None) -> str:
+    """Mint a one-time token that authorizes replaying this exact action."""
+    token = secrets.token_hex(3)  # 6 hex chars; a small model can repeat it
+    tokens = _read_tokens(home)
+    tokens[token] = _key(app, action, label)
+    path = _tokens_path(home)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(tokens, indent=2) + "\n")
+    return token
+
+
+def consume_token(
+    app: str, action: str, label: str, token: str, home: Path | None = None
+) -> bool:
+    """True once, if token exists and matches this exact app/action/label."""
+    if not token:
+        return False
+    tokens = _read_tokens(home)
+    key = tokens.pop(token.strip(), None)
+    _tokens_path(home).write_text(json.dumps(tokens, indent=2) + "\n")
+    return key is not None and key == _key(app, action, label)

@@ -53,7 +53,8 @@ def test_click_no_listing_first(home, monkeypatch):
 
 def test_click_confirm_word_needs_confirmation(home, controls):
     result = ui.ui_click(2)
-    assert result == "CONFIRM click 'Delete' on 'TextEdit'"
+    assert result.startswith("CONFIRM click 'Delete' on 'TextEdit'")
+    assert "call again with token=" in result
     assert controls["press"] == []
 
 
@@ -98,7 +99,8 @@ def test_type_fallback_failure(home, controls, monkeypatch):
 
 def test_type_confirm_word_in_label(home, controls):
     result = ui.ui_type(2, "x")
-    assert result == "CONFIRM type 'Delete' on 'TextEdit'"
+    assert result.startswith("CONFIRM type 'Delete' on 'TextEdit'")
+    assert "call again with token=" in result
     assert controls["set_value"] == [] and controls["type_text"] == []
 
 

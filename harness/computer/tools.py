@@ -20,22 +20,31 @@ def _cap(text: str) -> str:
     return f"{body}\n[end]"
 
 
-def _verdict_line(verdict: str, what: str) -> str | None:
-    """None if the action may run, else the status line to return."""
-    if verdict == policy.DENY:
+def _authorize(app: str, action: str, label: str, token: str, what: str) -> str | None:
+    """None if the action may run, else the status line to send back.
+
+    A CONFIRM carries a one-time token; replaying the same call with that
+    token runs the action and logs it as CONFIRMED. DENY is never overruled.
+    """
+    result = policy.verdict(app, action, label)
+    if result == policy.CONFIRM and policy.consume_token(app, action, label, token):
+        policy.log_action(app, action, label, policy.CONFIRMED)
+        return None
+    policy.log_action(app, action, label, result)
+    if result == policy.DENY:
         return f"ERR not allowed: {what}"
-    if verdict == policy.CONFIRM:
-        return f"CONFIRM {what}"
+    if result == policy.CONFIRM:
+        issued = policy.issue_token(app, action, label)
+        return f"CONFIRM {what} | call again with token={issued}"
     return None
 
 
-def app_open(name: str) -> str:
+def app_open(name: str, token: str = "") -> str:
     """Open an app by name, after the policy check."""
     if policy.stopped():
         return policy.STOPPED_MESSAGE
     name = name.strip()
-    verdict = policy.check(name, "open")
-    if (line := _verdict_line(verdict, f"open app '{name}'")) is not None:
+    if (line := _authorize(name, "open", "", token, f"open app '{name}'")) is not None:
         return line
     ok, message = direct.open_app(name)
     if not ok:
@@ -64,7 +73,7 @@ def file_find(query: str) -> str:
     return _cap(f"OK file_find '{query}' | {len(_last_files)} results\n{listing}")
 
 
-def file_open(n: int) -> str:
+def file_open(n: int, token: str = "") -> str:
     """Open result N from the last file_find list."""
     if policy.stopped():
         return policy.STOPPED_MESSAGE
@@ -72,8 +81,7 @@ def file_open(n: int) -> str:
     if not _last_files or not 1 <= n <= len(_last_files):
         return f"ERR no file {n}; call file_find first"
     path = _last_files[n - 1]
-    verdict = policy.check("Finder", "file_open", path)
-    if (line := _verdict_line(verdict, f"open file '{path}'")) is not None:
+    if (line := _authorize("Finder", "file_open", path, token, f"open file '{path}'")) is not None:
         return line
     ok, message = direct.open_path(path)
     if not ok:
