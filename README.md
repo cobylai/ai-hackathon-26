@@ -1,6 +1,21 @@
 # ai-hackathon-26
 AI hackathon 2026
 
+## Run it
+
+On `main`, from the repo root, on an Apple Silicon Mac. Everything runs locally, so it works with Wi-Fi off once set up.
+
+```bash
+uv sync                                                    # once, online
+scripts/serve_bonsai.sh 4B                                 # Bonsai 2 4B on localhost:8080 (leave running)
+MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web  # chat window on the sample-mail bank
+```
+
+Voice (push to talk, Argmax) needs `ARGMAX_API_KEY` in the same shell and a one-time `cd voice/swift && swift build -c release`. Without it, typing still works.
+
+- Setup and testing step by step: [docs/PARTNER-TESTING.md](docs/PARTNER-TESTING.md)
+- How the halves fit, the demo bank (`~/muse-demo-bank`, and how to rebuild it for the recording day), live Gmail sync, and what changed in harness/: [docs/integration.md](docs/integration.md)
+
 ## Hackathon rules that constrain the build (from the 2026-11-14 kickoff)
 
 - **Due noon Sun 2026-11-15** in the Discord submissions channel. Include both names, a one-sentence description, the prizes you're entering, a repo link, and a demo video of 2 minutes or less. Finalist demos start around 12:30.

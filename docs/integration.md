@@ -1,23 +1,28 @@
 # Integration: running both halves together
 
-Branch `integration` = main (llm/, sufficiency/, bank/) + the partner's four
-`feature/*` branches (harness/). Every model call goes to local Bonsai 2 4B.
+**Use `main`.** The `integration` branch landed on main at 0e65978 and is
+retired. main holds both halves: ours (llm/, sufficiency/, bank/, reason/,
+voice/) and the partner's harness/ (his four `feature/*` branches). Every
+model call goes to local Bonsai 2 4B. For a partner's step-by-step setup,
+see `docs/PARTNER-TESTING.md`.
 
 ## Setup (once, while online)
 
-Run from the repo root (or a worktree of it).
+Run from the repo root.
 
 ```bash
-# 1. Python env for harness/ (uv picks Python >= 3.12; tested on 3.14.6)
+# 1. Python env (uv picks Python >= 3.12; tested on 3.14.6)
 uv sync
 
 # 2. The Chromium build the locked Playwright (1.65.2) needs: chromium-1255
 uv run playwright install chromium
 
-# 3. Ad filter lists into ~/.harness/filters (optional; browser works without)
+# 3. Ad filter lists into ~/.harness/filters (optional; the browser works without)
 uv run python scripts/fetch_filters.py
 
-# 4. One-time visible sign-in to Gmail in the harness profile (~/.harness/profile)
+# 4. Only for live Gmail: one-time visible sign-in on the harness profile (~/.harness/profile).
+#    Sign in to the test account, then QUIT Chrome for Testing with Cmd+Q. Closing the
+#    window leaves it running, holding the profile lock, and the hidden browser cannot start.
 uv run python -m harness login https://mail.google.com
 ```
 
@@ -30,34 +35,115 @@ Bonsai models and their venv live in the main checkout at
 # Bonsai 2 4B on http://localhost:8080/v1 (one server at a time; reuse a running one)
 curl -s localhost:8080/v1/models || scripts/serve_bonsai.sh 4B
 
-# Tests (harness tests/ and our sufficiency tests are separate runs)
-uv run pytest -q
-uv run python -m pytest -q sufficiency/tests
+# The demo: chat window on the sample-mail bank (see "Demo bank" below)
+MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web
 
-# Live: typed questions through gather with the partner's browser
-uv run python scripts/live_gather.py "What is the capital of Australia?"
+# Tests: harness tests/ and our packages are separate runs
+uv run pytest -q
+uv run python -m pytest -q bank/tests sufficiency/tests reason/tests
 ```
+
+## Demo bank: `~/muse-demo-bank`
+
+The demo answers from sample mail (brief M's 20 fake emails from 13 made-up
+senders, written into real Gmail thread markup), not from live sends. The
+video says it is sample mail.
+
+- Bank: `~/muse-demo-bank` (outside every checkout).
+- Pages, truth.json and the saved template: `~/muse-demo-threads/`.
+  `template.html` is a saved Gmail page with a real sender in it; keep it out of git.
+
+Regenerate for the recording day (one command; set DAY to that day; Bonsai up):
+
+```bash
+DAY=2026-11-15; rm -rf ~/muse-demo-bank && uv run python scripts/make_test_threads.py 20 --today $DAY --template ~/muse-demo-threads/template.html --out ~/muse-demo-threads && MUSE_BANK_DIR=~/muse-demo-bank uv run python scripts/sync_test_threads.py ~/muse-demo-threads && MUSE_BANK_DIR=~/muse-demo-bank uv run python scripts/make_test_mail.py check ~/muse-demo-threads --today $DAY --offline
+```
+
+The chat window uses the real clock, so build the bank for the day you record.
+`--today` moves the generator's "today": sent and due dates are offsets from
+it, and `check` computes "this week" / "next week" / "tomorrow" with the same
+weekend rule as `reason.route`.
+
+How it works: `scripts/make_test_threads.py` writes each email into a copy of
+the saved message markup (sender name and address, date in the live format
+"15 Nov 2026, 09:12", subject, body), drops Gmail's scripts, and scrubs the
+template's real sender (it stops if any trace remains).
+`scripts/sync_test_threads.py` opens each page as a local file in the
+partner's browser (his `Session`, on the scratch profile `data/test-profile`,
+with every non-file request aborted), reads it with his `read_messages`, and
+files it the way the live sync does. It refuses any bank folder without
+"test" or "demo" in its name.
+
+**Current result** (built for Sun 2026-11-15, Bonsai 4B, offline): 20/20
+threads match sender, address, date and subject. Brief M's check: **37/38**
+(person 14/14, no-match 2/2, due 16/16, bank 5/6). The one miss: "What are
+the team name options for the hackathon?" -> "I don't have that saved".
+"What's due this week?" lists 7 rows (Mon 11/16 to Sun 11/22); "What's due
+tomorrow?" lists Hugo's vote (Mon 11/16 5pm).
+
+Person questions for the video (names speech-to-text is unlikely to garble;
+all right in the check): Felix, Hugo, Ivy (no ask: the newsletter), Jonah,
+Greta, Omar, Lena, Milo. Avoid Nina (two of them), Tess, Kiri and Rafe.
+
+Earlier runs, superseded: 32/37 on `data/bank-test` before worker 9's
+person-route fix (brief P), then 36/37 after it, matching the text bank.
+
+## Email -> bank sync (live Gmail)
+
+```bash
+MUSE_BANK_DIR=~/muse-bank uv run python scripts/sync_email.py 7     # last 7 days, signed-in account
+MUSE_BANK_DIR=/tmp/bank uv run python scripts/sync_email.py --fixture tests/pages/gmail_thread.html
+```
+
+`email_search(days=N)` rows -> `read.open_thread` + `read.read_messages` ->
+`bank.ingest(body, source="gmail:<thread_id>#<i>", kind="email", sender_name,
+sender_address, sent_date (ISO), subject)` as kwargs. Read paths only: no
+compose, draft or send. One search page, so at most 10 threads per sync. Keep
+the bank outside the repo.
+
+Live run (test account ilovelocalai@gmail.com, 2026-11-14): 5 threads (Coby's
+demo emails 1, 3, 5, 7 plus Google's welcome mail) -> 5 entries in 28 s;
+re-run 0 added. Senders, sent dates and deadlines came out right. Live Gmail
+shows dates as "14 Nov 2026, 22:24"; the sync parses that and the fixture's
+"Thu, Nov 12, 2026, 4:30 PM". The live-send demo (docs/demo-emails.md) was
+dropped for the sample-mail bank; the partner's four emails were never synced.
+
+Known issue, no fix (thinker ruling): Google's welcome mail is filed with
+course "LLC 1600", read from its "Google LLC, 1600 Amphitheatre" footer.
+
+## Web search for gather: `sufficiency/websearch.py`
+
+`search(query) -> [{title, url, snippet}]`: the partner's
+`harness.search.engine.search` (Google, then DuckDuckGo) first; when that
+returns nothing, Bing results read in the same hidden browser. On this network
+Google answered /sorry/ and DuckDuckGo served its duck challenge every time; no
+bot check is solved or bypassed. `websearch.last_engine` says which one
+answered. Pages are opened with the partner's `open_page`.
+
+Live gather on Bonsai 4B, online, 60 s limit (`scripts/live_gather.py`, all via
+Bing): Mona Lisa -> Leonardo da Vinci 7.9 s; Apollo 11 -> 1969 7.2 s; boiling
+point of water -> 212 °F 7.8 s (all Wikipedia). An earlier run gave Canberra,
+9 November 1989 and Mary Shelley in 5 to 8 s.
 
 ## Offline readiness (Wi-Fi off)
 
 - Bonsai: `serve_bonsai.sh` sets HF offline flags and never downloads.
 - Chromium: `~/Library/Caches/ms-playwright/chromium-1255` and
-  `chromium_headless_shell-1255` downloaded on 2026-11-14 (only 1248 was there
-  before, which the locked Playwright does not use).
-- Filters: `~/.harness/filters/easy{list,privacy}.txt` downloaded 2026-11-14.
-- With Wi-Fi off, web search and Gmail return BLOCKED/ERR text; `open_page`
-  answers only from its 24 h cache. The offline demo answers from bank/.
+  `chromium_headless_shell-1255`, downloaded 2026-11-14.
+- Filters: `~/.harness/filters/easy{list,privacy}.txt`, downloaded 2026-11-14.
+- With Wi-Fi off, web search and Gmail return BLOCKED/ERR; `open_page` answers
+  only from its 24 h cache. The demo answers from the bank.
 
 ## Model calls: localhost only
 
-`harness/llm.ask` now calls `llm.client.chat`. A repo search
-(`git grep` for chat/completions, anthropic, openai, lmstudio, ollama,
-httpx.post/Client, urlopen, requests.post, outside samples/) finds one model
-caller, `llm/client.py`, which raises unless `BONSAI_BASE_URL` is localhost.
-The only other HTTP code is `scripts/fetch_filters.py` and
-`scripts/fetch_ubol.py`, which download ad-block lists, not model calls.
+`harness/llm.ask` calls `llm.client.chat`. A repo search (`git grep` for
+chat/completions, anthropic, openai, lmstudio, ollama, httpx.post/Client,
+urlopen, requests.post, outside samples/) finds one model caller,
+`llm/client.py`, which raises unless `BONSAI_BASE_URL` is localhost. The only
+other HTTP code is `scripts/fetch_filters.py` and `scripts/fetch_ubol.py`,
+which download ad-block lists.
 
-## Merges and conflicts
+## Merges and conflicts (integration branch, now on main)
 
 | Merge | Conflict | Resolution |
 |---|---|---|
@@ -68,6 +154,7 @@ The only other HTTP code is `scripts/fetch_filters.py` and
 | sufficiency-check (2a7af5a) | none | |
 | context-store (82a70a5) | `.gitignore` | union, keeps `data/` |
 | main 99000fa (final context-store 6cec2f6) | none | |
+| reasoning-layer | none | |
 
 ## Changes made inside harness/ (and the partner's tests, scripts, docs)
 
@@ -75,144 +162,25 @@ The only other HTTP code is `scripts/fetch_filters.py` and
 - `harness/llm.py`: `ask()` keeps its signature, `last_usage`, `_coerce` and
   `FakeLLM`, but calls `llm.client.chat` instead of `httpx.post`. Removed
   `base_url()`, `model()` and the `LLM_BASE_URL` / `LLM_MODEL` /
-  `LLM_REASONING_EFFORT` env vars (server and size now come from
-  `BONSAI_BASE_URL` / `BONSAI_SIZE`). With `choices`, the prompt now ends
+  `LLM_REASONING_EFFORT` env vars (server and size come from
+  `BONSAI_BASE_URL` / `BONSAI_SIZE`). With `choices`, the prompt ends
   "Reply with exactly one of: A, B." instead of a JSON-schema enum. Errors
   still return "" but are printed to stderr. Sampling is the client's
   non-thinking preset (temperature 0.7), not temperature 0.
-- `tests/test_prompts.py`: the seven `llm.ask` tests now patch
-  `llm.client.chat` instead of `httpx.post`; the endpoint-URL and
-  reasoning-effort tests were replaced by a "goes through the Bonsai client" test.
+- `tests/test_prompts.py`: the `llm.ask` tests patch `llm.client.chat`
+  instead of `httpx.post`; the endpoint-URL and reasoning-effort tests were
+  replaced by a "goes through the Bonsai client" test.
 - `tests/test_tools.py`: merge resolution only (above).
 - `scripts/eval_search.py`: docstring no longer points at LM Studio.
 - `docs/plan/00-overview.md`: removed "point it at Claude (claude-haiku)".
-- `.gitignore`: union (above), plus `data/` from context-store.
+- `.gitignore`: union (above), plus `data/`.
 
-A Bing fallback was briefly added to harness/search (ed93e1c) and then
-reverted (next commit) on thinker's ruling to keep harness/ untouched; it now
-lives on our side in `sufficiency/websearch.py`. Net change to harness/search: none.
+A Bing fallback was briefly added to harness/search (ed93e1c) and reverted in
+the next commit, on the thinker's ruling to keep harness/ untouched. Net
+change to harness/search: none.
 
-## Web search for gather: `sufficiency/websearch.py` (ours)
+## Not done
 
-`search(query) -> [{title, url, snippet}]`: the partner's
-`harness.search.engine.search` (Google, then DuckDuckGo) first; when that
-returns nothing (on this Mac it says BLOCKED: Google /sorry/, DuckDuckGo duck
-challenge), Bing results read in the same hidden browser. No bot check is
-solved or bypassed. `websearch.last_engine` says which one answered. This is
-the `search_fn` for gather; pages are opened with the partner's `open_page`.
-
-## Live gather result (2026-11-14, online, Bonsai 2 4B, max_seconds=60)
-
-Via `scripts/live_gather.py` -> `sufficiency.websearch.search` (all Bing, harness said BLOCKED):
-
-| Question | Answer | Source | Seconds |
-|---|---|---|---|
-| Who painted the Mona Lisa? | Leonardo da Vinci | en.wikipedia.org/wiki/Mona_Lisa | 7.9 |
-| What year did Apollo 11 land on the Moon? | 1969 | en.m.wikipedia.org/wiki/Apollo_11 | 7.2 |
-| What is the boiling point of water in Fahrenheit? | 212 °F | en.wikipedia.org/wiki/Boiling_point | 7.8 |
-
-Earlier run (same path, inline in the script): capital of Australia ->
-Canberra (worldatlas.com, 5.4 s); Berlin Wall -> 9 November 1989 (wikipedia,
-8.1 s); Frankenstein -> Mary Shelley (wikipedia, 7.6 s).
-
-## Email -> bank sync
-
-```bash
-# live: last 7 days of the signed-in Gmail (keep the bank outside the repo)
-MUSE_BANK_DIR=~/muse-bank uv run python scripts/sync_email.py 7
-# saved thread instead of live mail
-MUSE_BANK_DIR=/tmp/bank uv run python scripts/sync_email.py --fixture tests/pages/gmail_thread.html
-```
-
-`email_search(days=N)` rows -> `read.open_thread` + `read.read_messages` ->
-`bank.ingest(body, source="gmail:<thread_id>#<i>", kind="email", sender_name,
-sender_address, sent_date (ISO), subject)` as kwargs. Read paths only: no
-compose, draft or send. One search page, so at most 10 threads per sync.
-Fixture run on final context-store: 3 messages -> 3 entries in 9.1 s, senders
-and dates right, `sent_date_guessed: false`; re-run adds 0 (dedup).
-
-Live run (test account ilovelocalai@gmail.com, Bonsai 4B, 2026-11-14):
-5 threads (Coby's demo emails 1, 3, 5, 7 plus Google's welcome mail) -> 5
-entries in 28.2 s; re-run 0 added in 13.0 s. Senders, sent dates and the
-three deadlines (Mon 11/16 23:59, Thu 11/19, Fri 11/20 12:00) came out right.
-Live Gmail shows dates as "14 Nov 2026, 22:24", now parsed (fixture used
-"Thu, Nov 12, 2026, 4:30 PM"). Gmail sign-in: after `harness login`, quit
-Chrome for Testing with Cmd+Q; closing the window leaves it holding the
-profile lock and the hidden browser cannot start.
-
-Known issue, no fix (thinker ruling): Google's welcome mail is filed with
-course "LLC 1600", read from its "Google LLC, 1600 Amphitheatre" footer.
-
-## Test threads: many senders without sending mail (brief N)
-
-```bash
-# once: save one single-message thread page from the test account as the template
-#   -> data/templates/thread.html (gitignored; it has the real sender in it)
-uv run python scripts/make_test_threads.py 30            # -> data/test-threads/*.html + truth.json
-MUSE_BANK_DIR=data/bank-test uv run python scripts/sync_test_threads.py
-MUSE_BANK_DIR=data/bank-test uv run python scripts/make_test_mail.py check data/test-threads
-```
-
-`make_test_threads.py` takes brief M's emails (`scripts/make_test_mail.py`
-`build()`, same senders, text and seed) and writes each into a copy of the
-saved Gmail message markup: sender name and address, date (live format
-"14 Nov 2026, 22:33"), subject and body. Gmail's scripts are dropped, and the
-template's real sender is scrubbed from every output (the script stops if any
-remains). `sync_test_threads.py` opens each page as a local file in the
-partner's browser (his `Session`, on a scratch profile `data/test-profile` so
-it never competes with the signed-in Gmail profile; non-file requests are
-aborted), reads it with his `read_messages`, and files it with the live sync's
-`file_thread` -> `bank.ingest`. It refuses to run unless MUSE_BANK_DIR is a
-test bank. Everything it writes is under data/ (gitignored). If this bank
-appears in the demo or video, say it is sample mail.
-
-Result (2026-11-14, Bonsai 4B): brief M's generator has 20 emails, so 20
-threads, not 30. 20 filed in 75 s; **20/20** match sender name, address,
-sent date and subject. Brief M's check on that bank: **32/37 right** (person
-10/14, no-match 2/2, due 15/15, bank 5/6). Wrong: Tess and Jonah "don't say"
-(their asks are "confirm ... by" / "book a study room"); Felix and Ivy given
-an ask from a no-ask email; the hackathon team-name question missed the bank
-and timed out on the web route (the check ran online).
-
-## Demo bank (brief Q): `~/muse-demo-bank`
-
-The demo answers from sample mail (brief M's 20 fake emails as Gmail thread
-pages), not from live sends. The video says it is sample mail.
-
-- Bank: `~/muse-demo-bank` (outside every worktree).
-- Pages, truth.json and the saved template: `~/muse-demo-threads/`
-  (`template.html` is the saved Gmail page; it has a real sender, so keep it out of git).
-
-Regenerate for the recording day (one command; set DAY to that day). Run from
-the repo root with the Bonsai server up:
-
-```bash
-DAY=2026-11-15; rm -rf ~/muse-demo-bank && uv run python scripts/make_test_threads.py 20 --today $DAY --template ~/muse-demo-threads/template.html --out ~/muse-demo-threads && MUSE_BANK_DIR=~/muse-demo-bank uv run python scripts/sync_test_threads.py ~/muse-demo-threads && MUSE_BANK_DIR=~/muse-demo-bank uv run python scripts/make_test_mail.py check ~/muse-demo-threads --today $DAY --offline
-```
-
-Launch the chat window on it:
-
-```bash
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web
-```
-
-`--today` (added at brief Q) moves the generator's fixed "today": sent and due
-dates are offsets from it, and `check` computes "this week" / "next week" /
-"tomorrow" from it with the same weekend rule as `reason.route`. The chat
-window uses the real clock, so build the bank for the day you record.
-
-Built for **2026-11-15** on 2026-11-14: 20/20 threads match sender, address,
-date and subject. Offline check: **37/38 right** (person 14/14, no-match 2/2,
-due 16/16 incl. "What's due tomorrow?", bank 5/6). The one miss: "What are the
-team name options for the hackathon?" -> "I don't have that saved". "What's
-due this week?" lists 7 rows (Mon 11/16 to Sun 11/22), and "What's due
-tomorrow?" lists Hugo's vote (Mon 11/16 5pm).
-
-Person questions for the video (names speech-to-text is unlikely to garble;
-all right in the offline check): What did Felix ask me? / Hugo / Ivy (no ask:
-the newsletter) / Jonah / Greta / Omar / Lena / Milo. Avoid Nina (two of
-them), Tess, Kiri and Rafe.
-
-## Not run yet
-
-- Re-sync of the partner's demo emails: dropped (brief Q; the demo uses the sample-mail bank).
+- 30 test threads: brief M's generator has 20 emails, so the test and demo
+  banks hold 20.
+- Voice run of the video's person questions on `~/muse-demo-bank` (needs Coby).
