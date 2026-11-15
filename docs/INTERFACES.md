@@ -127,5 +127,6 @@ Argmax runs only from Swift, so voice is a small separate Swift program. It turn
   - the browser folder name
   - the final `search`/`open` shapes
   - whether `open` takes a "wait for selector" option for mail pages
+  - **a way to list messages.** `open(url)` on the inbox returns the inbox page's text, not the individual emails, so the sync step can't walk the mailbox with `search`/`open` alone. The browser side needs something like `recent_messages(limit) -> list[{"source_id", "text"}]` (each message as plain text with a stable id), and the same later for Canvas.
 - Who builds computer control.
 - The UI (built last), and the main entry point that typed and spoken questions go into.
