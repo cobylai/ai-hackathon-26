@@ -29,3 +29,4 @@
 - Re-merged browser-core (40d89d7: B8 sign-in check, live tests) into web-search, email-gmail and computer-control; browser subsets 47 / 45 / 43 passed, CI green on all three (computer-control full suite: 308 passed, 7 skipped).
 - B2 fix: a failed `Session.start()` now stops its Playwright driver. Before, a locked profile (e.g. the B8 sign-in window) left a driver and event loop behind, so every later start in the same process refused to run. Regression test plus a cross-process lock test (real second Chromium) added.
 - B2 test: cookies survive a profile restart (needs an expiry; session cookies die with the browser), covering the "sign-ins persist" promise B8 relies on.
+- B2 fix merged into all three branches (web-search 079a28e, email c6739ba, computer-control 70116ef). Test-only conflicts resolved by keeping both sides (their restart/HARNESS_PROFILE_DIR tests plus the new session tests). CI green: search 1m32s, email 172 passed, computer-control 316 passed.
