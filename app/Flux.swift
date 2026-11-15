@@ -17,7 +17,6 @@ let hotKeyFlags: CGEventFlags = .maskSecondaryFn
 let hotKeyName = "Fn-Space"
 let holdSeconds = 0.35                       // held longer than this = push to talk
 let windowURL = URL(string: "http://localhost:8765/")!
-let bonsaiURL = URL(string: "http://localhost:8080/v1/models")!
 let statusURL = URL(string: "http://localhost:8765/status")!
 let panelSize = NSSize(width: 640, height: 440)
 let keychainService = "Flux Argmax key"
@@ -26,6 +25,7 @@ let keychainAccount = "ARGMAX_API_KEY"
 let env = ProcessInfo.processInfo.environment
 /// FLUX_<name>, or the old MUSE_<name> (read for one release).
 func setting(_ name: String) -> String? { env["FLUX_" + name] ?? env["MUSE_" + name] }
+let bonsaiURL = URL(string: setting("BONSAI_URL") ?? "http://localhost:8080/v1/models")!   // FLUX_BONSAI_URL: tests
 // Where the repo is: `defaults write local.ai-hackathon-26.flux FluxRepo <path>`, then FLUX_REPO,
 // then the path baked in at build time (empty in the DMG build), then ~/ai-hackathon-26.
 var repo: String = [UserDefaults.standard.string(forKey: "FluxRepo"), UserDefaults.standard.string(forKey: "MuseRepo"), setting("REPO"),
@@ -588,9 +588,18 @@ struct Part {
     let commands: () -> [String]      // shell lines, run in the code folder; shown under Details
 }
 
+/// Where Bonsai lives, the same way scripts/serve_bonsai.sh finds it: BONSAI_MODELS_DIR / BONSAI_VENV,
+/// else the main checkout (a worktree at <main>/.claude/worktrees/<name> has no models of its own).
+func mainCheckout(_ r: String) -> String { r.components(separatedBy: "/.claude/worktrees/").first ?? r }
+var bonsaiMLX: String { mainCheckout(repo) + "/samples/bonsai-models/mlx" }
+var bonsaiModels: String { env["BONSAI_MODELS_DIR"].flatMap { $0.isEmpty ? nil : $0 } ?? (bonsaiMLX + "/models") }
+var bonsaiVenv: String { env["BONSAI_VENV"].flatMap { $0.isEmpty ? nil : $0 } ?? (bonsaiMLX + "/.venv") }
+/// Installed = the 4B model file is there, or a Bonsai server already answers.
+func bonsaiInstalled() -> Bool { exists(bonsaiModels + "/bonsai2-4b-mlx/model.safetensors") || get(bonsaiURL) != nil }
+
 func parts() -> [Part] {
-    let mlx = repo + "/samples/bonsai-models/mlx"
-    let bonsai = mlx + "/models/bonsai2-4b-mlx"
+    let mlx = bonsaiMLX
+    let bonsai = bonsaiModels + "/bonsai2-4b-mlx"
     let whisperRoot = home + "/Documents/huggingface/models/argmaxinc/whisperkit-coreml"
     return [
         Part(name: "Flux code", size: nil, link: repoURL.isEmpty ? "" : repoURL,
@@ -602,11 +611,11 @@ func parts() -> [Part] {
              commands: { (which("uv") ? [] : ["curl -LsSf https://astral.sh/uv/install.sh | sh"])
                          + ["uv sync", "uv run playwright install chromium"] }),
         Part(name: "Bonsai 2 4B", size: "about 1 GB", link: "https://huggingface.co/prism-ml/Ternary-Bonsai-2-4B-mlx-2bit",
-             done: { exists(bonsai + "/model.safetensors") },
-             commands: { (exists(mlx + "/.venv/bin/python") ? [] : [
-                            "uv venv --python 3.12 \"\(mlx)/.venv\"",
-                            "uv pip install --python \"\(mlx)/.venv/bin/python\" -r \"\(mlx)/requirements.txt\""])
-                         + ["\"\(mlx)/.venv/bin/hf\" download prism-ml/Ternary-Bonsai-2-4B-mlx-2bit --local-dir \"\(bonsai)\""] }),
+             done: { bonsaiInstalled() },
+             commands: { (exists(bonsaiVenv + "/bin/python") ? [] : [
+                            "uv venv --python 3.12 \"\(bonsaiVenv)\"",
+                            "uv pip install --python \"\(bonsaiVenv)/bin/python\" -r \"\(mlx)/requirements.txt\""])
+                         + ["\"\(bonsaiVenv)/bin/hf\" download prism-ml/Ternary-Bonsai-2-4B-mlx-2bit --local-dir \"\(bonsai)\""] }),
         Part(name: "Speech model", size: "about 630 MB", link: "https://huggingface.co/argmaxinc/whisperkit-coreml",
              done: { exists(modelFolder) },
              commands: { ["uvx --from huggingface_hub hf download argmaxinc/whisperkit-coreml --include \"openai_whisper-large-v3-v20240930_626MB/*\" --local-dir \"\(whisperRoot)\""] }),
@@ -933,6 +942,11 @@ final class Setup: NSObject, NSWindowDelegate {
         let done = onDone; onDone = {}
         done()
     }
+}
+
+if CommandLine.arguments.contains("--parts") {
+    for p in parts() { print("\(p.name)\t\(p.done() ? "installed" : "missing")") }
+    exit(0)
 }
 
 let app = NSApplication.shared

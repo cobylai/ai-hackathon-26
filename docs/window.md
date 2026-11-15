@@ -127,6 +127,8 @@ Four short screens, each with one line of text, a checklist with a status dot pe
 3. **Argmax key:** one field; kept in the login Keychain as **"Flux Argmax key"** (an old "Muse Argmax key" is moved once).
 4. **Permissions:** Accessibility (for Fn-Space), Microphone, Calendar, Reminders, Mail, each with **Allow** until it's on. Flux launches Calendar, Reminders and Mail hidden so macOS can ask.
 
+Bonsai counts as installed when the 4B model is in the code folder, in the main checkout (a worktree has none of its own, as in `scripts/serve_bonsai.sh`), in `BONSAI_MODELS_DIR` (venv: `BONSAI_VENV`), or when a Bonsai server already answers on :8080. `Flux --parts` prints what each row detects; `app/tests/test_parts.sh` checks those cases against the real binary.
+
 It shows on first launch and whenever the code, the key, Accessibility or the microphone is missing; "Set Up Flux…" in the menu reopens it. `FLUX_SETUP_SCREEN=0…3` opens one screen directly (for screenshots). Permissions survive rebuilds because every build is signed with the same Developer ID.
 
 ### What it does on every launch
