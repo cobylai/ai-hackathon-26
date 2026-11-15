@@ -72,6 +72,28 @@ class Web(unittest.TestCase):
         self.assertEqual(got["route"], "due")
         self.assertIn("Prof. Lena Ortiz", got["text"])
         self.assertIn(("what is due Monday", "2026-11-14"), self.seen)
+        self.assertFalse(got["pending"])
+        self.assertIsNone(got["choices"])
+
+    def test_discover_button_and_choices(self):
+        self.assertIn('id="discover"', PAGE)
+        self.assertIn("ask('discover'", PAGE)
+        with mock.patch("discover.waiting", return_value=True):
+            srv = HTTPServer(("127.0.0.1", 0), make_handler(
+                today="2026-11-14", answer_fn=lambda q, today=None: Answer("Question 1 of 2: ...", "discover"),
+                online_fn=lambda: False, count_fn=lambda: 0, entries_fn=lambda: []))
+            threading.Thread(target=srv.serve_forever, daemon=True).start()
+            try:
+                req = urllib.request.Request(f"http://127.0.0.1:{srv.server_port}/ask",
+                                             data=b'{"question": "discover"}', method="POST",
+                                             headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req) as r:
+                    got = json.loads(r.read())
+            finally:
+                srv.shutdown()
+                srv.server_close()
+        self.assertTrue(got["pending"])
+        self.assertEqual([w for _, w in got["choices"]], ["yes", "no", "skip", "stop"])
 
 
 

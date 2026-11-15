@@ -11,6 +11,8 @@ stay on one thread.
     GET  /bank    [{"date", "sender", "subject", "summary", "ask", "deadlines"}], newest first
     POST /ask     {"question": str} -> {"text", "route", "sources", "seconds", "pending"}
                   pending: an action is held for a yes; the page shows Yes / Cancel
+                  choices: [[label, word]] for the buttons when set (discovery: Yes / No / Skip)
+The Discover button sends "discover" to /ask (playbooks/discover.md).
 """
 from __future__ import annotations
 
@@ -19,11 +21,14 @@ import json
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+import discover
 from bank import store
 
 from . import act
 from .answer import answer as _answer, online as _online
 from .speech import HoldToTalk, start_voice
+
+DISCOVER_CHOICES = [["Yes", "yes"], ["No", "no"], ["Skip", "skip"], ["Stop", "stop"]]
 
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -66,6 +71,7 @@ PAGE = """<!doctype html>
   <input id="q" autocomplete="off" placeholder="Ask a question" autofocus>
   <button type="submit" id="send">Send</button>
   <button type="button" id="talk" disabled title="Voice is unavailable">Hold to talk</button>
+  <button type="button" id="discover" title="Let Muse ask you a few questions about yourself">Discover</button>
 </form>
 <script>
 const log = document.getElementById('log'), q = document.getElementById('q'),
@@ -105,7 +111,7 @@ async function ask(question, spoken) {
     m.textContent = r.route + ', ' + r.seconds.toFixed(1) + 's'; d.appendChild(m);
     if (r.pending) {
       const b = document.createElement('div'); b.className = 'confirm';
-      for (const [label, word] of [['Yes, do it', 'yes'], ['Cancel', 'no']]) {
+      for (const [label, word] of (r.choices || [['Yes, do it', 'yes'], ['Cancel', 'no']])) {
         const k = document.createElement('button'); k.type = 'button'; k.textContent = label;
         k.addEventListener('click', () => { b.remove(); ask(word, false); }); b.appendChild(k);
       }
@@ -120,6 +126,8 @@ document.getElementById('f').addEventListener('submit', (ev) => {
   const question = q.value.trim(); if (!question) return;
   q.value = ''; ask(question, false);
 });
+
+document.getElementById('discover').addEventListener('click', () => ask('discover', false));
 
 const talk = document.getElementById('talk'); let recording = false;
 async function post(path) { return (await fetch(path, {method: 'POST'})).json(); }
@@ -226,8 +234,10 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 n = int(self.headers.get("Content-Length") or 0)
                 question = str(json.loads(self.rfile.read(n) or b"{}").get("question") or "")
                 a = answer_fn(question, today=today)
+                held = a.route == "discover" and discover.waiting()
                 self._json({"text": a.text, "route": a.route, "sources": a.sources,
-                            "seconds": a.seconds, "pending": a.route == "act" and act.waiting()})
+                            "seconds": a.seconds, "pending": held or (a.route == "act" and act.waiting()),
+                            "choices": DISCOVER_CHOICES if held else None})
             except Exception as e:  # show it in the window; keep serving
                 self._json({"text": f"Error: {type(e).__name__}: {e}", "route": "error",
                             "sources": [], "seconds": 0.0})
