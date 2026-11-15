@@ -85,8 +85,9 @@ def _has_confirm_word(text: str, words: list[str]) -> bool:
 def verdict(app: str, action: str, label: str = "", home: Path | None = None) -> str:
     """Decide ALLOW, CONFIRM or DENY for an action. Pure; logs nothing.
 
-    Order: block list first (cannot be overridden), then confirm words in the
-    action or label, then the allow list. Anything not allowed is denied.
+    Order: block list first (cannot be overridden), then the allow list, then
+    confirm words in the action or label. Anything not allowed is denied, so
+    a confirm token can never reach an app off the allow list.
     """
     policy = load_policy(home)
     blocked = _norm(policy["block_apps"])
@@ -95,11 +96,11 @@ def verdict(app: str, action: str, label: str = "", home: Path | None = None) ->
 
     if name in blocked:
         return DENY
+    if name not in allowed:
+        return DENY
     if _has_confirm_word(f"{action} {label}", policy["confirm_words"]):
         return CONFIRM
-    if name in allowed:
-        return ALLOW
-    return DENY
+    return ALLOW
 
 
 def check(app: str, action: str, label: str = "", home: Path | None = None) -> str:

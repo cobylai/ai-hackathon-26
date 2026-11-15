@@ -48,6 +48,10 @@ CASES = [
     ("Notes", "click", "Sender field", "ALLOW"),
     # deny beats confirm: a blocked app with a confirm word is still DENY
     ("Terminal", "click", "delete", "DENY"),
+    # ... and so is an unlisted app: a confirm token must never reach an app
+    # off the allow list (CONFIRM here would let a token replay run it)
+    ("Google Chrome", "click", "Delete account", "DENY"),
+    ("Safari", "type", "send", "DENY"),
 ]
 
 

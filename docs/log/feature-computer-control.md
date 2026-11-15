@@ -96,3 +96,8 @@
 - ui.py: ui_click/ui_type now refuse with "front app changed; call ui again" when the frontmost pid differs from the listing's pid.
 - Closes a real hole: the policy check used the current front app, but the AX element belonged to the listed app, so a click could land on a background app.
 - New test test_click_refuses_after_front_app_change; full suite 312 passed / 4 skipped.
+
+## Policy: allowlist checked before confirm words (2026-11-15)
+- policy.verdict reordered: block, then allowlist (unlisted = DENY), then confirm words. Matches the docstring "anything not allowed is denied".
+- Closes a real hole: an unlisted app + a confirm-word label used to return CONFIRM, so a one-time token replay could run an action on an app off the allowlist.
+- New cases (Chrome+delete, Safari+send = DENY); only harness/computer calls verdict/check; full suite 314 passed / 4 skipped.
