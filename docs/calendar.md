@@ -76,7 +76,7 @@ uv run python -m unittest discover reason/tests     # events source mocked (test
 
 ## Known gaps
 
-- **Repeating events:** Calendar's AppleScript `whose start date` doesn't expand them, so a weekly event shows only on its first date. Use one-off events in the demo calendar.
+- **Repeating events:** Calendar's AppleScript returns each repeating event once, at its first date, and doesn't expand the repeats. Use one-off events in the demo calendar.
 - **Only one calendar** is read.
 - **Calendar.app opens** in the background on the first question if it isn't running. The first answer takes about 5 s.
 - **`sandbox-exec` breaks it** (-10004). Use the per-process block, or really turn Wi-Fi off.
