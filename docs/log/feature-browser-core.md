@@ -24,3 +24,4 @@
 - B5 fix: `elements` now reports "40 of 62 elements" when the list is capped, instead of counting only the lines it printed (`list_elements_counts` returns shown/matched).
 - CI: added `.github/workflows/tests.yml` (uv + Playwright Chromium on ubuntu, runs pytest on feature/* pushes and PRs). Made the CLI test find the browser cache portably; 14 tool tests green locally.
 - Merged browser-core (85741a4) into feature/web-search, feature/email-gmail and feature/computer-control per the plan. Merges were conflict-free; browser tests on each branch: 53 / 50 / 50 passed, and CI is green on all three (computer-control needed a Linux stub for one macOS-only test).
+- Live checks are now a maintained opt-in suite: `HARNESS_LIVE=1 uv run pytest -q tests/test_live.py` covers example.com, Wikipedia paging, BBC index-page text (>600 chars), and the CAPTCHA-article false positive. Skipped by default so CI stays offline; 4 passed live in 7.9 s.
