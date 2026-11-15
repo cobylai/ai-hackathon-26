@@ -146,3 +146,49 @@ def person_in(question: str, names: set[str]) -> str | None:
         elif w not in COMMON:  # lowercase mode, or the sentence-case first word
             return w
     return None
+
+
+# ---- notes about the user, and person pages (playbooks/remember.md, people.md) ----
+
+_LEAD = re.compile(r"^[\s\-–•*]*(?:(?:hey|ok|okay)[\s,]+)?(?:(?:muse|hearth)[\s,!.:]+)?(?:please[\s,]+)?", re.I)
+
+
+def _lead(question: str) -> str:
+    """Drop what comes before the command: a list dash from voice, "Muse,", "please"."""
+    return _LEAD.sub("", question or "", count=1).strip()
+
+
+def _after(book: str, key: str, question: str) -> str | None:
+    t = _lead(question)
+    m = playbook.trigger(book, key).match(t)
+    return None if not m else t[m.end():].strip(" ,:")
+
+
+def remember_text(question: str) -> str | None:
+    """'Remember that my lab is Tuesdays at 2' -> 'my lab is Tuesdays at 2'. A question
+    ("remember that thing Felix said?") or "do you remember …" is not a command: None."""
+    if (question or "").strip().endswith("?"):
+        return None
+    rest = _after("remember", "remember", question)
+    return None if rest is None else rest.rstrip(" .!")
+
+
+def forget_text(question: str) -> str | None:
+    """'Forget that my lab is Tuesdays at 2' -> 'my lab is Tuesdays at 2'; 'forget that' -> ''."""
+    rest = _after("remember", "forget", question)
+    if rest is None:
+        return None
+    return "" if rest.lower().strip(" .!") in ("", "it", "this", "that") else rest
+
+
+def is_about_me(question: str) -> bool:
+    return bool(playbook.trigger("remember", "about_me").search(question or ""))
+
+
+def who_text(question: str) -> str | None:
+    """'Who is Felix?' / 'What do you know about Felix Ambrose?' -> 'Felix' / 'Felix Ambrose'."""
+    rest = _after("people", "who", question)
+    if rest is None:
+        return None
+    rest = re.sub(r"'s$|'$", "", rest.strip(" ?.!"))
+    return rest or None
