@@ -60,6 +60,10 @@ first thread and a blank compose and prints a count per name:
 uv run python -m harness.email.selfcheck
 ```
 
+It opens a blank compose and closes it again. If the account inserts a signature
+into new messages, Gmail saves that signature as a draft — so an occasional
+"(no subject)" draft in Drafts is expected, not a bug in the tool.
+
 ## Timings
 
 ```bash
