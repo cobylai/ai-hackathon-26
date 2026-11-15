@@ -63,3 +63,18 @@ def answered(root: Path | None = None) -> set[str]:
 def learned(root: Path | None = None) -> list[dict]:
     """Confirmed facts still in place, in the order they were confirmed."""
     return [r for r in load(root) if r.get("answer") == "yes"]
+
+
+def since_sync(root: Path | None = None) -> float:
+    """Seconds since discovery last ran the mail sync (infinity if never)."""
+    p = path(root).parent / "last_sync"
+    try:
+        return datetime.now().timestamp() - float(p.read_text().strip())
+    except (OSError, ValueError):
+        return float("inf")
+
+
+def stamp_sync(root: Path | None = None) -> None:
+    p = path(root).parent / "last_sync"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(f"{datetime.now().timestamp():.0f}\n")

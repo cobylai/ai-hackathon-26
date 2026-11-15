@@ -199,6 +199,30 @@ class Discover(unittest.TestCase):
         self.assertEqual(seen, [self.root])
         self.assertIn("Checked your mail first (2 new)", a.text)
 
+    def test_sync_at_most_every_30_minutes(self):
+        seen = []
+        self.deps["online"] = lambda: True
+        self.deps["sync"] = lambda root: seen.append(1) or 0
+        self.ask("discover")
+        self.ask("stop")
+        self.ask("discover")
+        self.assertEqual(len(seen), 1)
+
+    def test_relation_guess_only_when_its_question_comes_up(self):
+        self.deps["events"] = lambda s, e: lab_events(8)  # the Lab question outranks Lena's
+        self.ask("discover")
+        self.assertEqual(self.relations, [])
+        while session.waiting() and not self.relations:
+            self.ask("skip")
+        self.assertEqual(self.relations, ["Lena Marsh"])
+        self.assertIn("Is Lena Marsh your TA?", session._run["queue"][0]["question"])
+
+    def test_unusable_relation_guess_is_dropped(self):
+        self.deps["relation"] = lambda name, es: None
+        asked, _ = self.run_all("skip")
+        self.assertNotIn("relation", [c["kind"] for c in asked])
+        self.assertTrue(all(not c.get("lazy") for c in asked))
+
     # ---- review ----
 
     def test_learned_and_unlearn(self):

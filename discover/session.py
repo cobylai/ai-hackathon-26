@@ -30,6 +30,7 @@ CAL_BACK, CAL_AHEAD = 56, 28   # days of calendar read around today
 SHOW_SOURCES = 5
 RELATION_ENTRIES = 6
 SYNC_DAYS = 7
+SYNC_EVERY = 30 * 60  # seconds: discovery runs the mail sync at most this often
 
 _run: dict | None = None      # {"queue": [candidate], "n": int, "yes": int, "no": int, "skip": int}
 
@@ -126,9 +127,10 @@ def _start(today: date, root, deps: dict):
     from reason.answer import Answer
     act.reset()
     notes = []
-    if deps["online"]():
+    if deps["online"]() and state.since_sync(root) >= SYNC_EVERY:
         try:
             n = deps["sync"](root)
+            state.stamp_sync(root)
             notes.append(say("discover", "synced", count=n))
         except BaseException as ex:  # SystemExit when Gmail isn't signed in
             if isinstance(ex, KeyboardInterrupt):
@@ -143,23 +145,36 @@ def _start(today: date, root, deps: dict):
     answered = {r["id"] for r in done}
     asked_relation = {r["write"].get("name", "").lower() for r in done if r["kind"] == "relation"}
 
-    def relation(name, entries):
+    def worth_asking(name, entries):  # no Bonsai call here: the guess is made when asked
         if name.lower() in asked_relation:
-            return None
+            return False
         page = people.get(name, root=root)
-        if page and page.get("relation"):
-            return None
-        return deps["relation"](name, entries)
+        return not (page and page.get("relation"))
 
-    cands = propose.candidates(store.all_entries(root), events, relation_fn=relation)
+    cands = propose.candidates(store.all_entries(root), events, relation_fn=worth_asking,
+                               lazy_relation=True)
     queue = [c for c in cands if c["id"] not in answered and not _known(c, root)][:MAX_QUESTIONS]
     head = "\n".join(notes)
-    if not queue:
+    _run = {"queue": queue, "n": len(queue), "yes": 0, "no": 0, "skip": 0, "relation": deps["relation"]}
+    _resolve()
+    if not _run["queue"]:
         _run = None
         return Answer("\n".join(x for x in (head, say("discover", "nothing_new")) if x), "discover")
-    _run = {"queue": queue, "n": len(queue), "yes": 0, "no": 0, "skip": 0}
-    intro = say("discover", "found", count=len(queue))
+    intro = say("discover", "found", count=_run["n"])
     return _ask(("\n".join(x for x in (head, intro) if x)))
+
+
+def _resolve() -> None:
+    """Turn a relation placeholder at the head of the queue into a real question (one
+    Bonsai call), or drop it when the guess is unusable."""
+    q = _run["queue"]
+    while q and q[0].get("lazy"):
+        c = q.pop(0)
+        rel = _run["relation"](c["name"], c["entries"])
+        if rel:
+            q.insert(0, propose.relation_candidate(c["name"], rel, c["sources"]))
+        else:
+            _run["n"] -= 1
 
 
 # ---- confirm ----------------------------------------------------------------
@@ -221,6 +236,7 @@ def _reply(kind: str, today: date, root):
         _run["skip"] += 1
         said = say("discover", "skipped")
     _run["queue"].pop(0)
+    _resolve()
     if _run["queue"]:
         return _ask(said)
     r = _run
