@@ -31,3 +31,8 @@ Every tool is also reachable from a shell: `uv run python scripts/run_tool.py --
   hardening, self-check default, busy-profile line) is on `feature/email-gmail`.
   Merging `main` in conflicts only in `README.md`, the email log and
   `tests/test_state.py`; `harness/email/*` auto-merges.
+- Integration check: main's browser-core has diverged internally (`session.py`,
+  `login.py`, `tools.py`, `text.py`, `elements.py`), but every API the email tools
+  call is unchanged — `get_session()`, `Session.start/page/stop`,
+  `state.classify`, `config.PROFILE_DIR` and `MAX_CHARS` — and main's
+  `GROUPS["email"]` lists the same five tools.
