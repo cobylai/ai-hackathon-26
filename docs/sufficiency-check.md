@@ -106,9 +106,43 @@ All result files are in `sufficiency/eval/results/`: `4B_<variant>_run{1,2,3}.js
 - the gather loop: running out of `max_seconds`, found on the first search, found after a rephrase, giving up, never reopening a URL, skipping failed opens, `max_results` and title ordering, and the adapter shapes
 - the `sampling=` merge in `llm/client.py`
 
+## Web search: off-topic Bing results (2026-11-14)
+
+The reported "character limit" was not a limit. The page text is never capped:
+`open_page` returns the whole page, and judge splits it into 6000-token chunks.
+A 77,150-character page took 6 chunks and answered in 7.5 s, with no BudgetError.
+The real fault was in search. Google and DuckDuckGo show a bot check to the hidden
+browser, so every search falls back to Bing, and Bing sometimes returns
+off-topic results to it. "First president of Kenya" got ten visitprague.cz
+pages, and "speed of light in km per second" got speed-test sites. Gather then
+judged 17-20 junk pages and gave up after about 40 s.
+
+Fix in `sufficiency/websearch.py`. A hit is dropped unless it shares at least
+half of the query's content words (`relevant()`). When fewer than 3 hits are
+left, Wikipedia's public search API adds up to 5 more. No bot check is bypassed
+and the user agent is unchanged. `last_engine` notes any drops, e.g.
+`bing (harness said BLOCKED), 10 off-topic dropped, + wikipedia`.
+
+Live, `python -m reason`, online, Bonsai 2 4B, fresh bank:
+
+| Question | Answer | Source | Seconds |
+|---|---|---|---|
+| Who was the first president of Kenya? | Jomo Kenyatta | en.wikipedia.org/wiki/President_of_Kenya | 10.3 |
+| What is the speed of light in km per second? | 299792458 (m/s, not km/s) | en.wikipedia.org/wiki/Speed_of_light | 11.2 |
+| Who won the 2022 FIFA World Cup? | Argentina | en.wikipedia.org/wiki/2022_FIFA_World_Cup_final | 10.2 |
+| Who wrote Frankenstein? | Mary Shelley | en.m.wikipedia.org/wiki/Frankenstein | 8.3 |
+| When did the Berlin Wall fall? | 9 November 1989 | en.m.wikipedia.org/wiki/Fall_of_the_Berlin_Wall | 8.2 |
+| What is the chemical symbol for gold? | Au | en.wikipedia.org/wiki/Gold | 10.5 |
+| Who painted The Starry Night? | Vincent van Gogh | en.wikipedia.org/wiki/The_Starry_Night | 8.9 |
+
+Before the fix, Kenya and speed of light came back not found (42.9 s and
+37.5 s), and the World Cup question took 59.7 s.
+
 ## Known limits
 
 - **Pointer pages.** A page that only says where the answer is ("Meeting times are posted on our Instagram") can be accepted as the answer. Its quote is real, so the quote check passes. This is s03 with the shipped prompt. Thinker 0 ruled no further prompt work. The A/B check call (`CHECK_ANSWER = True`) catches these pointers but rejects answers that need date reasoning, so it is off.
+- **Units.** The judge answers from the quote, so it may not convert units. "Speed of light in km per second" was answered as 299792458, which is the m/s figure.
+- **Deadline.** `max_seconds` is checked between pages, not between chunks, so one huge page can run past it.
 - **Short answers.** The `answer` text can be terse ("NO"). Show `evidence` with it.
 
 ## Not run
