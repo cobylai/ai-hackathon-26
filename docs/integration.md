@@ -84,22 +84,9 @@ The only other HTTP code is `scripts/fetch_filters.py` and
 - `tests/test_tools.py`: merge resolution only (above).
 - `scripts/eval_search.py`: docstring no longer points at LM Studio.
 - `docs/plan/00-overview.md`: removed "point it at Claude (claude-haiku)".
-- `.gitignore`: union (above), plus `data/` from context-store.
-- `harness/search/bing.py` (new): Bing results parser, same `Result` shape,
-  reuses ddg's helpers; unwraps `bing.com/ck/a?u=a1<base64>` links.
-- `harness/search/engine.py`: after Google and DuckDuckGo both fail, tries Bing
-  (`_bing`, waits for `load` because Bing navigates again after
-  DOMContentLoaded). If Bing also has nothing, the earlier status word
-  (e.g. BLOCKED) is kept. Bing is not remembered like the DDG fallback, so a
-  walled network costs two failed loads per query (~1.5 s). `_run` gained an
-  optional `wait_until` argument (default unchanged).
-- `tests/test_ddg.py`: the walled-DDG test now expects a third visit (Bing).
-- `tests/test_bing.py`, `tests/pages/bing_results.html` (new): parser tests
-  on a trimmed real Bing page (result list only).
+- `.gitignore`: union (above).
 
 ## Live gather result (2026-11-14, online, Bonsai 2 4B, max_seconds=60)
-
-Run 1 (Bing read by our script, before the engine had Bing):
 
 | Question | Answer | Source | Seconds |
 |---|---|---|---|
@@ -107,32 +94,12 @@ Run 1 (Bing read by our script, before the engine had Bing):
 | When did the Berlin Wall fall? | 9 November 1989 | en.m.wikipedia.org/wiki/Fall_of_the_Berlin_Wall | 8.1 |
 | Who wrote the novel Frankenstein? | Mary Shelley | en.m.wikipedia.org/wiki/Frankenstein | 7.6 |
 
-Run 2 (his `engine.search` end to end: Google walled -> DDG walled -> Bing):
-
-| Question | Answer | Source | Seconds |
-|---|---|---|---|
-| What year did Apollo 11 land on the Moon? | 1969 | en.m.wikipedia.org/wiki/Apollo_11 | 9.7 |
-| What is the boiling point of water in Fahrenheit? | 212 °F | en.wikipedia.org/wiki/Boiling_point | 8.2 |
-| Who painted the Mona Lisa? | Leonardo da Vinci | en.wikipedia.org/wiki/Mona_Lisa | 7.6 |
-
-From this Mac, Google answered /sorry/ and DuckDuckGo served its duck
-challenge on every try. No challenge was solved or bypassed.
-
-## Email -> bank sync
-
-```bash
-# live: last 7 days of the signed-in Gmail (keep the bank outside the repo)
-MUSE_BANK_DIR=~/muse-bank uv run python scripts/sync_email.py 7
-# saved thread instead of live mail
-MUSE_BANK_DIR=/tmp/bank uv run python scripts/sync_email.py --fixture tests/pages/gmail_thread.html
-```
-
-`email_search(days=N)` rows -> `read.open_thread` + `read.read_messages` ->
-`bank.ingest(body, source="gmail:<thread_id>#<i>", kind="email", sender_name,
-sender_address, sent_date (ISO), subject)`. Read paths only: no compose,
-draft or send. One search page, so at most 10 threads per sync. Fixture run:
-3 messages -> 3 entries in 13.1 s; re-run 0 added (dedup).
+Search caveat: from this Mac, Google answered /sorry/ and DuckDuckGo served
+its duck challenge, so `engine.search` returned BLOCKED for every query. No
+challenge was solved. `scripts/live_gather.py` (ours, not in harness/) then
+reads Bing results in the same hidden browser; pages were opened with the
+partner's `open_page`. harness/search itself has no Bing engine.
 
 ## Not run yet
 
-- Live Gmail sync (waits for Coby to sign in to the test account).
+- Email sync into bank/ (waits for context-store and a Gmail login).

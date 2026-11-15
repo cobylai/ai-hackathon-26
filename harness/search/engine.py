@@ -1,7 +1,5 @@
 """Pick a search engine: Google first, DuckDuckGo after a wall or empty page.
 
-Bing is the last resort when both fail (added at integration).
-
 The choice is sticky for ten minutes, so a walled Google does not cost one
 failed navigation per query inside the same research loop.
 """
@@ -15,12 +13,11 @@ from playwright.sync_api import Page
 
 from harness.browser.session import get_session
 from harness.browser.state import classify
-from harness.search import bing, ddg, google
+from harness.search import ddg, google
 from harness.search.google import Result
 
 GOOGLE_URL = "https://www.google.com/search?q={query}&hl=en"
 DDG_URL = "https://html.duckduckgo.com/html/?q={query}&kl=us-en"
-BING_URL = "https://www.bing.com/search?q={query}&setlang=en"
 FALLBACK_SECONDS = 600
 TIMEOUT_MS = 20_000
 
@@ -47,10 +44,10 @@ def in_fallback() -> bool:
     return _now() < _fallback_until
 
 
-def _run(page: Page, url: str, parser, wait_until: str = "domcontentloaded") -> list[Result]:
+def _run(page: Page, url: str, parser) -> list[Result]:
     global last_status
     try:
-        response = page.goto(url, wait_until=wait_until, timeout=TIMEOUT_MS)
+        response = page.goto(url, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
     except Exception:
         last_status = "ERR"
         return []
@@ -66,17 +63,6 @@ def _run(page: Page, url: str, parser, wait_until: str = "domcontentloaded") -> 
         return []
     results = parser(html)
     last_status = "OK"
-    return results
-
-
-def _bing(page: Page, query: str) -> list[Result]:
-    """Last resort; keeps the earlier status word when Bing has nothing either."""
-    global last_status
-    before = last_status
-    # Bing navigates again after DOMContentLoaded, so wait for the full load.
-    results = _run(page, BING_URL.format(query=quote_plus(query)), bing.parse, wait_until="load")
-    if not results:
-        last_status = before
     return results
 
 
@@ -96,8 +82,6 @@ def search(query: str, page: Page | None = None) -> list[Result]:
         # actually answers. A walled fallback must not pin every later query.
         results = _run(current, DDG_URL.format(query=quote_plus(query)), ddg.parse)
         _fallback_until = _now() + FALLBACK_SECONDS if results else 0.0
-        if not results:
-            results = _bing(current, query)
         return results
 
     results = _run(current, DDG_URL.format(query=quote_plus(query)), ddg.parse)
