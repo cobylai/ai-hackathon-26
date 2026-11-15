@@ -8,10 +8,13 @@ The chat page (`reason/web.py`) and the Mac app that shows it.
 
 ### Layout
 
-- **Bar:** the name, Discover, one status line (online or offline, items in the bank), and the bank button at the far right. Clicking the status line also shows the bank.
+- **Bar:** the chats button at the far left, the name, Speak, Discover, one status line (online or offline, items in the bank), and the bank button at the far right. Clicking the status line also shows the bank.
+- **Chats (left):** saved conversations, grouped under day headings (Today, Yesterday, then the date) with the open chat tinted. The pencil button starts a new chat. Delete is two clicks: hover a chat and click ×, which turns into a red "Delete" for 3 seconds, and click it again to delete. In wide windows the chats column shows by default and is remembered. In the compact panel it starts hidden, and when opened it covers the whole panel with a **Done** button; Escape, opening a chat or starting a new one closes it.
 - **Conversation:** it reads like a document. Each question is a small grey line, and the answer is plain text under it. Answer lines of the form `- when  what` (two spaces) become a table with the dates aligned. Other `- ` lines become a list. A short line ending in `:` becomes a heading. An indented line becomes a note under the row above it.
 - **Under each answer:** a muted line with the source and the route and time. A bank source opens that entry in the bank. A web source opens the page.
 - **Actions:** when `/ask` returns `pending`, the first line of the answer (what will happen) and **Cancel / Yes, do it** sit in one row under the answer. The result replaces the buttons in that row. Escape is Cancel.
+- **Speak:** the Speak button beside Discover turns spoken answers on or off (off by default; blue when on; the browser remembers it). When on, `/ask` carries `speak: true` and the server reads the answer with the Mac's `say`, without the Source line. Asking again, starting to talk (button, ⌥ or the Mac app's hotkey) or turning it off stops the speech.
+- **Follow-ups:** "and Friday?", "the first one", "who sent that?", "open it" lean on the last answer (`playbooks/followup.md`). The server keeps one conversation for the page, in memory only.
 - **Discover:** the Discover button in the top bar sends `discover` to `/ask`. While a discovery question is held, `/ask` returns `choices` and the answer gets **Yes / No / Skip / Stop** buttons; each reply (and the next question) is a new turn. Escape is Stop. See `playbooks/discover.md`.
 - **The bank (right):** a slide-over from the right, grouped into Mail, Coursework, Notes about you and People. Each group collapses. Clicking an item shows its summary, ask and due dates. Clicking a person asks "Who is …?". People are the senders of mail in the bank.
 - **Empty state:** three example questions from the playbooks (due, calendar, person). Clicking one asks it.
@@ -45,12 +48,13 @@ Colours follow the system's light and dark modes. The only accent is system blue
 
 Keep these working:
 
-- `#q` (the text field), `#send`, `#talk`, `#status`.
+- `#q` (the text field), `#send`, `#talk`, `#status`, `#speak` (the Speak switch).
 - `window.museTalk.start()` / `window.museTalk.stop()`: start and stop listening, the same as holding and releasing the talk control. These are for the Mac app's hotkey.
 - `window.museFocus()`: puts the cursor in the text field (it does nothing while listening).
 - `POST /ask` → `pending: true` shows Cancel / Yes. Yes and Cancel send `yes` / `no` to `/ask`.
 - `POST /ask` → `choices: [[label, word]]` (discovery) shows those buttons instead; each sends its word to `/ask`. `#discover` is the Discover button.
-- `#chats`: the left slot. It is an empty `<nav id="chats" hidden>` before `<main>`, kept for a chats list (past conversations, worker 18). Remove `hidden` to show it as a 240 px column at the left. It is hidden in the compact panel.
+- `#chats`: the left column, the saved chats (worker 18, brief T2). The bar's `#chatsbtn` and `body.chatsopen` show it; `#chatsclose` is Done in the panel. The list draws into `#chatlist`; `#newchat` (the pencil) sits in its head. It holds day headings (`.chday`: Today, Yesterday, then the date) and one `.chat[data-id]` per chat, newest first, titled by its first question (`.chtitle`), with `.on` on the open chat and a delete control (`.chdel`: the first click shows "Delete", the second deletes the file). `window.museChats.refresh() / .open(id) / .new() / .remove(id)`. It is a 232 px column in wide windows, and a full-panel overlay in the compact panel.
+- Saved chats: `GET /chats`, `GET /chats/<id>`, `POST /chats/new`, `POST /chats/<id>/open`, `POST /chats/<id>/delete` (`reason/web.py` docstring). A reopened chat redraws its answers as they were given, with no rerun; a follow-up runs fresh against the current bank. Each launch starts a new chat.
 - `#side` / `#sidebtn` / `#sideclose` and `body.bankopen`: the bank slide-over and its toggles.
 - `GET /bank` rows carry `folder` (course, person, other, me) and `id`, which the sidebar groups by and the source line links by.
 
@@ -66,6 +70,9 @@ At the 640 pt panel size, light and dark (the before shots are from before the r
 | after, long due list | ![](window/after-panel-list-light.png) | ![](window/after-panel-list-dark.png) |
 | after, bank open | ![](window/after-panel-bank-light.png) | ![](window/after-panel-bank-dark.png) |
 | after, bank hidden | ![](window/after-panel-hidden-light.png) | ![](window/after-panel-hidden-dark.png) |
+| after, bar | ![](window/after-panel-bar-light.png) | ![](window/after-panel-bar-dark.png) |
+| after, chats open | ![](window/after-panel-chats-light.png) | ![](window/after-panel-chats-dark.png) |
+| after, chats, delete armed | | ![](window/after-panel-chats-delete-dark.png) |
 
 At 420 px, rows stack: ![](window/after-narrow-light.png)
 
@@ -76,6 +83,7 @@ Full width, bank open and hidden:
 | before | ![](window/before-wide-light.png) | ![](window/before-wide-dark.png) |
 | after | ![](window/after-wide-light.png) | ![](window/after-wide-dark.png) |
 | after, bank hidden | ![](window/after-wide-hidden-light.png) | ![](window/after-wide-hidden-dark.png) |
+| after, chats | ![](window/after-wide-chats-light.png) | ![](window/after-wide-chats-dark.png) |
 
 The approved mock is `window/mock.html`, with its screenshots in `window/mock-*.png`.
 
@@ -96,7 +104,7 @@ app/build.sh                 # -> app/build/Muse.app, ad-hoc signed, ~10 s
 open app/build/Muse.app
 ```
 
-The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it runs the servers from, because the Bonsai models live only there. `MUSE_REPO=<folder>` at build or launch time points it somewhere else. Keep that checkout on current `main`, with `voice/swift` built (`swift build -c release`).
+The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it runs the servers from, because the Bonsai models live only there. Muse looks for the code in this order: `defaults write local.ai-hackathon-26.muse MuseRepo <folder>`, `MUSE_REPO`, the folder recorded at build, then `~/ai-hackathon-26`. If none has the code, the panel says so. Keep that checkout on current `main`, with `voice/swift` built (`swift build -c release`).
 
 ### Using it
 
@@ -121,3 +129,16 @@ The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it 
 **Quit** stops only what Muse started (SIGINT so Python closes voice, then SIGTERM). A Bonsai or window server that was already running stays up.
 
 If the window server was started from a terminal instead, Muse uses it as it is; its voice then depends on that terminal's key and microphone allow, and Check setup says so if voice isn't ready.
+
+### Ship to another Mac
+
+```bash
+app/make_dmg.sh              # -> app/dist/Muse.dmg (~100 KB), app/build/ untouched
+```
+
+The disk image holds `Muse.app` (no folder recorded, so it looks in `~/ai-hackathon-26` or the `defaults` setting), `INSTALL.html`, `setup.sh` and an Applications shortcut. No models, keys, bank or `data/`.
+
+- **INSTALL.html** has two paths. One command: `bash /Volumes/Muse/setup.sh`. Do it yourself: one numbered step per part, each with its official link and exact command: Xcode, uv, the repo (private), Python packages and Playwright Chromium, Bonsai 2 4B with its own venv, the Whisper model, the Argmax registry login and your own keys, building `voice/swift`, the demo bank and "Muse demo" calendar, then opening Muse. Each part installs on its own, so Bonsai, Argmax and the harness are visibly separate.
+- **setup.sh** prints each command before it runs it, asks before every download or install, skips what's already there, never uses `sudo`, and reads the Argmax secret token hidden. It ends with `defaults write … MuseRepo <folder>`.
+- **First open:** Muse is ad-hoc signed and not notarized. Right-click → Open, or `xattr -dr com.apple.quarantine /Applications/Muse.app`.
+- **Each Mac needs its own Argmax key**, and the first voice start on a new Mac takes several minutes (one-time Neural Engine compile).

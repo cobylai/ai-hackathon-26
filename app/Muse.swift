@@ -24,7 +24,11 @@ let keychainService = "Muse Argmax key"
 let keychainAccount = "ARGMAX_API_KEY"
 
 let env = ProcessInfo.processInfo.environment
-let repo: String = env["MUSE_REPO"] ?? (Bundle.main.object(forInfoDictionaryKey: "MuseRepo") as? String) ?? ""
+// Where the repo is: `defaults write local.ai-hackathon-26.muse MuseRepo <path>`, then MUSE_REPO,
+// then the path baked in at build time (empty in the DMG build), then ~/ai-hackathon-26.
+let repo: String = [UserDefaults.standard.string(forKey: "MuseRepo"), env["MUSE_REPO"],
+                    Bundle.main.object(forInfoDictionaryKey: "MuseRepo") as? String]
+    .compactMap { $0 }.first { !$0.isEmpty } ?? (NSHomeDirectory() + "/ai-hackathon-26")
 let bankDir: String = env["MUSE_BANK_DIR"] ?? (NSHomeDirectory() + "/muse-demo-bank")
 // Sync mail writes real Gmail here, never into the demo bank.
 let syncBankDir: String = env["MUSE_SYNC_BANK_DIR"] ?? (NSHomeDirectory() + "/muse-bank")
@@ -388,6 +392,9 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
         let calProblem = calendarProblem()
 
+        if !FileManager.default.fileExists(atPath: repo + "/scripts/serve_bonsai.sh") {
+            return say("Muse code not found at \(repo).\nRun setup.sh from the Muse disk image, or point Muse at your copy:\n  defaults write local.ai-hackathon-26.muse MuseRepo /path/to/ai-hackathon-26\nthen reopen Muse.")
+        }
         let started = Date()
         var extra: [String: String] = [:]
         if let k = argmaxKey { extra["ARGMAX_API_KEY"] = k }

@@ -214,6 +214,22 @@ def _plan_open(target: str, today: date, root, deps: dict):
                  say("act", "open_page_preview", title=e.get("subject") or url, url=url))
 
 
+def plan_row(row: dict, deps: dict | None = None):
+    """'Open it' after an answer that listed rows (reason/session.py): a row with a link opens
+    that page, a calendar row opens Calendar, mail without a link says so. Held for a yes."""
+    from .answer import Answer
+    d = {"open_app": open_app, "open_page": open_page, **(deps or {})}
+    if row.get("kind") == "event":
+        return _hold("open_app", lambda: d["open_app"]("Calendar"), say("act", "open_app_preview", app="Calendar"))
+    e = row.get("entry") or {}
+    url = str(e.get("source") or "")
+    if URL_RE.match(url):
+        return _hold("open_page", lambda: d["open_page"](url),
+                     say("act", "open_page_preview", title=e.get("subject") or url, url=url))
+    who = e.get("sender_name") or e.get("sender_address") or "an unknown sender"
+    return Answer(say("followup", "no_link", who=who), "act")
+
+
 def _plan_draft(name: str, gist: str, root, deps: dict):
     from .answer import Answer
     who_cap = name[:1].upper() + name[1:]

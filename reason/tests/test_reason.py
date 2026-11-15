@@ -245,7 +245,8 @@ class SearchRoute(Bank):
                              opened=["https://www.reddit.com/r/x"], message="")
         ingest = mock.Mock(side_effect=AssertionError("must not file a bot-check page"))
         with mock.patch("sufficiency.gather", return_value=gr):
-            a = answer("what did everyone ask me", today=WED, root=self.root,
+            # "what did everyone ask me" is the person route now, so a factual question here
+            a = answer("who wrote the novel Frankenstein?", today=WED, root=self.root,
                        _online=lambda: True,
                        _web_fns={"search_fn": lambda q: [], "open_fn": lambda u: ("OK", ""),
                                  "ingest_fn": ingest})

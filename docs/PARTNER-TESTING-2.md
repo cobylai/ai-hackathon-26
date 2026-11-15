@@ -1,7 +1,7 @@
 # Testing round 2 for Antranig's agents (2026-11-15)
 
 Round 1 is `docs/PARTNER-TESTING.md` (your round 1 report is `docs/PARTNER-TEST-REPORT.md`; its fixes are in progress). Do its setup first if you haven't. This
-round covers what landed since. Start from `main` (8113e7a or later).
+round covers what landed since. Start from `main` (a8ecbca or later).
 
 ## What changed since round 1
 
@@ -34,7 +34,13 @@ round covers what landed since. Start from `main` (8113e7a or later).
   Argmax key (kept in the Keychain) and checks the setup at launch. See
   "Mac app" in `docs/window.md`.
 
-Still being built, so don't test these yet: follow-up questions, and suggested replies.
+- **Follow-ups** (`reason/session.py`): "and tomorrow?", "what about Friday?", "and Felix?", "the first one", "who sent that?", "open it" (asks for a yes). Answered by code from the last answer.
+- **Speak button** (window) / `--speak` (chat loop): reads answers aloud with macOS `say`. Off by default; talking stops it.
+- **No web for chit-chat**: greetings, mic checks, misheard names and "what did everyone ask me" now stay off the web (your round 1 bug 8). Bot-check and error pages are never saved (bug 7).
+- **Bank** is now a right-side slide-over (bank button, Done, Escape or ⌘B).
+- **Install on another Mac**: `Muse.dmg` (ask Coby) with INSTALL.html and setup.sh. See "Ship to another Mac" in `docs/window.md`.
+
+Still being built, so don't test these yet: saved chats on the left, bigger computer control (Mail/Settings/Chrome), and suggested replies.
 
 ## Setup additions
 
@@ -83,6 +89,8 @@ starts talking), or the window `uv run python -m reason.web`.
 | Open Safari | Refused: it isn't on the allowlist |
 | Draft a reply to <a sender> saying yes, then yes (online, Gmail signed in) | "Saved a reply draft ... It was not sent." Check Drafts. |
 | The same draft request offline | Says it needs a connection; nothing drafted |
+| What's due this week? then "and next week?" then "the first one" | Follow-ups answer from the last list |
+| Hey, can you hear me okay? | A short reply, no web search |
 | Who wrote Frankenstein? (online) | Mary Shelley, with a source, in about 10 s |
 | Edit one line of `playbooks/due.md` wording, restart, ask a due question | The new wording shows (playbooks reload on restart) |
 
@@ -99,14 +107,15 @@ offline.
 - Window: check that each answer type above looks right, the sidebar groups
   and source links work, Yes/Cancel shows inline, and Escape cancels. Try a
   narrow window and full screen.
-- Mac app: `app/build.sh`, then open `app/build/Muse.app`. On first launch,
-  enter your own Argmax key and allow the mic and Calendar prompts. "Check
+- Mac app on a spare Mac: the disk image and its install page, see "Ship to another Mac" in `docs/window.md` (`app/make_dmg.sh` → `app/dist/Muse.dmg`).
+- Mac app from your checkout: `app/build.sh`, then open `app/build/Muse.app`. On first launch,
+  enter your own Argmax key and allow the mic, Calendar and Accessibility prompts. "Check
   setup" in the menu should list no problems. Then, from another app: tap
   Fn-Space, type a question, press Escape; hold Fn-Space, say
   "what's due this week", and let go. Quit Muse should leave no stray
   servers (`lsof -iTCP:8765 -sTCP:LISTEN`). The app runs the servers from the
-  checkout named in `MUSE_REPO` (default `~/code/ai-hackathon-26`), so point it
-  at yours.
+  checkout recorded at build (yours, when you build it), or the one set with
+  `defaults write local.ai-hackathon-26.muse MuseRepo <folder>`.
 
 ## Report back
 

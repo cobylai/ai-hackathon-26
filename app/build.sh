@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # Build app/Muse.app (menu-bar panel + Fn-Space). No Xcode project, no signing identity.
-#   app/build.sh            # -> app/build/Muse.app
+#   app/build.sh            # -> app/build/Muse.app, runs servers from the main checkout
+#   MUSE_APP_OUT=app/dist MUSE_NO_REPO=1 app/build.sh   # for the DMG: no path baked in
 # The app runs the servers from the main checkout (models live only there);
-# MUSE_REPO at build or run time points it elsewhere.
+# MUSE_REPO at build time, or `defaults write local.ai-hackathon-26.muse MuseRepo <path>`, points it elsewhere.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 TOP="$(cd "$HERE/.." && pwd)"
 REPO="${MUSE_REPO:-${TOP%%/.claude/worktrees/*}}"
-APP="$HERE/build/Muse.app"
+[ -n "${MUSE_NO_REPO:-}" ] && REPO=""
+OUT="${MUSE_APP_OUT:-$HERE/build}"
+mkdir -p "$OUT"; OUT="$(cd "$OUT" && pwd)"
+APP="$OUT/Muse.app"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -31,4 +35,4 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </dict></plist>
 PLIST
 codesign --force -s - "$APP"   # ad-hoc, so macOS can remember the microphone allow
-echo "Built $APP (servers from $REPO)"
+echo "Built $APP (servers from ${REPO:-~/ai-hackathon-26 or defaults MuseRepo})"

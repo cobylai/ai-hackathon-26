@@ -11,6 +11,12 @@ a.text      # the answer; ends with its source
 a.route     # "due" | "person" | "bank" | "web" | "offline" | "not_found"
 a.sources   # bank entry paths, or [url] on the web route
 a.seconds
+a.rows      # what a due / calendar / person answer listed, for follow-ups
+
+from reason.session import Session
+s = Session()                                  # one conversation, in memory only
+answer("what's due tomorrow", session=s)
+answer("and Friday?", session=s)               # due again, for Friday
 ```
 
 Both front ends are thin wrappers over `answer()`; neither adds logic.
@@ -21,7 +27,7 @@ Both front ends are thin wrappers over `answer()`; neither adds logic.
 MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason [--today YYYY-MM-DD] [--no-voice]
 ```
 
-Type a question and press Enter. Press Enter on an empty line to talk, and Enter again to stop; the words heard are printed as `you (spoken)>` and answered like typed text. `quit` or Ctrl-D exits.
+Type a question and press Enter. Press Enter on an empty line to talk, and Enter again to stop; the words heard are printed as `you (spoken)>` and answered like typed text. `quit` or Ctrl-D exits. `--speak` reads each answer aloud with the Mac's `say` (no Source line); talking or a new question stops it.
 
 **Chat window** (one local page, standard library only, nothing loaded from the internet, so it opens with Wi-Fi off):
 
@@ -48,10 +54,17 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
 - Code reads the Triggers patterns, the Wording and Not found lines, and the Prompt blocks (`reason/playbook.py`). Edit a file and restart Muse to change how a route answers. Code keeps no second copy of the wording.
 - The steps' order is code. `STEPS` in `reason/answer.py` must match each file's numbered steps (`reason/tests/test_playbooks.py`).
 - The bank/web judge and rephrase prompts live in `sufficiency/prompts.py`; `bank.md` and `web.md` hold copies, and a test fails if they drift.
-- Checker: `MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check` runs every Examples table on a temporary copy of the bank with the network blocked. 27/27 on 2026-11-15 (14 when the playbooks landed, 13 more with remember and people). Brief M's check gave the same output line for line before and after the move (37/38).
+- Checker: `MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check` runs every Examples table on a temporary copy of the bank with the network blocked. 27/27 on 2026-11-15 (14 when the playbooks landed, 13 more with remember and people). Brief M's check gave the same output line for line before and after the move (37/38). 69/69 after follow-ups (`followup.md` adds 19, run in order as one conversation; 50 before).
 
 ## Routes, checked in this order
 
+-2. **Follow-up** (`reason/session.py`, `playbooks/followup.md`), only when the front end passes a `Session` (the chat loop and the window do; `playbook_check` gives each playbook file one) and no discovery question or action waits for a yes. Code only, no model call.
+   - "and tomorrow?", "what about Friday?", "and next week?" (anything the date table below names) after a due or calendar answer: that route again for the new range.
+   - "and <name>?" (one to three name-like words) after a person or "who is" answer: the last question with the name swapped. An unknown name gets "I have nothing from <name>."
+   - "the first one" … "the tenth one", "the last one", "number 2", "that one": the row, its summary and source. "who sent that?" and "when is it due?" (or "… the second one") answer from the row. With no ordinal: the row picked last, else the only row, else "Which one?". These come back as route `followup` and keep the rows, so "the second one" still works next.
+   - "open it" / "open the first one": `act.plan_row` holds an open (the row's link, or Calendar for an event) and asks for a yes; mail without a link says so.
+   - Anything else is a new question, and an answer that listed nothing (bank, offline…) ends the rows, so "the first one" after it is a new question too.
+   - The session: one per chat loop run, one open chat in the window server (it serves one person; the Mac app shows the same page). Nothing is written to the bank. Each chat is saved as a file outside the repo after every answer (`reason/chats.py`, brief T2), and the window lists them on the left; reopening one restores its follow-ups. It is built to be saved (thinker ruling, for brief T2): `id`, `title`, `started` and `turns` (question, route, text, sources, rows), with `to_dict()` / `Session.from_dict()`.
 -1. **Discover** (`discover/`, `playbooks/discover.md`), checked before everything: "discover" starts a run of at most 10 yes/no questions about the user, built by code from the bank and Apple Calendar (Bonsai only guesses a relation). While a question is held, yes / no / skip / stop answer it; any other input ends the run. Only a yes writes (me store or person page). "What have you learned" and "unlearn N" review. The window has a Discover button and Yes / No / Skip / Stop buttons.
 0. **Remember, forget, about_me, people** (`reason/me.py`, `playbooks/remember.md`, `playbooks/people.md`). Code only, no model call, checked before due, so "remember the essay is due Monday" becomes a note.
    - **remember:** the sentence starts with "remember (that)", "note that" or "don't forget (that)". A leading dash from voice, "Muse," and "please" are dropped first. A sentence ending in "?" doesn't count, and neither does "do you remember …". The rest is filed in the user's words (`bank.remember`: kind "me", folder `me/`).
@@ -79,9 +92,16 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
    - **Ask questions** (ask / want / need in the question): code lists the sender's newest 8 entries as `date  subject: ask`, or `no ask. <summary>` when an entry has none. No model call (thinker ruling, brief P: the model misread the notes on 4 of 14). With a full name ("Nina Valdez"), only senders matching every name word are listed.
    - **Other person questions** ("what did Emily say about the lab"): `bank.by_person` returns the entries, and the newest 8 go to Bonsai with the question. The model returns `{"answer", "used": [numbers]}` at temperature 0.2, and the used entries become the sources (all 8 if `used` is bad).
 
+2a. **Everyone, and misheard names** (from Antranig's test report, problem 8: "What did everyone ask me?" and a misheard "Elena asked me" went to the web).
+   - "everyone / everybody / anyone / anybody / people" with an ask/say/send/want/need verb lists every sender's open asks (deadline today or later, or none), newest first, at most 12, each with the sender. Code only.
+   - With an ask/say/send/want/need verb, a word of 4+ letters that is no sender but close to one counts as that sender: one is the other with up to 2 extra letters at the start or end ("elena" ~ "lena"), or one letter off when both have 5+ letters ("Tim" is never guessed as "Tom"). Close to one sender: that sender's asks, under `(I heard "Elena" and took it as Lena Marsh.)`. Close to two or more: `I heard "X". Did you mean A or B?`.
+
 2b. **Unknown person (no-match guard).** A question shaped "what did <name> ask / say / send / want" whose name is no sender in the bank answers "I have nothing from <name>." and stops, never reaching search (thinker ruling: a wrong answer about a person is worse than none). Pronouns ("what did you send") don't count.
 
+2c. **Chat** (`reason/chat.py`, `playbooks/chat.md`). A greeting, mic check or thanks, with almost nothing else said (at most 2 words left after the chat and filler phrases, and no question word), gets a fixed reply: "I can hear you. …", "Hi. …" or "You're welcome." So "Hey, can you hear me okay?" no longer runs 3 web searches. "Hey, what's due tomorrow?" is still a due question.
+
 3. **Everything else.**
+   - **Web gate (RULES.md rule 9).** If the bank can't answer, only a clear factual question goes to the web: it starts with a question word (after "Muse," or "please") or ends with "?", and has no "my"/"mine". Otherwise it answers `not_found` with "I don't have that in your notes or mail." (a "my" question) or "I'm not sure what you're asking, so I didn't look it up." Nothing is sent to a search engine.
    - `bank.search(question, limit=5)`. The entries are written as numbered note blocks and passed to `sufficiency.judge` once. If it's enough, the route is `bank`, and the source is the block that holds the judge's quote.
    - If it's not enough and the network is up (one TCP connect to www.bing.com:443, 2 s timeout), the route is `web`. That runs `gather(question, sufficiency.websearch.search, harness.search.tools.open_page, max_seconds=60)`. websearch tries the partner's `engine.search` first, then Bing. On success the answer is filed with `bank.ingest(..., source=url, kind="page")`. harness is imported only here, so offline answers never load Playwright.
    - If it's not enough and the network is down, the route is `offline`: "I don't have that saved, and the Mac is offline, so I can't look it up."
@@ -138,6 +158,8 @@ The web seconds include gather (the partner's engine.search and open_page) and t
 ```bash
 uv run python -m unittest discover -s reason/tests -t .
 ```
+
+110 pass on 2026-11-15 (`test_session.py` adds 15: date, name and row follow-ups after due, calendar and person questions, "open it" through act, unrelated questions not taken as follow-ups, nothing written, `say` start/stop and the Source line dropped, the window's Speak switch and stop on talk, one session for the window, the chat loop's `--speak`). Earlier count:
 
 63 pass (`test_me.py` adds the remember, forget, about_me and people routes with any model call failing the test; bank/tests/test_me.py covers `bank.remember/notes/forget` and `bank.people`; `test_playbooks.py` adds the playbook checks: sections, step counts, every wording key code uses and its placeholders, the sufficiency prompt copies). They cover:
 - every row of the date table, plus Sunday "this weekend"

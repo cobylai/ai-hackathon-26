@@ -9,11 +9,24 @@ stay on one thread.
     GET  /        the page
     GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None}
     GET  /bank    [{"date", "sender", "subject", "summary", "ask", "deadlines", "folder", "id"}], newest first
-    POST /ask     {"question": str} -> {"text", "route", "sources", "seconds", "pending"}
+    POST /ask     {"question": str, "speak": bool} -> {"text", "route", "sources", "seconds", "pending"}
+                  speak: read the answer aloud with the Mac's `say` (the Speak switch in the bar)
                   pending: an action is held for a yes; the page shows Yes / Cancel
                   choices: [[label, word]] when a discovery question is held; the page shows
                   those buttons instead (Yes / No / Skip / Stop), each reply as a new turn
+    POST /speak/stop  stop reading aloud (the Speak switch turned off)
 The Discover button in the bar sends "discover" to /ask (playbooks/discover.md).
+Follow-ups ("and tomorrow?", "the first one", "open it") lean on the last answer of the
+open chat: one current Session (reason/session.py) for the server, since the window serves
+one person and the Mac app shows the same page. Each chat is saved after every answer
+(reason/chats.py, outside the repo); launch starts a new one.
+
+    GET  /chats             {"current": id, "chats": [{"id", "title", "started", "updated", "turns"}]}, newest first
+    GET  /chats/<id>        the saved chat: {"id", "title", "started", "turns": [{"question", "route", "text", "sources", ...}]}
+    POST /chats/new         start a new chat -> {"current": id}
+    POST /chats/<id>/open   make it the current chat (follow-ups go on from it) -> the saved chat
+    POST /chats/<id>/delete delete its file; deleting the open chat starts a new one -> {"ok", "current"}
+Any /ask and /listen/start stop the spoken answer first, so talking cuts it off.
 """
 from __future__ import annotations
 
@@ -27,6 +40,9 @@ from bank import store
 
 from . import act
 from .answer import answer as _answer, online as _online
+from . import chats
+from .session import Session
+from .speak import Speaker
 from .speech import HoldToTalk, start_voice
 
 DISCOVER_CHOICES = [["Yes", "yes"], ["No", "no"], ["Skip", "skip"], ["Stop", "stop"]]
@@ -57,8 +73,28 @@ PAGE = """<!doctype html>
   svg { display: block; flex: none; }
   [hidden] { display: none !important; }
 
-  /* left slot: kept empty for a chats list (past conversations, worker 18); show it by removing [hidden] */
-  #chats { width: 240px; flex: none; background: var(--side); border-right: 1px solid var(--line); overflow-y: auto; }
+  /* saved chats: a column on the left (worker 18's list; hooks #chats #newchat .chday .chat[data-id].on .chtitle .chdel) */
+  #chats { width: 232px; flex: none; background: var(--side); border-right: 1px solid var(--line); display: none;
+           flex-direction: column; min-height: 0; }
+  body.chatsopen #chats { display: flex; }
+  #chats .head { display: flex; align-items: center; gap: 4px; min-height: 38px; flex: none; padding: 0 8px 0 16px;
+                 font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--line); }
+  #chats .head span { flex: 1; }
+  #chatlist { flex: 1; overflow-y: auto; padding: 4px 8px 12px; }
+  #chatsclose { display: none; height: 22px; padding: 0 10px; font-size: 12px; font-weight: 400; }
+  #chats .chday { padding: 12px 8px 4px; font-size: 11px; font-weight: 600; color: var(--text3); }
+  #chats .chempty { padding: 12px 8px; font-size: 12px; color: var(--text3); }
+  #chats ul { list-style: none; margin: 0; padding: 0; }
+  #chats .chat { display: flex; align-items: center; border-radius: 6px; }
+  #chats .chat:hover { background: var(--hover); }
+  #chats .chat.on { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  #chats .chtitle { flex: 1; min-width: 0; text-align: left; padding: 5px 4px 5px 8px; font-size: 13px;
+                    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #chats .chdel { flex: none; height: 22px; min-width: 22px; margin-right: 3px; padding: 0 5px; border-radius: 5px;
+                  font-size: 14px; line-height: 22px; color: var(--text3); visibility: hidden; }
+  #chats .chdel:hover { background: var(--hover); color: var(--text2); }
+  #chats .chat:hover .chdel, #chats .chdel.armed, #chats .chdel:focus-visible { visibility: visible; }
+  #chats .chdel.armed { font-size: 12px; color: var(--red); }
   /* the bank: a slide-over from the right */
   #side { position: fixed; z-index: 3; top: 0; right: 0; bottom: 0; width: 320px; max-width: 100%; background: var(--side);
           border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(0,0,0,.10); display: flex; flex-direction: column;
@@ -68,7 +104,7 @@ PAGE = """<!doctype html>
   #side .head { display: flex; align-items: center; justify-content: space-between; min-height: 38px; flex: none;
                 padding: 0 12px 0 16px; font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
   #sideclose { height: 22px; padding: 0 10px; font-size: 12px; font-weight: 400; color: var(--text); }
-  #sidebtn[aria-pressed="true"] { background: var(--hover); color: var(--text); }
+  #sidebtn[aria-pressed="true"], #chatsbtn[aria-pressed="true"] { background: var(--hover); color: var(--text); }
   #groups { flex: 1; overflow-y: auto; padding: 0 8px 12px; }
   .group > button { width: 100%; display: flex; align-items: center; gap: 4px; padding: 6px 8px 4px;
                     font-size: 11px; font-weight: 600; color: var(--text2); text-align: left; }
@@ -163,9 +199,11 @@ PAGE = """<!doctype html>
      The page lets the panel's material show through. */
   @media (max-width: 760px) {
     body { background: transparent; }
+    #chats { position: fixed; z-index: 3; inset: 0; width: 100%; border-right: 0; }
+    #chatsclose { display: block; }
+    body.chatsopen main { visibility: hidden; }
     #side { width: 100%; border-left: 0; box-shadow: none; }
     body.bankopen main { visibility: hidden; }
-    #chats { display: none; }
     .turn, .empty { padding-left: 18px; padding-right: 18px; }
     .hint { display: none; }
   }
@@ -177,10 +215,17 @@ PAGE = """<!doctype html>
   }
 </style></head>
 <body>
-<nav id="chats" aria-label="Chats" hidden></nav>
+<nav id="chats" aria-label="Chats">
+  <div class="head"><span>Chats</span>
+    <button type="button" class="iconbtn" id="newchat" title="New chat" aria-label="New chat"><svg width="15" height="15" viewBox="0 0 15 15"><path d="M7 2H3.5A1.5 1.5 0 0 0 2 3.5v8A1.5 1.5 0 0 0 3.5 13h8a1.5 1.5 0 0 0 1.5-1.5V8M11.3 1.7l2 2L7.5 9.5H5.5v-2z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></button>
+    <button type="button" class="btn" id="chatsclose" title="Close (Escape)">Done</button></div>
+  <div id="chatlist"></div>
+</nav>
 <main>
   <div class="bar">
+    <button class="iconbtn" type="button" id="chatsbtn" title="Show chats" aria-pressed="false"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
     <h1>Muse</h1>
+    <button type="button" class="btn" id="speak" aria-pressed="false" title="Read answers aloud">Speak</button>
     <button type="button" class="btn" id="discover" title="Let Muse ask you a few questions about yourself">Discover</button>
     <button type="button" id="status" title="Show what's in the bank"><span class="dot"></span>Checking…</button>
     <button class="iconbtn" type="button" id="sidebtn" title="Show the bank (⌘B)" aria-pressed="false"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
@@ -349,7 +394,7 @@ async function ask(question, spoken, into) {
     w.appendChild(el('span', '', question === 'yes' ? 'Doing it…' : 'Cancelling…')); into.appendChild(w);
   } else t = newTurn(question, spoken);
   try {
-    const res = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }) });
+    const res = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question, speak: speakOn }) });
     const r = await res.json();
     if (into) { into.textContent = ''; into.appendChild(el('span', 'what' + (r.route === 'error' ? ' err' : ' done'), (r.text || '').trim())); }
     else showAnswer(t, r);
@@ -360,10 +405,15 @@ async function ask(question, spoken, into) {
   }
   busy = false; send.disabled = false; bottom();
   if (!recording) q.focus();
-  refresh(); loadBank();
+  refresh(); loadBank(); loadChats();
 }
 
 $('discover').addEventListener('click', () => ask('discover', false));
+// Speak switch: off by default, remembered in this browser. Turning it off stops reading.
+let speakOn = store('muse.speak') === '1';
+function speakState() { const b = $('speak'); b.setAttribute('aria-pressed', speakOn ? 'true' : 'false'); b.classList.toggle('primary', speakOn); b.title = speakOn ? 'Reading answers aloud (click to stop)' : 'Read answers aloud'; }
+$('speak').addEventListener('click', () => { speakOn = !speakOn; store('muse.speak', speakOn ? '1' : '0'); speakState(); if (!speakOn) post('/speak/stop').catch(() => {}); q.focus(); });
+speakState();
 $('f').addEventListener('submit', (ev) => { ev.preventDefault(); const v = q.value; q.value = ''; ask(v, false); });
 
 /* ---------- status line ---------- */
@@ -428,6 +478,7 @@ document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape') {
     if (recording) { altTalk = false; stopTalk(true); }
     else if (sideShown()) toggleSide(false);
+    else if (!isWide() && chatsShown()) toggleChats(false);
     else if (pending) pending.cancel();
     ev.preventDefault(); return;
   }
@@ -529,8 +580,82 @@ async function loadBank() {
 }
 
 talkState('idle');
+/* ---------- saved chats (left column, #chats) ----------
+   Hooks for the layout: #newchat, .chat[data-id] (.on = the open chat), .chtitle, .chdel;
+   window.museChats.refresh() / .open(id) / .new() / .remove(id). A reopened chat shows its
+   answers as they were given; nothing is asked again. Delete takes two clicks. */
+const chatsEl = $('chatlist');
+let currentChat = null;
+function dayLabel(iso) {
+  const d = new Date((iso || '').slice(0, 10) + 'T12:00:00'); if (isNaN(d)) return '';
+  const today = new Date(); today.setHours(12, 0, 0, 0);
+  const n = Math.round((today - d) / 864e5);
+  if (n === 0) return 'Today'; if (n === 1) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+function drawChats(list) {
+  chatsEl.textContent = '';
+  if (!list.length) chatsEl.appendChild(el('div', 'chempty', 'Your chats will show here.'));
+  let day = null, ul = null;
+  for (const c of list) {
+    const d = dayLabel(c.updated);
+    if (d !== day) { day = d; chatsEl.appendChild(el('div', 'chday', d)); ul = el('ul'); chatsEl.appendChild(ul); }
+    const li = el('li', 'chat' + (c.id === currentChat ? ' on' : '')); li.dataset.id = c.id;
+    const b = el('button', 'chtitle', c.title); b.type = 'button'; b.title = c.title; b.onclick = () => openChat(c.id);
+    const x = el('button', 'chdel', '×'); x.type = 'button'; x.title = 'Delete this chat'; x.setAttribute('aria-label', 'Delete chat: ' + c.title);
+    x.onclick = () => removeChat(c.id, x);
+    li.appendChild(b); li.appendChild(x); ul.appendChild(li);
+  }
+}
+async function loadChats() {
+  try { const r = await (await fetch('/chats')).json(); currentChat = r.current; drawChats(r.chats || []); } catch (e) { /* the list waits for the next answer */ }
+}
+function clearLog() { log.textContent = ''; pending = null; }
+async function newChat() {
+  if (busy) return;
+  try { await post('/chats/new'); } catch (e) { return; }
+  clearLog(); showEmpty(); loadChats(); chatsDone(); q.focus();
+}
+async function openChat(id) {
+  if (busy) return;
+  let r; try { r = await post('/chats/' + id + '/open'); } catch (e) { return; }
+  if (!r || r.error) { loadChats(); return; }
+  clearLog();
+  for (const t of r.turns || []) showAnswer(newTurn(t.question, false), { text: t.text, route: t.route, sources: t.sources, seconds: t.seconds || 0 });
+  if (!(r.turns || []).length) showEmpty();
+  bottom(); loadChats(); chatsDone(); q.focus();
+}
+async function removeChat(id, btn) {
+  if (btn && !btn.classList.contains('armed')) {  // first click asks; the second deletes
+    btn.classList.add('armed'); btn.textContent = 'Delete';
+    setTimeout(() => { btn.classList.remove('armed'); btn.textContent = '×'; }, 3000);
+    return;
+  }
+  try { await post('/chats/' + id + '/delete'); } catch (e) { return; }
+  if (id === currentChat) { clearLog(); showEmpty(); }
+  loadChats();
+}
+$('newchat').onclick = () => newChat();
+// Show / hide the chats column: the bar's left button or Done / Escape in the panel. Wide windows show it by
+// default and remember the choice; the compact panel starts with it hidden and shows it over the whole panel.
+function chatsShown() { return document.body.classList.contains('chatsopen'); }
+function toggleChats(show) {
+  const on = show ?? !chatsShown();
+  document.body.classList.toggle('chatsopen', on);
+  if (isWide()) store('muse.chats', on ? '1' : '0');
+  const b = $('chatsbtn'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.title = on ? 'Hide chats' : 'Show chats';
+  if (!recording) q.focus();
+}
+function chatsDone() { if (!isWide() && chatsShown()) toggleChats(false); }  // compact: back to the conversation
+$('chatsbtn').onclick = () => toggleChats();
+$('chatsclose').onclick = () => toggleChats(false);
+if (isWide() && store('muse.chats') !== '0') document.body.classList.add('chatsopen');
+toggleChats(chatsShown());
+window.matchMedia('(min-width: 761px)').addEventListener('change', (e) => { if (!e.matches) toggleChats(false); });
+window.museChats = { refresh: loadChats, open: openChat, new: newChat, remove: (id) => removeChat(id, null) };
+
 showEmpty();
-refresh(); loadBank();
+refresh(); loadBank(); loadChats();
 q.focus();
 </script>
 </body></html>
@@ -554,9 +679,15 @@ def bank_rows(entries) -> list[dict]:
 
 
 def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None,
-                 entries_fn=None):
+                 entries_fn=None, speaker=None, session=None, chats_root=None):
     entries_fn = entries_fn or store.all_entries
-    answer_fn = answer_fn or _answer
+    cur = {"s": session or Session()}  # the open chat (single user); swapped on new / open
+    answer_fn = answer_fn or (lambda q, today=None: _answer(q, today=today, session=cur["s"]))
+
+    def _switch(s):
+        act.reset()       # a held yes/no belongs to the chat it was asked in
+        discover.reset()
+        cur["s"] = s
     online_fn = online_fn or _online
     count_fn = count_fn or (lambda: len(store.all_entries()))
 
@@ -581,10 +712,23 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                             "voice_why": voice_why})
             elif self.path == "/bank":
                 self._json(bank_rows(entries_fn()))
+            elif self.path == "/chats":
+                self._json({"current": cur["s"].id, "chats": chats.listing(chats_root)})
+            elif self.path.startswith("/chats/"):
+                try:
+                    self._json(chats.read(self.path.split("/")[2], chats_root))
+                except (ValueError, OSError):
+                    self._json({"error": "no such chat"}, 404)
             else:
                 self._send(404, "not found", "text/plain")
 
         def do_POST(self):
+            if speaker is not None and self.path in ("/ask", "/listen/start", "/speak/stop"):
+                speaker.stop()  # talking, a new question or the switch cuts off the spoken answer
+            if self.path == "/speak/stop":
+                return self._json({"ok": True})
+            if self.path.startswith("/chats/"):
+                return self._chats_post(self.path.split("/")[2:])
             if self.path in ("/listen/start", "/listen/stop"):
                 if talk is None:
                     return self._json({"error": f"voice is unavailable ({voice_why})"})
@@ -596,8 +740,15 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 return self._send(404, "not found", "text/plain")
             try:
                 n = int(self.headers.get("Content-Length") or 0)
-                question = str(json.loads(self.rfile.read(n) or b"{}").get("question") or "")
+                body = json.loads(self.rfile.read(n) or b"{}")
+                question = str(body.get("question") or "")
                 a = answer_fn(question, today=today)
+                try:
+                    chats.save(cur["s"], chats_root)
+                except OSError as e:  # the answer still stands; say it once in the server log
+                    print(f"Couldn't save the chat: {e}", flush=True)
+                if speaker is not None and body.get("speak") and a.route != "error":
+                    speaker.speak(a.text)
                 held = a.route == "discover" and discover.waiting()
                 self._json({"text": a.text, "route": a.route, "sources": a.sources,
                             "seconds": a.seconds, "pending": held or (a.route == "act" and act.waiting()),
@@ -605,6 +756,24 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
             except Exception as e:  # show it in the window; keep serving
                 self._json({"text": f"Error: {type(e).__name__}: {e}", "route": "error",
                             "sources": [], "seconds": 0.0})
+
+        def _chats_post(self, parts):
+            if parts == ["new"]:
+                _switch(Session())
+                return self._json({"current": cur["s"].id})
+            if len(parts) != 2 or parts[1] not in ("open", "delete"):
+                return self._send(404, "not found", "text/plain")
+            chat_id, verb = parts
+            try:
+                if verb == "open":
+                    _switch(chats.load(chat_id, chats_root))
+                    return self._json(chats.read(chat_id, chats_root))
+                chats.delete(chat_id, chats_root)
+            except (ValueError, OSError):
+                return self._json({"error": "no such chat"}, 404)
+            if chat_id == cur["s"].id:
+                _switch(Session())
+            return self._json({"ok": True, "current": cur["s"].id})
 
         def log_message(self, fmt, *args):  # quiet
             pass
@@ -622,7 +791,7 @@ def main(argv=None) -> int:
     voice, why = (None, "turned off") if args.no_voice else start_voice()
     print("Voice: ready" if voice else f"Voice is unavailable ({why}); typing only.", flush=True)
     srv = HTTPServer(("127.0.0.1", args.port), make_handler(
-        today=args.today, talk=HoldToTalk(voice) if voice else None, voice_why=why))
+        today=args.today, talk=HoldToTalk(voice) if voice else None, voice_why=why, speaker=Speaker()))
     url = f"http://localhost:{args.port}/"
     print(f"Muse window at {url}  (Ctrl-C to stop)", flush=True)
     if not args.no_open:
