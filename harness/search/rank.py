@@ -101,4 +101,9 @@ def top_chunks(text: str, question: str, k: int = 2, size: int = CHUNK_CHARS) ->
     if scores[chosen[0]] <= 0:
         # Nothing in the page matches the question: keep the opening chunks.
         return chunks[: min(k, len(chunks))]
+    if k >= 2 and 0 not in chosen:
+        # Definitions, dates and summaries live in the opening chunk, and BM25
+        # can miss them when the question words are spread over a long page.
+        # Keep one slot for it and let BM25 fill the rest.
+        chosen = [0, *ranked[: k - 1]]
     return [chunks[i] for i in sorted(chosen)]

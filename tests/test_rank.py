@@ -48,10 +48,34 @@ def test_chunks_come_back_in_page_order():
     paragraphs = [f"Paragraph {n}. {filler}" for n in range(30)]
     paragraphs[5] = "The cracked mantle was replaced by the keeper at once. " * 4
     paragraphs[25] = "The spare mantle waited in the oilcloth store. " * 4
-    picked = top_chunks("\n\n".join(paragraphs), "cracked spare mantle", k=2)
-    assert len(picked) == 2
+    text = "\n\n".join(paragraphs)
+    picked = top_chunks(text, "cracked spare mantle", k=3)
+    all_chunks = chunk_text(text)
+    positions = [all_chunks.index(chunk) for chunk in picked]
+    assert positions == sorted(positions)  # page order, whatever the scores
+    assert any("cracked" in chunk for chunk in picked)
+    assert any("spare" in chunk for chunk in picked)
+
+
+def test_opening_chunk_is_always_read():
+    opening = "Welcome to the archive. " * 30  # one chunk on its own, no query words
+    body = [
+        f"Article {n}: notes about lighthouse lanterns and their glass."
+        for n in range(1, 25)
+    ]
+    chunks = chunk_text("\n\n".join([opening] + body))
+    picked = top_chunks("\n\n".join([opening] + body), "lighthouse lantern glass", k=2)
+    assert picked[0] == chunks[0]
+    assert any("lighthouse lanterns" in chunk for chunk in picked[1:])
+
+
+def test_single_chunk_still_ranks_by_relevance():
+    opening = "Welcome to the archive. " * 30
+    filler = [f"Article {n} about the sea and the light." for n in range(1, 15)]
+    answer = "The cracked mantle was replaced with a spare kept in oilcloth."
+    text = "\n\n".join([opening, *filler, answer])
+    picked = top_chunks(text, "cracked spare mantle", k=1)
     assert "cracked" in picked[0]
-    assert "spare" in picked[1]
 
 
 def test_k_is_respected():
