@@ -3,6 +3,7 @@
 #   app/make_dmg.sh                    # needs the "Muse-notarize" notarytool profile
 #   MUSE_NOTARIZE=0 app/make_dmg.sh    # signed, not notarized (testing)
 #   MUSE_REPO_URL=https://… app/make_dmg.sh   # where setup.sh clones the code from (else: "ask whoever gave you Muse")
+#   MUSE_DMG_OUT=app/dist/Muse-test.dmg app/make_dmg.sh   # another output name
 # Order: build + sign Muse.app (app/build.sh, Developer ID, hardened runtime) -> notarize + staple
 # the app -> DMG with the drag window (dmgbuild via uvx) -> sign -> notarize + staple the DMG -> check.
 # Contents: Muse.app (no repo path baked in), INSTALL.html, setup.sh, Applications link. No models,
@@ -12,7 +13,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 DIST="$HERE/dist"
 STAGE="$DIST/stage"
 ART="$DIST/art"
-DMG="$DIST/Muse.dmg"
+DMG="${MUSE_DMG_OUT:-$DIST/Muse.dmg}"
 PROFILE="${MUSE_NOTARY_PROFILE:-Muse-notarize}"
 DEVID="Developer ID Application: Coby Lai (XD7QDRDR78)"
 NOTARIZE="${MUSE_NOTARIZE:-1}"
