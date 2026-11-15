@@ -117,9 +117,17 @@ due(start_date, end_date)    # entries with a deadline in the range
 - **Data location:** `data/bank/` by default. It's gitignored because it will hold real email.
 - **Status:** the exact entry format and function details will be in `docs/plans/context-store.md` once that plan is written.
 
-## 6. Voice input — **planned** (Argmax, branch `argmax-runtime-test`)
+## 6. Voice input — **tested** (Argmax, branch `argmax-runtime-test`); handoff to Python **planned**
 
-Argmax runs only from Swift, so voice is a small separate Swift program. It turns speech into text, and the text goes into the same entry point as a typed question. How the Swift program hands text to Python is **undecided**; it will be in `docs/argmax.md` once the runtime test reports.
+Argmax runs only from Swift, so voice is a small separate Swift program. It turns speech into text, and the text goes into the same entry point as a typed question. Details are in `docs/argmax.md`.
+
+- **What runs today:** the sample CLI, `samples/argmax-pro-sdk/native/.build/release/meeting-scribe file <wav> --no-speakers`, with `ARGMAX_API_KEY` set. It transcribes a 6.7 s clip correctly.
+  - Warm process time: 4.5 s, most of it loading the model.
+  - Transcription alone: about 1.4 s.
+  - Model: Whisper large-v3 turbo, 615 MB, in `~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/`.
+- **Offline:** each launch contacts `api.argmaxinc.com`, but a failed check did not stop the run. A real Wi-Fi-off run is still to be done by Coby.
+- **Handoff to Python (proposed, not built):** Python starts one long-running Swift process with `subprocess.Popen` and reads its stdout. The Swift side writes one JSON line per finished utterance, for example `{"text": "remind me to buy oat milk", "start": 12.3, "end": 14.1}`, and flushes after each line. Python passes `text` into the same entry point as a typed question. One long-running process avoids paying the ~4.5 s model load per question.
+- **Not decided:** whether voice is push-to-talk or always on.
 
 ## 7. Not decided yet
 
