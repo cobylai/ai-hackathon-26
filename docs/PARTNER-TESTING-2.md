@@ -99,14 +99,15 @@ offline.
 - Window: check that each answer type above looks right, the sidebar groups
   and source links work, Yes/Cancel shows inline, and Escape cancels. Try a
   narrow window and full screen.
-- Mac app: `app/build.sh`, then open `app/build/Muse.app`. On first launch,
-  enter your own Argmax key and allow the mic and Calendar prompts. "Check
+- Mac app on a spare Mac: the disk image and its install page, see "Ship to another Mac" in `docs/window.md` (`app/make_dmg.sh` → `app/dist/Muse.dmg`).
+- Mac app from your checkout: `app/build.sh`, then open `app/build/Muse.app`. On first launch,
+  enter your own Argmax key and allow the mic, Calendar and Accessibility prompts. "Check
   setup" in the menu should list no problems. Then, from another app: tap
   Fn-Space, type a question, press Escape; hold Fn-Space, say
   "what's due this week", and let go. Quit Muse should leave no stray
   servers (`lsof -iTCP:8765 -sTCP:LISTEN`). The app runs the servers from the
-  checkout named in `MUSE_REPO` (default `~/code/ai-hackathon-26`), so point it
-  at yours.
+  checkout recorded at build (yours, when you build it), or the one set with
+  `defaults write local.ai-hackathon-26.muse MuseRepo <folder>`.
 
 ## Report back
 

@@ -96,7 +96,7 @@ app/build.sh                 # -> app/build/Muse.app, ad-hoc signed, ~10 s
 open app/build/Muse.app
 ```
 
-The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it runs the servers from, because the Bonsai models live only there. `MUSE_REPO=<folder>` at build or launch time points it somewhere else. Keep that checkout on current `main`, with `voice/swift` built (`swift build -c release`).
+The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it runs the servers from, because the Bonsai models live only there. Muse looks for the code in this order: `defaults write local.ai-hackathon-26.muse MuseRepo <folder>`, `MUSE_REPO`, the folder recorded at build, then `~/ai-hackathon-26`. If none has the code, the panel says so. Keep that checkout on current `main`, with `voice/swift` built (`swift build -c release`).
 
 ### Using it
 
@@ -121,3 +121,16 @@ The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it 
 **Quit** stops only what Muse started (SIGINT so Python closes voice, then SIGTERM). A Bonsai or window server that was already running stays up.
 
 If the window server was started from a terminal instead, Muse uses it as it is; its voice then depends on that terminal's key and microphone allow, and Check setup says so if voice isn't ready.
+
+### Ship to another Mac
+
+```bash
+app/make_dmg.sh              # -> app/dist/Muse.dmg (~100 KB), app/build/ untouched
+```
+
+The disk image holds `Muse.app` (no folder recorded, so it looks in `~/ai-hackathon-26` or the `defaults` setting), `INSTALL.html`, `setup.sh` and an Applications shortcut. No models, keys, bank or `data/`.
+
+- **INSTALL.html** has two paths. One command: `bash /Volumes/Muse/setup.sh`. Do it yourself: one numbered step per part, each with its official link and exact command: Xcode, uv, the repo (private), Python packages and Playwright Chromium, Bonsai 2 4B with its own venv, the Whisper model, the Argmax registry login and your own keys, building `voice/swift`, the demo bank and "Muse demo" calendar, then opening Muse. Each part installs on its own, so Bonsai, Argmax and the harness are visibly separate.
+- **setup.sh** prints each command before it runs it, asks before every download or install, skips what's already there, never uses `sudo`, and reads the Argmax secret token hidden. It ends with `defaults write … MuseRepo <folder>`.
+- **First open:** Muse is ad-hoc signed and not notarized. Right-click → Open, or `xattr -dr com.apple.quarantine /Applications/Muse.app`.
+- **Each Mac needs its own Argmax key**, and the first voice start on a new Mac takes several minutes (one-time Neural Engine compile).

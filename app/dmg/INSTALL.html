@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install Muse</title>
+<style>
+  :root { color-scheme: light dark; --muted: #666; --code: #f3f3f3; --line: #ddd; }
+  @media (prefers-color-scheme: dark) { :root { --muted: #aaa; --code: #2a2a2a; --line: #444; } }
+  body { font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+         max-width: 760px; margin: 32px auto; padding: 0 16px; }
+  h1 { font-size: 26px; margin-bottom: 4px; }
+  h2 { font-size: 19px; margin-top: 32px; border-top: 1px solid var(--line); padding-top: 20px; }
+  .lead { color: var(--muted); margin-top: 0; }
+  pre, code { font: 13px ui-monospace, Menlo, monospace; background: var(--code); border-radius: 6px; }
+  pre { padding: 10px 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+  code { padding: 1px 4px; }
+  ol > li { margin-bottom: 18px; }
+  .note { border-left: 3px solid #e0a800; padding: 4px 12px; margin: 16px 0; }
+</style></head>
+<body>
+<h1>Install Muse</h1>
+<p class="lead">A local Mac assistant: Bonsai 2 4B answers, Argmax turns speech into text, and the browser harness reads mail and the web. Everything runs on this Mac and answers with Wi-Fi off. Apple Silicon and macOS 15 or later.</p>
+
+<div class="note">
+  <p><b>Before you start.</b> Each Mac needs its <b>own</b> Argmax key (<code>ax_…</code>) and secret token (<code>axst_…</code>), from <a href="https://app.argmaxinc.com">app.argmaxinc.com</a>. Don't use someone else's.</p>
+  <p>The <b>first voice start on a new Mac takes several minutes</b> while macOS compiles the speech model for the Neural Engine. It happens once. Leave Muse running until voice is ready.</p>
+</div>
+
+<p>This disk image holds only <code>Muse.app</code>, this page and <code>setup.sh</code>. No models, keys or mail are in it. Each part below is installed on its own. Pick one of the two paths.</p>
+
+<h2>Path 1: one command</h2>
+<p><code>setup.sh</code> does the steps in Path 2 in order. Read it first; it's short. It prints each command before it runs it, asks before every download or install, skips what's already there, and never uses <code>sudo</code>.</p>
+<pre>bash /Volumes/Muse/setup.sh</pre>
+<p>It installs into <code>~/ai-hackathon-26</code>. To use another folder: <code>MUSE_DIR=~/somewhere bash /Volumes/Muse/setup.sh</code>. Then go to step 10 below.</p>
+
+<h2>Path 2: do it yourself</h2>
+<ol>
+  <li><b>Xcode 16 or later</b>, for building the voice program. <a href="https://apps.apple.com/app/xcode/id497799835">Xcode on the App Store</a>. Open it once to finish installing.</li>
+
+  <li><b>uv</b>, the Python package manager. <a href="https://docs.astral.sh/uv/getting-started/installation/">docs.astral.sh/uv</a>
+    <pre>curl -LsSf https://astral.sh/uv/install.sh | sh</pre></li>
+
+  <li><b>The Muse code.</b> <a href="https://github.com/cobylai/ai-hackathon-26">github.com/cobylai/ai-hackathon-26</a>. It's private, so ask Coby for access.
+    <pre>git clone https://github.com/cobylai/ai-hackathon-26.git ~/ai-hackathon-26
+cd ~/ai-hackathon-26</pre></li>
+
+  <li><b>Python packages and the harness's Chromium.</b> <a href="https://playwright.dev/python/docs/browsers">Playwright browsers</a>. Python 3.12 is pinned in <code>.python-version</code>.
+    <pre>uv sync
+uv run playwright install chromium</pre></li>
+
+  <li><b>Bonsai 2 4B</b>, the language model behind every answer. <a href="https://huggingface.co/prism-ml/Ternary-Bonsai-2-4B-mlx-2bit">prism-ml/Ternary-Bonsai-2-4B-mlx-2bit</a> (about 1 GB). It runs in its own Python env with <a href="https://github.com/Blaizzy/mlx-vlm">mlx-vlm</a>, in the folder <code>samples/bonsai-models/mlx/</code>.
+    <pre>cd ~/ai-hackathon-26/samples/bonsai-models/mlx
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -r requirements.txt
+.venv/bin/hf download prism-ml/Ternary-Bonsai-2-4B-mlx-2bit --local-dir models/bonsai2-4b-mlx
+cd ~/ai-hackathon-26</pre>
+    Check it: <code>scripts/serve_bonsai.sh 4B</code>, then <code>curl -s localhost:8080/v1/models</code> in another window. Ctrl-C stops it; Muse starts it on its own later.</li>
+
+  <li><b>Whisper speech model</b> for Argmax. <a href="https://huggingface.co/argmaxinc/whisperkit-coreml">argmaxinc/whisperkit-coreml</a>, folder <code>openai_whisper-large-v3-v20240930_626MB</code> (about 630 MB).
+    <pre>~/ai-hackathon-26/samples/bonsai-models/mlx/.venv/bin/hf download argmaxinc/whisperkit-coreml \
+  --include "openai_whisper-large-v3-v20240930_626MB/*" \
+  --local-dir ~/Documents/huggingface/models/argmaxinc/whisperkit-coreml</pre></li>
+
+  <li><b>Argmax SDK login.</b> <a href="https://app.argmaxinc.com">app.argmaxinc.com</a>: get your own secret token (<code>axst_…</code>, for the SDK download) and API key (<code>ax_…</code>, for Muse).
+    <pre>swift package-registry set --global --scope argmaxinc https://api.argmaxinc.com/v1/sdk
+swift package-registry login https://api.argmaxinc.com/v1/sdk/login --token axst_YOUR_TOKEN</pre></li>
+
+  <li><b>Build the voice program</b> (<code>argmax-voice</code>, about 1 minute).
+    <pre>cd ~/ai-hackathon-26/voice/swift && swift build -c release && cd ~/ai-hackathon-26</pre></li>
+
+  <li><b>Demo bank and demo calendar</b>, so nobody's real mail or appointments show.
+    <pre>scripts/serve_bonsai.sh 4B &amp;     # needed for filing; stop it after
+uv run python scripts/make_test_mail.py write ~/muse-demo-mail --today $(date +%F)
+MUSE_BANK_DIR=~/muse-demo-bank uv run python -m bank.load ~/muse-demo-mail --kind email</pre>
+    In Calendar.app: File &gt; New Calendar, name it <b>Muse demo</b>, and add a few made-up events.</li>
+
+  <li><b>Open Muse.</b> Copy <code>Muse.app</code> to Applications. If the code isn't in <code>~/ai-hackathon-26</code>, tell Muse where it is:
+    <pre>defaults write local.ai-hackathon-26.muse MuseRepo /path/to/ai-hackathon-26</pre>
+    <b>First open:</b> Muse is ad-hoc signed and not notarized, so macOS blocks a double-click. Right-click Muse.app &gt; Open &gt; Open. Or run <code>xattr -dr com.apple.quarantine /Applications/Muse.app</code>.
+    <p>At first launch:</p>
+    <ul>
+      <li>Paste your <code>ax_</code> key. Muse keeps it in your login Keychain as "Muse Argmax key".</li>
+      <li>Allow the <b>microphone</b>, <b>Calendar</b>, and <b>Accessibility</b> (System Settings opens; turn Muse on). Accessibility is for the Fn-Space hotkey.</li>
+      <li>Muse starts Bonsai and its window server, then lists anything still missing, each with its fix.</li>
+    </ul>
+    <p><b>Use it:</b> tap Fn-Space (the Globe key and Space) to show or hide the panel; hold it to talk and let go to ask. Waveform icon in the menu bar: Open, Sync mail, Discover, Check setup, Quit.</p></li>
+</ol>
+</body></html>

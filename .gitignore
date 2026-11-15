@@ -9,3 +9,4 @@ voice/swift/.build/
 voice/swift/.swiftpm/
 voice/swift/Package.resolved
 app/build/
+app/dist/
