@@ -144,3 +144,31 @@ def test_click_after_navigation_is_refused(btools, site):
     out = check(btools.click(n))
     assert out.startswith("ERR")
     assert "elements again" in out
+
+
+def test_locked_profile_returns_err(monkeypatch):
+    from harness.browser import tools
+
+    class Broken:
+        def start(self):
+            raise RuntimeError(
+                "Failed to create a ProcessSingleton for your profile directory."
+            )
+
+    monkeypatch.setattr(tools, "get_session", lambda: Broken())
+    out = check(tools.goto("https://example.com"))
+    assert out.startswith("ERR local")
+    assert "profile in use" in out
+
+
+def test_other_start_failure_returns_err(monkeypatch):
+    from harness.browser import tools
+
+    class Broken:
+        def start(self):
+            raise RuntimeError("Executable doesn't exist at /nowhere")
+
+    monkeypatch.setattr(tools, "get_session", lambda: Broken())
+    out = check(tools.back())
+    assert out.startswith("ERR local")
+    assert "browser failed to start" in out

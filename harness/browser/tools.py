@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 from urllib.parse import urlparse
 
 from playwright.sync_api import Page
@@ -17,16 +18,28 @@ STATUS_WORDS = ("OK", "BLOCKED", "LOGIN", "ERR")
 # Leave room for the status line inside the hard 1500-char answer cap.
 TEXT_CHARS = max(200, config.MAX_CHARS - 160)
 
-_blocked_for: int | None = None
+class BrowserStartError(RuntimeError):
+    """Chromium could not be started (profile lock, missing build)."""
+
+
+_blocked_page: Page | None = None
 
 
 def _page() -> Page:
     """The shared page, with request blocking installed once."""
-    global _blocked_for
-    page = get_session().start().page
-    if id(page) != _blocked_for:
+    global _blocked_page
+    try:
+        page = get_session().start().page
+    except Exception as exc:
+        text = " ".join(str(exc).split())
+        if "ProcessSingleton" in text or "profile directory" in text:
+            raise BrowserStartError(
+                "profile in use; close the other Chromium window and retry"
+            ) from exc
+        raise BrowserStartError(f"browser failed to start: {text[:100]}") from exc
+    if page is not _blocked_page:
         blocking.install(page)
-        _blocked_for = id(page)
+        _blocked_page = page
     return page
 
 
@@ -75,6 +88,19 @@ def _note(word: str, page: Page, message: str) -> str:
     return _cap(_status_line(word, page, message), hint="[end]")
 
 
+def _browser_tool(fn):
+    """Turn a failed browser start into a clean ERR line instead of a traceback."""
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except BrowserStartError as exc:
+            return _cap(f"ERR local | {exc}", hint="[end]")
+
+    return wrapper
+
+
 def _normalize_url(url: str) -> str:
     url = url.strip()
     if "://" in url or url.startswith(("about:", "data:", "file:")):
@@ -82,6 +108,7 @@ def _normalize_url(url: str) -> str:
     return f"https://{url}"
 
 
+@_browser_tool
 def goto(url: str) -> str:
     """Open a URL; return status line, title and the first page of text."""
     page = _page()
@@ -108,6 +135,7 @@ def goto(url: str) -> str:
     return _cap(f"{_status_line('OK', page, f'page 1/{total}')}\n{chunk}", hint)
 
 
+@_browser_tool
 def read(page: int = 1) -> str:
     """Return page N of the current page's main text."""
     current = _page()
@@ -130,6 +158,7 @@ def read(page: int = 1) -> str:
     return _cap(f"{_status_line('OK', current, suffix)}\n{chunk}", hint)
 
 
+@_browser_tool
 def elements(filter: str | None = None) -> str:
     """List visible clickable and typeable items as numbered lines."""
     current = _page()
@@ -143,6 +172,7 @@ def elements(filter: str | None = None) -> str:
     return _cap(f"{_status_line(word, current, suffix)}\n{listing}", hint)
 
 
+@_browser_tool
 def click(n: int) -> str:
     """Click element N from the last numbered list."""
     current = _page()
@@ -155,6 +185,7 @@ def click(n: int) -> str:
     return _cap(_status_line(word, current), hint="[end]")
 
 
+@_browser_tool
 def type(n: int, text: str, enter: int = 0) -> str:
     """Type text into element N; enter=1 also presses Enter."""
     current = _page()
@@ -167,6 +198,7 @@ def type(n: int, text: str, enter: int = 0) -> str:
     return _cap(_status_line("OK", current, suffix), hint="[end]")
 
 
+@_browser_tool
 def back() -> str:
     """Go back one page in the current tab."""
     current = _page()

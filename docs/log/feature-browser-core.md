@@ -20,3 +20,4 @@
 - B6 fix: "captcha" and "access denied" now only count on wall-sized pages (body <= 1500 chars). Wikipedia's CAPTCHA article (29k chars) was BLOCKED, now OK; Reddit and StackOverflow still BLOCKED live.
 - B4 fix: when trafilatura keeps <20% of the visible body (BBC homepage: 285 of 8,427 chars), fall back to body text and drop sub-20-char menu labels. BBC goto now returns 1,293 chars of headlines; article extraction unchanged.
 - B5 fix: click/type now refuse numbers taken before a navigation (or with no list) and return ERR "call elements again" instead of clicking a stale data-hn that may belong to a different control.
+- B7 fix: a locked profile (e.g. an open sign-in window) now returns "ERR local | profile in use; close the other Chromium window and retry" instead of a traceback; any other start failure returns ERR too. Blocking is now keyed on the page object, not its id.
