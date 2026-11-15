@@ -31,9 +31,11 @@ def split_sender(sender: str) -> tuple[str | None, str | None]:
 
 
 def iso_date(raw: str) -> str | None:
-    """Gmail's title date ('Thu, Nov 12, 2026, 4:30 PM') -> '2026-11-12'."""
+    """Gmail's title date -> ISO. Seen: 'Thu, Nov 12, 2026, 4:30 PM' (fixture)
+    and '14 Nov 2026, 22:24' (live account, 24-hour locale)."""
     s = " ".join((raw or "").replace(" ", " ").split())
-    for fmt in ("%a, %b %d, %Y, %I:%M %p", "%b %d, %Y, %I:%M %p", "%a, %b %d, %Y %I:%M %p"):
+    for fmt in ("%a, %b %d, %Y, %I:%M %p", "%b %d, %Y, %I:%M %p", "%a, %b %d, %Y %I:%M %p",
+                "%d %b %Y, %H:%M", "%a, %d %b %Y, %H:%M", "%d %b %Y, %I:%M %p", "%b %d, %Y, %H:%M"):
         try:
             return datetime.strptime(s, fmt).date().isoformat()
         except ValueError:

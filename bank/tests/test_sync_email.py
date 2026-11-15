@@ -18,6 +18,7 @@ class TestSyncEmail(unittest.TestCase):
     def test_iso_date(self):
         self.assertEqual(S.iso_date("Thu, Nov 12, 2026, 4:30 PM"), "2026-11-12")
         self.assertEqual(S.iso_date("Sat, Nov 14, 2026, 9:12 AM"), "2026-11-14")
+        self.assertEqual(S.iso_date("14 Nov 2026, 22:24"), "2026-11-14")
         self.assertIsNone(S.iso_date("9:12 AM"))
 
     def test_file_thread_oldest_first_and_skips_empty(self):
