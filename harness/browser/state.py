@@ -9,8 +9,14 @@ BLOCKED_PHRASES = (
     "are you a robot",
     "unusual traffic",
     "verify you are human",
+    "prove your humanity",
     "captcha",
     "access denied",
+    # DuckDuckGo's HTML endpoint answers with its own puzzle when it sees a bot
+    # (S8: this page used to classify as OK, so search looked empty instead of walled).
+    "bots use duckduckgo too",
+    "confirm this search was made by a human",
+    "select all squares containing",
 )
 
 # These are unambiguous, so they count on any page. The rest are common words

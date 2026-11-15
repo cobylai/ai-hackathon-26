@@ -1,0 +1,23 @@
+{
+  "id": "e06_prof_extension",
+  "task": "extraction",
+  "note": "",
+  "email": "From: Prof. Daniel Reyes <dreyes@univ.example.edu>\nDate: Thu, 12 Nov 2026 13:05:44 -0500\nSubject: ENGRD 2700 project extension\n\nAll,\n\nGiven the server outage, the project 2 deadline moves from Friday to Monday 11:59pm. Please submit your final notebook and a one page reflection on the course site. No further extensions will be granted.\n\nDR",
+  "expected": {
+    "sender": "dreyes@univ.example.edu",
+    "sender_name": "Prof. Daniel Reyes",
+    "date": "2026-11-12",
+    "ask_keywords": [
+      [
+        "submit",
+        "notebook",
+        "reflection"
+      ]
+    ],
+    "deadline_keywords": [
+      [
+        "monday"
+      ]
+    ]
+  }
+}

@@ -10,7 +10,10 @@ from dataclasses import dataclass
 from typing import Callable
 
 from harness.browser import tools as browser_tools
+from harness.search import tools as search_tools
 from harness.email import tools as email_tools
+from harness.computer import tools as computer_tools
+from harness.computer import ui as computer_ui
 
 
 @dataclass(frozen=True)
@@ -58,6 +61,24 @@ TOOLS: dict[str, Tool] = {
         {},
         browser_tools.back,
     ),
+    "search": Tool(
+        "search",
+        "Search the web and list results as numbers.",
+        {"query": str},
+        search_tools.search,
+    ),
+    "open_result": Tool(
+        "open_result",
+        "Open numbered result N from the last search.",
+        {"n": int},
+        search_tools.open_result,
+    ),
+    "research": Tool(
+        "research",
+        "Answer a question from the web with sources.",
+        {"question": str},
+        search_tools.research,
+    ),
     "email_search": Tool(
         "email_search",
         "Search Gmail; returns numbered rows.",
@@ -90,8 +111,51 @@ TOOLS: dict[str, Tool] = {
     ),
 }
 
+COMPUTER_TOOLS: dict[str, Tool] = {
+    "app_open": Tool(
+        "app_open",
+        "Open a Mac app by name.",
+        {"name": str, "token": str},
+        computer_tools.app_open,
+    ),
+    "file_find": Tool(
+        "file_find",
+        "Find files by name in the home folder; returns numbered paths.",
+        {"query": str},
+        computer_tools.file_find,
+    ),
+    "file_open": Tool(
+        "file_open",
+        "Open file N from the last file_find list.",
+        {"n": int, "token": str},
+        computer_tools.file_open,
+    ),
+    "ui": Tool(
+        "ui",
+        "List the front window's controls as numbers; optional filter word.",
+        {"filter": str},
+        computer_ui.list_controls,
+    ),
+    "ui_click": Tool(
+        "ui_click",
+        "Click control N from the last ui list.",
+        {"n": int, "token": str},
+        computer_ui.ui_click,
+    ),
+    "ui_type": Tool(
+        "ui_type",
+        "Type text into control N from the last ui list.",
+        {"n": int, "text": str, "token": str},
+        computer_ui.ui_type,
+    ),
+}
+
+TOOLS.update(COMPUTER_TOOLS)
+
 GROUPS: dict[str, list[str]] = {
     "web": ["goto", "read", "elements", "click", "type", "back"],
+    # Kept apart from "web" so a model sees at most three tools at a time.
+    "search": ["search", "open_result", "research"],
     "email": [
         "email_search",
         "email_read",
@@ -99,5 +163,5 @@ GROUPS: dict[str, list[str]] = {
         "email_draft",
         "email_reply_draft",
     ],
-    "computer": [],
+    "computer": list(COMPUTER_TOOLS),
 }

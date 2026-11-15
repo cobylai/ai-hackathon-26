@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import atexit
 from pathlib import Path
 
 from playwright.sync_api import BrowserContext, Page, Playwright, sync_playwright
@@ -43,6 +44,9 @@ class Session:
         self._context = context
         pages = self._context.pages
         self._page = pages[0] if pages else self._context.new_page()
+        # So a process that started a browser never leaves it running behind
+        # (pytest kills, CLI one-shots). stop() is safe to call twice.
+        atexit.register(self.stop)
         return self
 
     @property

@@ -12,6 +12,12 @@ import pytest
 PAGES_DIR = Path(__file__).parent / "pages"
 
 
+@pytest.fixture(autouse=True)
+def isolated_page_cache(tmp_path, monkeypatch):
+    """Keep the S7 page cache out of ~/.harness and out of other tests."""
+    monkeypatch.setenv("HARNESS_CACHE_DB", str(tmp_path / "cache.db"))
+
+
 class _QuietHandler(SimpleHTTPRequestHandler):
     def log_message(self, *args, **kwargs):  # silence server output in tests
         pass
@@ -25,6 +31,18 @@ class Site:
 
     def url(self, name: str) -> str:
         return f"{self.base_url}/{name.lstrip('/')}"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def stop_shared_browser():
+    """Stop the shared browser session (browser.tools' get_session) at the end
+    of the run, so a pytest exit never leaves a Chromium behind."""
+    yield
+    from harness.browser import session as session_mod
+
+    if session_mod._session is not None:
+        session_mod._session.stop()
+        session_mod._session = None
 
 
 @pytest.fixture(scope="session")

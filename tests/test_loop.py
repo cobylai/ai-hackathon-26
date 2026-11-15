@@ -1,0 +1,222 @@
+"""S6: the research loop stops early, rewrites, respects caps and survives walls."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from harness import llm, registry
+from harness.browser.text import page_text
+from harness.search import engine, loop, tools
+from harness.search.google import Result
+
+ARTICLE = page_text(
+    (Path(__file__).parent / "pages" / "article.html").read_text(encoding="utf-8")
+)
+
+
+def results_for(tag: str, count: int = 5) -> list[Result]:
+    return [
+        Result(
+            f"{tag} result {n}",
+            f"https://{tag}{n}.example/page",
+            f"{tag}{n}.example",
+            "A page about the lighthouse.",
+        )
+        for n in range(1, count + 1)
+    ]
+
+
+class Script:
+    """A search + open_page pair over fixture pages, with call counters."""
+
+    def __init__(self, blocked: set[str] | None = None) -> None:
+        self.queries: list[str] = []
+        self.opened: list[str] = []
+        self.blocked = blocked or set()
+
+    def search(self, query: str) -> list[Result]:
+        self.queries.append(query)
+        return results_for(f"round{len(self.queries)}")
+
+    def open_page(self, url: str) -> tuple[str, str]:
+        self.opened.append(url)
+        if any(marker in url for marker in self.blocked):
+            return "BLOCKED", ""
+        return "OK", ARTICLE
+
+
+def answer_words(text: str) -> int:
+    return len(text.splitlines()[0].split())
+
+
+def test_stops_early_when_the_notes_are_enough():
+    fake = llm.FakeLLM(
+        [
+            "1",  # pick
+            "The keeper kept the light for thirty-one years.",  # note
+            "YES",  # enough
+            "He kept it for thirty-one years [1].",  # answer
+        ]
+    )
+    site = Script()
+    outcome = loop.research(
+        "how long did the keeper keep the light?",
+        ask=fake.ask,
+        search=site.search,
+        open_page=site.open_page,
+    )
+    assert outcome.rounds == 1
+    assert len(site.queries) == 1
+    assert len(site.opened) == 1
+    assert "thirty-one years" in outcome.answer
+    assert "Sources: 1. round11.example" in outcome.answer
+    assert len(fake.prompts) == 4
+
+
+def test_rewrites_when_the_notes_are_not_enough():
+    fake = llm.FakeLLM(
+        [
+            "1",
+            "The page mentions the steps.",
+            "NO",
+            "lighthouse automation date",
+            "2",
+            "The automation crew arrived two winters later.",
+            "YES",
+            "The crew arrived two winters later [2].",
+        ]
+    )
+    site = Script()
+    outcome = loop.research(
+        "when was the light automated?",
+        ask=fake.ask,
+        search=site.search,
+        open_page=site.open_page,
+    )
+    assert site.queries == ["when was the light automated?", "lighthouse automation date"]
+    assert outcome.rounds == 2
+    assert "2. round22.example" in outcome.answer
+    assert len(site.opened) == 2
+
+
+class GreedyModel:
+    """Always picks five results, never finds anything useful, always asks again."""
+
+    def __init__(self) -> None:
+        self.rewrites = 0
+        self.prompts: list[str] = []
+
+    def __call__(self, prompt: str, choices=None, max_tokens: int = 64) -> str:
+        self.prompts.append(prompt)
+        if "Search results:" in prompt:
+            return "1 2 3 4 5"
+        if "Page chunk:" in prompt:
+            return "NONE"
+        if choices:
+            return "NO"
+        if "better search query" in prompt:
+            self.rewrites += 1
+            return f"another query {self.rewrites}"
+        return "an answer"
+
+
+def test_never_exceeds_round_and_page_caps():
+    site = Script()
+    outcome = loop.research(
+        "anything", ask=GreedyModel(), search=site.search, open_page=site.open_page
+    )
+    assert outcome.rounds == loop.MAX_ROUNDS == 3
+    assert loop.MAX_PAGES_PER_ROUND == 2
+    assert len(site.queries) == 3
+    assert len(site.opened) == 6  # two pages per round, never more
+    assert len(set(site.opened)) == 6
+    assert outcome.notes == []
+    assert "No useful results were found" in outcome.answer
+
+
+def test_at_most_two_picks_are_opened_in_a_round():
+    fake = llm.FakeLLM(["1 2 3 4 5", "A useful note.", "YES", "Answer [1]."])
+    site = Script()
+    outcome = loop.research("q", ask=fake.ask, search=site.search, open_page=site.open_page)
+    assert outcome.rounds == 1
+    assert len(site.opened) == 2
+
+
+def test_survives_a_blocked_page():
+    fake = llm.FakeLLM(
+        [
+            "1, 2",  # pick; result 1 is walled
+            "The crew arrived two winters later.",  # note from result 2
+            "YES",
+            "Two winters later [2].",
+        ]
+    )
+    site = Script(blocked={"round11.example/page"})
+    outcome = loop.research("q", ask=fake.ask, search=site.search, open_page=site.open_page)
+    assert len(site.opened) == 2  # the walled page was visited, not retried
+    assert [note[0] for note in outcome.notes] == [1]  # note numbering, not result numbering
+    assert outcome.notes[0][1] == "round12.example"
+    assert "Sources: 1. round12.example" in outcome.answer
+
+
+def test_repeating_a_query_stops_the_loop():
+    fake = llm.FakeLLM(["1", "One note.", "NO", "   "])
+    site = Script()
+    outcome = loop.research(
+        "original question", ask=fake.ask, search=site.search, open_page=site.open_page
+    )
+    assert outcome.rounds == 1
+    assert site.queries == ["original question"]
+
+
+def test_pages_are_opened_only_once():
+    fake = llm.FakeLLM(["1", "One note.", "NO", "second query", "1", "YES", "Done [1]."])
+    site = Script()
+    site.search = lambda query: results_for("same")  # same URLs every round
+    outcome = loop.research("q", ask=fake.ask, search=site.search, open_page=site.open_page)
+    assert len(site.opened) == 1
+    assert outcome.rounds == 2
+
+
+def test_answer_is_capped_at_120_words():
+    long_reply = " ".join(f"word{n}" for n in range(400))
+    fake = llm.FakeLLM(["1", "A note.", "YES", long_reply])
+    site = Script()
+    outcome = loop.research("q", ask=fake.ask, search=site.search, open_page=site.open_page)
+    assert answer_words(outcome.answer) == loop.MAX_ANSWER_WORDS
+
+
+def test_empty_question_is_handled():
+    outcome = loop.research("   ")
+    assert outcome.rounds == 0 and outcome.pages == 0
+    assert "No question" in outcome.answer
+
+
+def test_research_tool_formats_status_and_stays_under_the_cap(monkeypatch):
+    engine.reset()
+    monkeypatch.setattr(
+        loop,
+        "research",
+        lambda question: loop.Outcome(
+            "Answer [1].\nSources: 1. a.example", 1, 1, [(1, "a.example", "note")]
+        ),
+    )
+    out = tools.research("q")
+    assert out.startswith("OK research | 1 rounds | 1 pages")
+    assert "Sources: 1. a.example" in out
+    assert len(out) <= 1500
+
+
+def test_research_tool_reports_a_blocked_wall(monkeypatch):
+    engine.reset()
+    engine.last_status = "BLOCKED"
+    monkeypatch.setattr(loop, "research", lambda question: loop.Outcome("nothing", 3, 3, []))
+    assert tools.research("q").startswith("BLOCKED research | 3 rounds")
+    engine.reset()
+
+
+def test_registry_exposes_research():
+    entry = registry.TOOLS["research"]
+    assert entry.args == {"question": str}
+    assert "research" in registry.GROUPS["search"]
+    assert entry.desc and len(entry.desc) <= 100

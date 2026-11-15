@@ -24,6 +24,17 @@ def test_challenge_iframe_is_blocked(session, site):
     assert classify(session.page) == "BLOCKED"
 
 
+def test_duckduckgo_challenge_is_blocked(session, site):
+    session.page.goto(site.url("hello.html"))
+    session.page.set_content(
+        "<html><head><title>DuckDuckGo</title></head><body>"
+        "<p>Unfortunately, bots use DuckDuckGo too. Please complete the following "
+        "challenge to confirm this search was made by a human. "
+        "Select all squares containing a duck:</p></body></html>"
+    )
+    assert classify(session.page) == "BLOCKED"
+
+
 def test_login_page_is_login(session, site):
     session.page.goto(site.url("login.html"))
     assert classify(session.page) == "LOGIN"
@@ -88,5 +99,14 @@ def test_short_page_mentioning_captcha_is_blocked(session, site):
     session.page.set_content(
         "<html><head><title>Security check</title></head><body>"
         "Please complete the captcha to continue.</body></html>"
+    )
+    assert classify(session.page) == "BLOCKED"
+
+
+def test_prove_your_humanity_page_is_blocked(session, site):
+    session.page.goto(site.url("hello.html"))
+    session.page.set_content(
+        "<html><head><title>Reddit - Prove your humanity</title></head>"
+        "<body>Prove your humanity</body></html>"
     )
     assert classify(session.page) == "BLOCKED"

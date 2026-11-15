@@ -46,7 +46,7 @@ These apply to every tool in every branch. Tests enforce the first three.
 Agree on these two before either side builds much.
 
 - **Tool registry.** `harness/registry.py` exposes `TOOLS: dict[str, Tool]` and `GROUPS: dict[str, list[str]]` (`web`, `email`, `computer`). Each `Tool` has `name`, `desc` (one line), `args` (flat, at most 3, all strings or ints) and `run(**args) -> str`. The decision tree picks a group; the model sees only that group.
-- **Model call.** `harness/llm.py` exposes `ask(prompt, choices=None, max_tokens=64) -> str`. It talks to any OpenAI-compatible endpoint (`LLM_BASE_URL`, `LLM_MODEL`). Local runtimes (llama.cpp server, `mlx_lm.server`) speak that protocol. Until the local model is wired in, point it at Claude (`claude-haiku-5-5`). Swapping is a config change, not a code change.
+- **Model call.** `harness/llm.py` exposes `ask(prompt, choices=None, max_tokens=64) -> str`. Since integration it calls `llm.client.chat`, the project's one Bonsai client (local Bonsai 2 on localhost:8080 only; no cloud model, ever).
 
 ## How to run a task (instructions for the worker model)
 

@@ -1,0 +1,23 @@
+{
+  "id": "o01_ta_regrade",
+  "kind": "email",
+  "source": "fixture:e01_ta_regrade",
+  "note": "",
+  "text": "From: Priya Natarajan <pn42@univ.example.edu>\nDate: Mon, 9 Nov 2026 10:14:03 -0500\nSubject: CS 3110 PS4 regrade\n\nHi,\n\nI looked at your regrade request for PS4 question 3. Could you send me the commit hash of the version you think we graded by mistake? Please get it to me by Friday at 5pm so I can update grades before the prelim.\n\nThanks,\nPriya (TA)",
+  "expected": {
+    "sender_address": "pn42@univ.example.edu",
+    "sender_name": "Priya Natarajan",
+    "sent_date": "2026-11-09",
+    "ask_keywords": [
+      [
+        "commit",
+        "hash"
+      ]
+    ],
+    "deadline_dates": [
+      "2026-11-13"
+    ],
+    "folder": "course",
+    "course": "CS 3110"
+  }
+}

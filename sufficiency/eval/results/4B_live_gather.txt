@@ -1,0 +1,24 @@
+
+== found first search
+found=True answer='NO'
+source=https://rec.example.edu/hours
+queries=['Is the gym open on Thanksgiving Day?']
+opened=['https://rec.example.edu/hours']
+message=Found on https://rec.example.edu/hours after 1 search(es) and 1 page(s).
+
+== found after rephrase
+found=True answer='8:30 PM'
+source=https://dining.example.edu/okenshields
+queries=['When does the dining hall stop serving dinner?', 'What time does the dining hall close for dinner on Friday, November 13, 2026?']
+opened=['https://news.example.com/article/4471', 'https://registrar.example.edu/calendar/fall-2026', 'https://dining.example.edu/okenshields']
+message=Found on https://dining.example.edu/okenshields after 2 search(es) and 3 page(s).
+
+== gives up
+found=False answer=None
+source=None
+queries=['When are the CS 4110 TA office hours?', 'CS 4110 Fall 2026 TA office hours', 'CS 4110 Fall 2026 syllabus TA office hours']
+opened=['https://deals.example.com/library-hours', 'https://canvas.example.edu/courses/88/grades', 'https://course.example.edu/cs3110/staff', 'https://news.example.com/article/4471']
+message=Not found after 3 search(es) and 4 page(s) (0 unreadable). Tried: "When are the CS 4110 TA office hours?"; "CS 4110 Fall 2026 TA office hours"; "CS 4110 Fall 2026 syllabus TA office hours".
+
+== rephrase alone
+ithaca ny weather forecast tomorrow afternoon

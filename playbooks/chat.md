@@ -1,0 +1,56 @@
+# Chat
+
+## For
+
+Greetings, mic checks and thanks, so they get a short reply instead of a web search. "Hey, can you hear me okay?", "Hi", "Thanks!", "Is this working?", "How are you?"
+
+## Triggers
+
+- chat: `hey|hi|hello|good (?:morning|afternoon|evening)`
+- chat: `can you hear me|are you (?:there|listening|working|on)|is this (?:on|working|thing on)|testing(?: testing)*|mic check`
+- chat: `how are you(?: doing)?|hope you'?re (?:doing )?(?:well|good|ok|okay)|nice to meet you`
+- chat: `thanks|thank you|cheers|good job|great|perfect|never ?mind|cool`
+- filler: `okay|ok|so|um|uh|oh|well|just|yeah|yes|flux|muse|there|again|very much|so much|today|a lot`
+
+It is chat only when, with every chat and filler phrase taken out, at most 2 words are left and none is a question word (what, when, where, who, which, why, how). So "Hey, what's due tomorrow?" is not chat.
+
+## Steps
+
+1. A chat trigger matches and almost nothing else is said (rule above). Checked after the person routes, before the bank.
+2. A mic check (can you hear me, is this working, testing) says `hear_you`; thanks says `thanks`; anything else says `hello`.
+3. Stop. Nothing is searched, nothing is saved.
+
+## May look
+
+Nothing. The reply is fixed text.
+
+## May not look
+
+The web, the bank, the model.
+
+## Wording
+
+- hear_you: I can hear you. Ask me about your mail, what's due, or your calendar.
+- hello: Hi. Ask me about your mail, what's due, or your calendar.
+- thanks: You're welcome.
+
+## Not found
+
+Not used: chat always has a reply.
+
+## Never
+
+- Never send chat to the web or the model.
+
+## Prompt
+
+No model step.
+
+## Examples
+
+| question | route | answer contains |
+|---|---|---|
+| Hey, can you hear me okay? Hope you're doing well. | chat | I can hear you |
+| Hi | chat | Hi. |
+| Thanks so much! | chat | You're welcome. |
+| Hey, what's due tomorrow? | due | Due Mon Nov 16 |
