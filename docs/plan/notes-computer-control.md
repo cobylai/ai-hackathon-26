@@ -80,3 +80,23 @@ Windows/Linux, revisit wrapping cua-driver then.
 C4 and C5 follow this decision: `pyobjc` (`ApplicationServices`, `Quartz`) for
 the AX walk in C5; `uv` already has `pyobjc-framework-ApplicationServices` as
 a dev dependency from this spike.
+
+## Proposed, not built: ui tools in the Flux act route (2026-11-15)
+
+The act route (`reason/act.py`) already calls `harness.computer` tools after a
+user "yes" (`app_open`, `direct.open_path`) and returns `say(...)` lines. The
+natural next step is three new kinds beside `open`/`calendar`/`remind`:
+
+- `find` → `tools.file_find(name)` — answer "where is X" jobs without a model.
+- `click` → `ui.ui_click(n)` — press a control from the last `ui` listing.
+- `type` → `ui.ui_type(n, text)` — fill a field from the last `ui` listing.
+
+Safety comes free: every ui action already runs the policy check with the
+control's label (CONFIRM for risky labels, DENY for blocked apps, STOP file
+beats all), and one-time confirm tokens (`--token`) fit the window's
+Yes/Cancel flow — a "yes" could mint a token for exactly that action.
+
+Not built now: four `agent-*` branches are live in `reason/`, so edits there
+would collide, and the route's trigger wording belongs to the playbook owners.
+Revisit once the agent-* branches land on main; zero overlap verified between
+those branches and `harness/computer/*`, so the tools side is ready as-is.
