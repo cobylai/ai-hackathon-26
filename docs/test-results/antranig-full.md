@@ -1,6 +1,6 @@
 # Flux full test suite: Antranig, 2026-11-15
 
-Tested on main 91dd76c (MacBook Pro, Apple Silicon, macOS 27). Every model call went to local Bonsai 2 4B on 127.0.0.1:8080. Nothing was sent. Rows marked PENDING need the Mac's keyboard or microphone and were not run by the agent.
+Tested on main 91dd76c (MacBook Pro, Apple Silicon, macOS 27) by two passes of the same tester that were merged into this file; where a row says "second pass" it is the later run. Every model call went to local Bonsai 2 4B on 127.0.0.1:8080. Nothing was sent. Rows marked PENDING need the Mac's keyboard or microphone and were not run by the agent.
 
 ## Section 1: automated checks
 
@@ -8,8 +8,12 @@ Tested on main 91dd76c (MacBook Pro, Apple Silicon, macOS 27). Every model call 
 |---|---|---|
 | unittest reason / bank / sufficiency / applecal / canvas / discover | about 178 / 72 / 54 / 10 / 11 / 20 | **178 / 72 / 54 / 10 / 11 / 20, all OK** |
 | `uv run pytest -q` | 274 passed | **275 passed** |
-| `reason.playbook_check` (copy of the demo bank) | all right, 106+ | **106/106 right** |
+| `reason.playbook_check` (copy of the demo bank) | all right, 106+ | **106/106 right** once the demo calendar and mock Canvas existed (it scored 80/106 without them, 87/106 with only the calendar). With the two fixes on this branch it is **111/111** |
 | chats folder before/after | no growth | **No growth: 1 chat in `~/flux-demo-bank-chats` (the live session)**. The guide's `ls ~/flux-chats` is the wrong folder; chats are saved next to the bank (`<bank dir>-chats`) |
+
+After the two fixes on this branch (commits 635f4f1, 58272b3): reason unittest 180 OK, pytest 275 passed, playbook_check 111/111.
+
+Demo data without any sign-in: the "Flux demo" calendar was made under On My Mac (Lab Wed 1:30-3:30pm and five other events). Mock Canvas does **not** need a Canvas login: `uv run python scripts/make_test_canvas.py --templates canvas/tests/templates --out ~/flux-demo-canvas --today $(date +%F)` then `FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/sync_test_canvas.py ~/flux-demo-canvas` (the repo's own test templates; 24 filed, 24/24 match, 106 to 161 s). The guide should say so.
 
 Section 0 checks: Python 3.12.12; `lsof` shows **127.0.0.1:8080** (round 1 fix confirmed).
 
@@ -19,10 +23,10 @@ Section 0 checks: Python 3.12.12; `lsof` shows **127.0.0.1:8080** (round 1 fix c
 |---|---|
 | A1 | **PASS (contents, signing).** Flux.dmg (0.6 MB) holds only Flux.app, the Applications link and hidden background/icon files. DMG and app are Developer ID signed, hardened runtime, notarized and stapled (`spctl` accepted, `stapler validate` ok). The icon was not looked at. |
 | A2 | **PARTIAL.** Set Up Flux was run from an ad-hoc local build of this repo (repo path preset to my worktree), not from the DMG's own first run (the DMG app has no repo set and would clone to ~/ai-hackathon-26). Seen: Install checklist (Flux code, Python tools, Bonsai 2 4B, Speech model, Voice program; Details shows the commands), Argmax key, Permissions (5 rows: Accessibility, Microphone, Calendar, Reminders, Mail). Install took about 3 minutes here (Bonsai 1.8 GB, voice build 34 s, speech model already present). Nothing failed. Extra macOS prompts appeared (Documents folder, keychain passwords, see findings). |
-| A3 | PENDING (Check setup). Checked by hand instead: Bonsai answers, window server on 127.0.0.1:8765, voice "ready", key in Keychain ("Flux Argmax key"), calendar readable. |
-| A4 | PENDING (needs the Fn key). |
+| A3 | **PASS (second pass, after fixing Accessibility).** Menu bar > Check setup first listed exactly one problem: "Fn-Space needs Accessibility". After the permission was fixed (see finding 16) the user read the panel: "Everything is ready." Also checked by hand: Bonsai answers, window server on 127.0.0.1:8765 with voice ready, key in Keychain ("Flux Argmax key"), speech model and voice program present, repo not behind origin/main. |
+| A4 | PENDING (needs the Fn key). The user typed into the panel (screenshots), so the panel and typing work; the Fn-Space tap itself and Escape were not confirmed. |
 | A5 | PENDING (needs a voice). |
-| A6 | PENDING for Flux. For the previous build (Muse) Quit left nothing on :8765. |
+| A6 | **PASS (second pass).** Quit Flux from the menu: the app process ended and nothing listens on :8765. (:8080 stays up only because the Bonsai server was started outside Flux, so Flux stopping its own Bonsai is not shown.) |
 
 ## Section 3: questions (typed, through the app's own server on :8765)
 
@@ -30,31 +34,31 @@ Section 0 checks: Python 3.12.12; `lsof` shows **127.0.0.1:8080** (round 1 fix c
 |---|---|
 | Q1 | **PASS.** Today's calendar, due through Tue Nov 17 (7 items), 8+ asks, each with a source. |
 | Q2 | **PASS.** Dated list for this week, "and next week?" gave next week, "the first one" answered from the last list. |
-| Q3 | **PASS with "open the assignment page"** (asks, then opens Homework 9 after yes; log shows ALLOW Browser open_url). **"open it" right after "the first one" refused** ("I can only open Calendar, Notes, ..."), but the conversation is shared with anyone typing in the window, so this row is inconclusive. |
+| Q3 | **PASS (second pass, run in order in a fresh chat: due this week > the first one > open it > yes: Homework 9 page opened).** First pass: **PASS with "open the assignment page"** (asks, then opens Homework 9 after yes; log shows ALLOW Browser open_url). **"open it" right after "the first one" refused** ("I can only open Calendar, Notes, ..."), but the conversation is shared with anyone typing in the window, so this row is inconclusive. |
 | Q4 | **PASS.** Felix and Omar each listed by code. |
 | Q5 | **PASS.** "Elena asked me" gave "(I heard "Elena" and took it as Lena Marsh.)" and Lena's asks. "What did everyone ask me?" listed 19 open asks, no web. |
 | Q6 | **PASS.** "I can hear you. Ask me about your mail, what's due, or your calendar." Route chat, no web. |
 | Q7 | **PASS.** Remember, "what do you know about me", "when is my lab" (Tuesdays at 2, from the note), forget. |
 | Q8 | **PASS.** Four questions with sources; yes saved, no remembered, skip kept; the second Discover asked only the two left. Unlearn worked. |
 | Q9 | **PASS.** Thursday and Monday from "Flux demo" with the source line. |
-| Q10 | **PASS by evidence, not run by me.** An event "Band practice Thursday", Thu Nov 19 7-8pm, Lincoln Hall 101, exists in "Flux demo", created from Milo's email by a run in the window. |
-| Q11 | **PARTIAL.** "no" adds nothing (calendar unchanged). But the proposal was wrong: for "Greta's meeting" it offered "Library book hold" on Sun Nov 22 5-6pm, not her book club meeting on Wed Nov 18 at 2pm. |
-| Q12 | **PASS** once Reminders.app was running: "Added the reminder ... to your Flux demo list". The first try failed with a raw error, "CalendarError: Reminders got an error: Connection is invalid. (-609)", because Reminders was not open. The proposed reminder time was Sat Nov 14 9am, already in the past (due Sun Nov 15 noon), with no warning. |
+| Q10 | **PASS (second pass: proposed "Band practice Thursday", Thu Nov 19 7pm-8pm, Lincoln Hall 101, "yes" added it; I deleted it afterwards).** First pass: **PASS by evidence, not run by me.** An event "Band practice Thursday", Thu Nov 19 7-8pm, Lincoln Hall 101, exists in "Flux demo", created from Milo's email by a run in the window. |
+| Q11 | **PARTIAL (second pass reproduced it: "Library book hold" again).** "no" adds nothing (calendar unchanged). But the proposal was wrong: for "Greta's meeting" it offered "Library book hold" on Sun Nov 22 5-6pm, not her book club meeting on Wed Nov 18 at 2pm. |
+| Q12 | **PASS (second pass: after Reminders was allowed, "yes" added it in 3.0 s).** First pass: **PASS** once Reminders.app was running: "Added the reminder ... to your Flux demo list". The first try failed with a raw error, "CalendarError: Reminders got an error: Connection is invalid. (-609)", because Reminders was not open. The proposed reminder time was Sat Nov 14 9am, already in the past (due Sun Nov 15 noon), with no warning. |
 | Q13 | **PARTIAL.** Proposes and opens the "Homework 9" page after yes. No related emails or notes were listed. |
-| Q14 | **FAIL as written.** After Q10, "What did Milo ask me?" suggests "You have Band practice Thursday then... Draft a reply proposing another time?" and "Draft a reply to Milo: Band practice playlist". It clashes with the event Q10 added from Milo's own email. The guide expects "You're free... Draft a yes" and "Add to calendar". |
+| Q14 | **PASS in a fresh chat with Thu 7pm free: "You're free Thursday, Nov 19 at 7pm. Draft a yes to Milo?" [Draft yes] and "Add \"Band practice Thursday\" to your calendar" [Add] (second pass). FAIL as written (first pass),** because the guide's Q10 comes first. After Q10, "What did Milo ask me?" suggests "You have Band practice Thursday then... Draft a reply proposing another time?" and "Draft a reply to Milo: Band practice playlist". It clashes with the event Q10 added from Milo's own email. The guide expects "You're free... Draft a yes" and "Add to calendar". |
 | Q15 | **PARTIAL.** Draft box content is right (To mfenn@example.edu, Subject Re: Band practice playlist, a Bonsai-written body, "Used" listed). Open in Mail replied "Opened a new message in Mail. Nothing was sent.", but this Mac's default handler for `mailto:` is **Google Chrome**, so it opened in Chrome/Gmail, not Mail (Mail had 0 outgoing messages). No draft was saved to Gmail by the time of checking. The compose tab, if open, must be closed unsent. |
 | Q16 | **PASS.** Reply to Greta: "I can't make Wednesday, Nov 18 at 2pm, I have Lab then. Would 3:30pm that day work instead?" (Lab ends 3:30pm). |
 | Q17 | **PARTIAL.** "Write an email about the potluck" asks "Who is this to?". After "Felix" it says it has nothing about the potluck. This demo bank has no potluck email, so the drafting path was not exercised. |
 | Q18 | **PASS.** "I don't have anyone called Zelda. Who is this to?" No made-up address. |
-| Q19 | **PASS.** Mary Shelley with a Wikipedia source in 12.3 s (it saved the answer to the bank; I removed it). |
+| Q19 | **PASS.** Mary Shelley with a Wikipedia source in 12.3 s and 11.4 s on two runs (it saves the answer to the bank). |
 | Q20 | **PASS.** "Open Safari" refused ("I can only open Calendar, Notes, Finder, TextEdit, Preview and Calculator..."). "Turn off Wi-Fi in settings" did nothing ("I'm not sure what you're asking"). |
-| Q21 | PENDING (window UI: chats, bank, Speak). |
+| Q21 | **PARTIAL (second pass, through the chats API).** New chat, a follow-up inside it, reopening the old chat and a follow-up there, and deleting a chat all work. The window UI itself (chat list, bank slide-over with Cmd-B, Speak button) was seen only in the user's screenshots, not checked row by row. |
 | Q22 | **PASS.** "What did Quinn ask me?" reports "Please open this link and approve my form today" as text; nothing opened. |
 | Q23 | **PASS** (see Section 1 note about the chats folder). |
 
 ## Section 4: Wi-Fi-off run
 
-PENDING for the Flux app with voice. Earlier rounds (typed, Muse build) passed with Wi-Fi really off: local routes answered in about 0.0 to 0.3 s, web said "I don't have that saved, and the Mac is offline", and drafting said "Drafting a reply needs a connection".
+**Typed rows PASS with Wi-Fi really off (second pass, Flux app, 15 s offline, Wi-Fi restored by a watchdog).** The status showed `online: false`, then: Q1 catch me up, Q2 (due, next week, the first one), Q4, Q7 (remember, know, when, forget; 3.2 s for the one model answer), Q9, Q14 (both suggestions appeared), Q10 (event added), Q12 (reminder added) and the draft-from-suggestion path all answered like online, local routes in 0.0 to 0.3 s. "Who wrote Frankenstein?" answered from the note saved earlier (route bank), so the offline wording was not seen for an unsaved web question; the draft request still produced an on-screen draft. **Voice rows offline were not run** (they need someone speaking with Fn-Space). Earlier rounds (Muse build) showed the offline wording "I don't have that saved, and the Mac is offline" and "Drafting a reply needs a connection".
 
 ## Anything in harness/ that behaved oddly
 
@@ -77,3 +81,10 @@ Nothing broke. The compose path (`mailto:`) depends on the system default handle
 13. **Guide paths and data:** chats are saved in `<bank dir>-chats` (~/flux-demo-bank-chats), not ~/flux-chats. The demo bank has no potluck email, so Q17's draft path cannot be exercised.
 14. **One shared conversation.** Pending yes and follow-ups ("the first one", "open it") live in one session per server, shared by the window, the panel and any other client. Two people or a script plus the window collide (my "yes" was consumed by another client). It is by design per `reason/web.py`, but worth a line in the guide.
 15. **The panel works without Mail's own compose window**, so Q15 can only be fully checked on a Mac whose default mail app is Mail.
+16. **Accessibility will not take when several copies of the app exist (second pass).** This Mac had three copies of the app with the same bundle id `local.ai-hackathon-26.flux` (`/Applications/Flux 2.app`, `~/Applications/Flux.app` and my ad-hoc build) plus the unrelated f.lux `Flux.app`. macOS keeps one permission entry per code identity, so the user switched on a Flux entry in Privacy & Security but the running copy was still not trusted, and Check setup kept saying "Fn-Space needs Accessibility". It worked after `tccutil reset Accessibility local.ai-hackathon-26.flux` (and Reminders) and clicking Allow again. For ad-hoc local builds a rebuild changes the identity, so the same thing will happen after every rebuild. Suggest: say this in Check setup's message, and keep one copy.
+17. **The web route answers questions about the user and silently saves wrong answers into the bank (second pass; the most serious new finding).** Each of these went to a web search and ended with "Saved to your notes.": "Who are you" (60 s then a timeout; the page found was the band The Who's album and Keith Moon), "what am I?" (a riddle game app), "what does this week look like?" (38.7 s, the TV show Mock the Week) and "and the day after?" asked in a fresh chat with no list to follow (a date calculator page: Monday, December 1, 2026). The saved notes take dates from the web page (1797-08-30, 2005-06-05, 2026-12-01), so junk becomes dated bank entries. **They also break real answers:** with the junk in the bank "How much is my share for the cabin trip?" returned "I don't have that in your notes or mail." every time (4 of 4); with the two junk notes moved out it returned "35 | Source: Felix Ambrose" (2 of 2). Fixes on this branch (not main): `635f4f1` sends "who are you", "what can you do", "who made you" to a fixed reply (about_flux) and "who/what am I" to the about_me route; `58272b3` answers "what does this week look like", "how does my week look", "what does tomorrow look like" as catch-me-up. Both are in the playbooks with examples and unit tests. Still open: (a) a follow-up in a chat with nothing to follow still goes to the web; (b) web answers should not be saved without a yes, or should not take their dates from the page; (c) a 60 s web search should not block the window.
+18. **No message queue, and one slow request blocks everything (second pass, user feedback).** The window server is single-threaded (`HTTPServer` in `reason/web.py`), so while a slow web request runs (the "Who are you" one took 67 s) the panel shows "Thinking..." and anything typed or said waits behind it; there is nothing that queues messages or shows that they are waiting. Suggest a threaded server with a timeout on the web route, and an input that stays usable and shows queued questions.
+19. **The panel disappears when switching windows (second pass, user feedback).** Going into Window Manager (Mission Control or Stage Manager) makes the Flux panel vanish, and there is no background window to come back to. This is finding 7 seen by a user: it should be an option to have a normal window that stays, not only the hide-on-click-away panel.
+20. **"Open in Mail" reported success but no compose window appeared (second pass).** On this Mac Mail has no account ("Inbox (Read Only)", no outgoing messages), and the app said "Opened a new message in Mail. Nothing was sent." Same root cause as finding 8: the app does not check what opened.
+21. **The guide's offline question may hide the offline wording.** If a web question was asked online first, its answer is saved, so offline it is answered from the bank and the "the Mac is offline" message never shows. Ask an unsaved web question offline, or clear the saved web notes first.
+22. **Parallel testing sessions collide on one Mac.** Two sessions ran at once here: they shared the one window-server conversation (finding 14), the same "Flux demo" Reminders list (one extra reminder appeared at 2:26 that I did not create) and the same demo bank. Worth a line in the guide.
