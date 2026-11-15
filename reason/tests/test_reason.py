@@ -220,8 +220,10 @@ class SearchRoute(Bank):
                              opened=["https://example.org/peru"], message="")
         ingested = {}
 
-        def fake_ingest(text, source, kind, subject=None, root=None):
-            ingested.update(text=text, source=source, kind=kind, subject=subject)
+        def fake_ingest(text, source, kind, subject=None, root=None, sent_date=None,
+                        today=None, deadlines=None):
+            ingested.update(text=text, source=source, kind=kind, subject=subject,
+                            sent_date=sent_date, deadlines=deadlines)
             return {"status": "added"}
 
         with mock.patch("sufficiency.gather", return_value=gr):
@@ -237,6 +239,9 @@ class SearchRoute(Bank):
         self.assertIn('"Lima is the capital of Peru."', ingested["text"])
         self.assertEqual(ingested["subject"], "what is the capital of Peru Lima")
         self.assertEqual(a.text.count('"Lima is the capital of Peru."'), 1)
+        # a page's own dates must not become the reader's deadlines
+        self.assertEqual(ingested["deadlines"], [])
+        self.assertEqual(ingested["sent_date"], WED)
 
     def test_web_bot_check_answer_not_filed(self):
         gr = SimpleNamespace(found=True, answer="Prove your humanity",
