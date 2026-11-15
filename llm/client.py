@@ -107,8 +107,11 @@ def _split_thinking(text: str) -> tuple[str, str | None]:
 
 
 def chat(messages: list[dict], max_tokens: int | None = None,
-         thinking: bool = False) -> Reply:
-    """Send a full message list. Checks the 32k budget first; never truncates."""
+         thinking: bool = False, sampling: dict | None = None) -> Reply:
+    """Send a full message list. Checks the 32k budget first; never truncates.
+
+    `sampling` overrides preset keys for this call only, e.g. {"temperature": 0.2}.
+    """
     if max_tokens is None:
         max_tokens = config.THINKING_MAX_TOKENS if thinking else config.DEFAULT_MAX_TOKENS
     est = tokens.check_budget(messages, max_tokens)
@@ -119,6 +122,7 @@ def chat(messages: list[dict], max_tokens: int | None = None,
         "stream": False,
         "chat_template_kwargs": {"enable_thinking": thinking},
         **config.PRESETS["thinking" if thinking else "non_thinking"],
+        **(sampling or {}),
     }
     t0 = time.monotonic()
     r = _request("POST", "/chat/completions", body)
@@ -141,12 +145,13 @@ def _messages(prompt: str, system: str | None) -> list[dict]:
 
 
 def complete(prompt: str, system: str | None = None, max_tokens: int | None = None,
-             json_schema_hint: str | None = None, thinking: bool = False) -> str:
+             json_schema_hint: str | None = None, thinking: bool = False,
+             sampling: dict | None = None) -> str:
     """One prompt in, reply text out."""
     if json_schema_hint:
         prompt = (f"{prompt}\n\nReply with only a JSON object, no prose and no code "
                   f"fence, matching this shape:\n{json_schema_hint}")
-    return chat(_messages(prompt, system), max_tokens, thinking).text
+    return chat(_messages(prompt, system), max_tokens, thinking, sampling).text
 
 
 class JSONReplyError(BonsaiError):
@@ -175,7 +180,7 @@ def parse_json(text: str):
 
 def complete_json(prompt: str, system: str | None = None, max_tokens: int | None = None,
                   json_schema_hint: str | None = None, thinking: bool = False,
-                  _stats: dict | None = None):
+                  _stats: dict | None = None, sampling: dict | None = None):
     """Like complete() but returns parsed JSON. Retries once on invalid JSON.
 
     Pass a dict as _stats to learn whether the first try was valid
@@ -185,7 +190,7 @@ def complete_json(prompt: str, system: str | None = None, max_tokens: int | None
     msgs = _messages(
         f"{prompt}\n\nReply with only a JSON object, no prose and no code fence, "
         f"matching this shape:\n{hint}", system)
-    reply = chat(msgs, max_tokens, thinking)
+    reply = chat(msgs, max_tokens, thinking, sampling)
     stats = _stats if _stats is not None else {}
     stats["calls"] = 1
     try:
@@ -197,6 +202,6 @@ def complete_json(prompt: str, system: str | None = None, max_tokens: int | None
     msgs += [{"role": "assistant", "content": reply.text},
              {"role": "user", "content": "That was not valid JSON. Reply again with "
               "only the JSON object, nothing else."}]
-    reply = chat(msgs, max_tokens, thinking)
+    reply = chat(msgs, max_tokens, thinking, sampling)
     stats["calls"] = 2
     return parse_json(reply.text)
