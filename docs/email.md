@@ -89,6 +89,21 @@ prints questions and dated lines grouped by thread. It reuses the same `scan()`
 as `email_asks`, so it inherits the login check and the 1500-character cap.
 Nothing is drafted or sent.
 
+### Unattended
+
+Exit codes: `0` a digest was produced, `1` the digest line is `LOGIN`/`ERR`
+(sign in, or retry), `2` the browser could not start (usually because
+another process holds `~/.harness/profile`). A locked profile prints one line,
+not a traceback, so a scheduler can retry quietly.
+
+```cron
+# weekdays at 07:30; keep each day's digest, note failures
+30 7 * * 1-5 cd /path/to/harness && uv run python scripts/daily_digest.py --days 1 --output ~/digest-$(date +\%F).txt || echo "digest failed" >> ~/digest.log
+```
+
+launchd works the same way. The script never prompts and never writes mail, so
+it needs no babysitting once the profile is signed in.
+
 ## Known gaps
 
 - **Attachments** are not listed or read; `email_read` returns message text only.
