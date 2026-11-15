@@ -9,7 +9,8 @@ stay on one thread.
     GET  /        the page
     GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None}
     GET  /bank    [{"date", "sender", "subject", "summary", "ask", "deadlines"}], newest first
-    POST /ask     {"question": str} -> {"text", "route", "sources", "seconds"}
+    POST /ask     {"question": str} -> {"text", "route", "sources", "seconds", "pending"}
+                  pending: an action is held for a yes; the page shows Yes / Cancel
 """
 from __future__ import annotations
 
@@ -20,6 +21,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from bank import store
 
+from . import act
 from .answer import answer as _answer, online as _online
 from .speech import HoldToTalk, start_voice
 
@@ -49,6 +51,7 @@ PAGE = """<!doctype html>
   .you { margin-left: auto; background: #e8eefc; }
   .muse { margin-right: auto; background: #f2f2f2; }
   .src { display: block; margin-top: 4px; font-size: 13px; color: #777; }
+  .confirm { display: flex; gap: 8px; margin-top: 8px; }
   .meta { display: block; margin-top: 2px; font-size: 12px; color: #999; }
   form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #ddd; }
   input { flex: 1; font: inherit; padding: 8px 10px; border: 1px solid #bbb; border-radius: 6px; }
@@ -100,6 +103,14 @@ async function ask(question, spoken) {
     const d = add('muse', r.text);
     const m = document.createElement('span'); m.className = 'meta';
     m.textContent = r.route + ', ' + r.seconds.toFixed(1) + 's'; d.appendChild(m);
+    if (r.pending) {
+      const b = document.createElement('div'); b.className = 'confirm';
+      for (const [label, word] of [['Yes, do it', 'yes'], ['Cancel', 'no']]) {
+        const k = document.createElement('button'); k.type = 'button'; k.textContent = label;
+        k.addEventListener('click', () => { b.remove(); ask(word, false); }); b.appendChild(k);
+      }
+      d.appendChild(b);
+    }
   } catch (e) { wait.textContent = 'Error: ' + e; }
   send.disabled = false; q.focus(); refresh();
 }
@@ -216,7 +227,7 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 question = str(json.loads(self.rfile.read(n) or b"{}").get("question") or "")
                 a = answer_fn(question, today=today)
                 self._json({"text": a.text, "route": a.route, "sources": a.sources,
-                            "seconds": a.seconds})
+                            "seconds": a.seconds, "pending": a.route == "act" and act.waiting()})
             except Exception as e:  # show it in the window; keep serving
                 self._json({"text": f"Error: {type(e).__name__}: {e}", "route": "error",
                             "sources": [], "seconds": 0.0})

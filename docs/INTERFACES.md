@@ -145,8 +145,11 @@ A store of everything Muse has read, kept as markdown files. This is what the Wi
 ```python
 from bank import ingest, search, by_person, due, rebuild_index
 
-ingest(text, source, kind, *, sender_name=None, sender_address=None, sent_date=None, subject=None)
-    # kind = "email" | "page". Needs the Bonsai server. The keywords win over anything in the text.
+ingest(text, source, kind, *, sender_name=None, sender_address=None, sent_date=None, subject=None,
+       deadlines=None)
+    # kind = "email" | "page" | "canvas". Needs the Bonsai server.
+    # deadlines=[{"phrase", "date", "time"}] replaces the model's deadlines (dates worked out in code).
+    # kind="canvas": sender_name is kept as the course; the model reads it as a page. The keywords win over anything in the text.
     # With none of them and no header lines: model sender + first "Name <addr>" + first dated line;
     # no date found -> ingest date, sent_date_guessed=True.
     # -> {"status": "added" | "duplicate", "path": str, "entry": dict, "raw": [model replies]}
@@ -167,6 +170,10 @@ rebuild_index()                  # -> path of data/bank/index.md (every ingest a
 - **Partner's side:** the sync loop in §2 calls `ingest(body, source=thread_id, kind="email", sender_name=..., sender_address=..., sent_date=..., subject=...)`. For a page, it calls `ingest(text, source=url, kind="page")`.
 - **Data location:** `data/bank/` by default, or `$MUSE_BANK_DIR` if that is set. It is gitignored (`data/`) because it will hold real email.
 - **Preload:** `python -m bank.load <folder> --kind email|page`.
+- **Canvas entries** (`kind="canvas"`, from `scripts/sync_test_canvas.py`): `sender_name` = course
+  ("HIST 2147 Maps and Empires"), `subject` = assignment title, `source` = the assignment page's
+  `file://` link, `deadlines` = the due date and time read from the page. They show up in `due`
+  like mail and stay out of the person route (it only uses `kind="email"` senders). See `docs/canvas.md`.
 - **Notes about the user** (`bank/me.py`), no model call:
   ```python
   remember(fact, today=None)  # -> {"status": "added" | "duplicate", "path", "entry"}; the user's own words
@@ -196,11 +203,12 @@ One entry point for typed and spoken questions. Code picks the route, never the 
 from reason import answer
 answer(question, today=None) -> Answer
     # Answer: text (ends with "Source: sender, Nov 12" or the url), route, sources, seconds
-    # route: "remember" | "forget" | "about_me" | "people" | "due" | "calendar" | "person"
+    # route: "act" | "remember" | "forget" | "about_me" | "people" | "due" | "calendar" | "person"
     #        | "bank" | "web" | "offline" | "not_found"
 ```
 
-- **Remember / forget / about_me / people** (checked first, `reason/me.py`, `playbooks/remember.md`, `playbooks/people.md`), all code, no model call:
+- **Act** (checked first): "draft a reply to <name> saying ...", "open my calendar", "open the assignment page". Muse shows exactly what it will do and waits for a typed or spoken yes. Then it calls the partner's `app_open`, `email.search` + `draft.reply` (drafts only, never sent, only in `ilovelocalai@gmail.com`), or opens a bank link. A draft needs a connection; opening an app doesn't. Details: `docs/acting.md`.
+- **Remember / forget / about_me / people** (checked right after act, `reason/me.py`, `playbooks/remember.md`, `playbooks/people.md`), all code, no model call:
   - "Remember (that) …", "note that …", "don't forget …" files a note (`bank.remember`). "Forget (that) …" deletes the best match; a tie asks which. "What do you know about me" lists the notes.
   - "Who is <name>" or "what do you know about <name>", when every word is a sender's or a page's name: their page (relation, facts) and their newest 5 emails.
   - "When is my lab" reaches a note through the bank route; the source reads "your note, Nov 14".
@@ -235,5 +243,5 @@ Argmax runs only from Swift, so voice is a small Swift program, `voice/swift/` �
 ## 8. Not decided yet
 
 - The app's name: "Muse" vs "Hearth" (Coby's call; no code depends on it; the partner prefers not "Muse").
-- Canvas sync: not started. It would follow the same pattern as email.
-- Not used by the app: the partner's computer-control, `email_asks` and draft tools, and `research()`.
+- Canvas: mock only (sample coursework from saved-page templates, `docs/canvas.md`). No live Canvas sync.
+- Not used by the app: `email_asks`, `research()`, `ui_click`/`ui_type`, `file_find`. Used since the acting route: `app_open`, `email_search`, `draft.reply`.

@@ -50,6 +50,14 @@ Your `plan/harness-task-breakdown` branch (plans only) is not merged.
 - The partner tool once saved a test reply **draft** to a real person (never
   sent). `email_draft` only saves drafts; nothing sends.
 
+## Acting route (worker 14): your tools now called, `harness/` unchanged
+
+`reason/act.py` calls your `computer.tools.app_open`, `email.search.search` +
+`last_rows`, and `email.draft.reply`, and only after the user says yes to a preview.
+It saves drafts only when the Gmail tab title shows `ilovelocalai@gmail.com`. Opening a
+bank link uses `computer.direct.open_path` plus `policy.log_action("Browser", "open_url", ...)`,
+because no browser is on your allow list. See `docs/acting.md`.
+
 ## Run it
 
 ```bash

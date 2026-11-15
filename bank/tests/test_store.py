@@ -130,6 +130,30 @@ class TestIngest(StoreCase):
         self.assertIsNone(e["sender_address"])
         self.assertEqual(e["deadlines"][0]["date"], "2026-11-24")
 
+    def test_canvas_keeps_course_and_given_deadlines(self):
+        kinds = []
+
+        def fake(text, kind):
+            kinds.append(kind)
+            return {"subject": "Essay 2", "summary": "Write the essay.", "ask": "Submit essay 2.",
+                    "deadlines": ["next week sometime"], "sender_is_person": False}
+        dl = [{"phrase": "Due Nov 18 at 11:59pm", "date": "2026-11-18", "time": "23:59"}]
+        with mock.patch.object(extract, "ask_model", side_effect=fake):
+            r = bank.ingest("Essay 2\nDue Nov 18 at 11:59pm", "https://canvas.example/a/1", "canvas",
+                            sender_name="HIST 2140 Maps and Empires", subject="Essay 2",
+                            sent_date="2026-11-10", deadlines=dl, root=self.root)
+        e = r["entry"]
+        self.assertEqual(kinds, ["page"])
+        self.assertEqual((e["kind"], e["sender_name"], e["course"], e["folder"]),
+                         ("canvas", "HIST 2140 Maps and Empires", "HIST 2140", "course"))
+        self.assertEqual(e["deadlines"], dl)
+        self.assertEqual(bank.due("2026-11-18", "2026-11-18", root=self.root)[0]["entry"]["subject"],
+                         "Essay 2")
+
+    def test_deadlines_kwarg_empty_list_clears(self):
+        r = bank.ingest(EMAIL, "msg:dl", "email", deadlines=[], root=self.root)
+        self.assertEqual(r["entry"]["deadlines"], [])
+
 
 class TestRoundTrip(unittest.TestCase):
     def test_render_parse(self):

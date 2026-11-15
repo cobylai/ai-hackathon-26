@@ -29,7 +29,7 @@ GATHER_SECONDS = 60
 
 # Wording and prompts come from playbooks/<route>.md. STEPS is how many numbered steps
 # each playbook lists; the code below runs them in that order (a test checks the count).
-STEPS = {"remember": 4, "people": 4, "due": 5, "calendar": 4, "person": 4, "bank": 4, "web": 5}
+STEPS = {"act": 5, "remember": 4, "people": 4, "due": 5, "calendar": 4, "person": 4, "bank": 4, "web": 5}
 PERSON_SYSTEM = playbook.prompt("person", "person_system")
 PERSON_PROMPT = playbook.prompt("person", "person_prompt")
 PERSON_HINT = playbook.prompt("person", "person_hint")
@@ -38,7 +38,7 @@ PERSON_HINT = playbook.prompt("person", "person_hint")
 @dataclass
 class Answer:
     text: str
-    route: str  # remember | forget | about_me | people | due | calendar | person | bank | web | offline | not_found
+    route: str  # act | remember | forget | about_me | people | due | calendar | person | bank | web | offline | not_found
     sources: list[str] = field(default_factory=list)  # bank entry paths, or one url
     seconds: float = 0.0
 
@@ -295,8 +295,10 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
     if not q:
         return Answer(say("RULES", "empty_question"), "none", [], 0.0)
 
-    from . import me
-    if (got := me.handle(q, today, root)) is not None:  # remember / forget / about_me / people
+    from . import act, me  # actions first: "draft a reply to Felix" names a sender
+    if (got := act.handle(q, today, root)) is not None:
+        a = got
+    elif (got := me.handle(q, today, root)) is not None:  # remember / forget / about_me / people
         a = got
     elif route.is_due(q):
         a = _due(q, today, root)
