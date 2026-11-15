@@ -19,7 +19,7 @@ Branch `feature/agent-proactive`. Code-only rules, no model call, no network. De
 
 ## Tests
 `uv run python -m unittest discover proactive/tests`: 19 tests (rules, quiet hours, kinds, dismiss/snooze, rate limit, injection text, state file, osascript called once, HTTP endpoints, default off, scheduler poller). All offline.
-Existing suites: reason 178, bank 72, sufficiency 54, applecal 10, canvas 11 OK; pytest and playbook_check 106/106 see the report.
+Existing suites: reason 178, bank 72, sufficiency 54, applecal 10, canvas 11 OK; pytest 275 passed (includes the proactive tests); playbook_check 106/106.
 
 ## Not done
 - No "replied" detection for asks (bank has no flag); the ask nudge may fire for a handled mail. Dismiss hides it.
