@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import sqlite3
 
 import pytest
 
@@ -64,6 +65,22 @@ def test_put_replaces_the_old_copy(clock):
 def test_empty_text_is_not_stored(clock):
     cache.put("https://example.org/a", "   ")
     assert cache.get("https://example.org/a") is None
+
+
+def test_expired_rows_are_pruned_on_write(clock):
+    cache.put("https://old.example/", "old text")
+    clock.value += cache.TTL_SECONDS + 5
+    cache.put("https://new.example/", "new text")
+    with sqlite3.connect(cache.db_path()) as connection:
+        urls = [row[0] for row in connection.execute("SELECT url FROM pages")]
+    assert urls == ["https://new.example/"]
+
+
+def test_fresh_rows_survive_a_prune(clock):
+    cache.put("https://a.example/", "a")
+    cache.put("https://b.example/", "b")
+    assert cache.get("https://a.example/") == "a"
+    assert cache.get("https://b.example/") == "b"
 
 
 def test_cache_lives_in_the_configured_file(clock):

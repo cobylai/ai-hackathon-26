@@ -74,6 +74,11 @@ def put(url: str, text: str, path: str | os.PathLike | None = None) -> None:
                 "INSERT OR REPLACE INTO pages (url, text, fetched_at) VALUES (?, ?, ?)",
                 (url, text, _now()),
             )
+            # Expired rows are invisible to `get` anyway; drop them so a long-lived
+            # install does not grow without bound (pages are tens of KB each).
+            connection.execute(
+                "DELETE FROM pages WHERE fetched_at < ?", (_now() - TTL_SECONDS,)
+            )
             connection.commit()
         finally:
             connection.close()
