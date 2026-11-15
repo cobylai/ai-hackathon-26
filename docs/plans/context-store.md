@@ -16,7 +16,9 @@ Branch `context-store`, cut from `d118285`. Code goes in `bank/`, the doc in `do
 - **Long text:** if the text is over 6,000 tokens, `llm.split_to_budget(text, 6000)` splits it and each chunk is extracted on its own.
   - The header fields, summary and ask come from the first chunk that has them.
   - Deadlines are merged across chunks, with repeats removed.
-- **Duplicates:** an item counts as already ingested when its content id is already in a file name. The id is the first 12 hex characters of the sha256 of the text, with whitespace collapsed. In that case `ingest` returns `"duplicate"` and writes nothing.
+- **Duplicates:** an item counts as already ingested in either of two cases. In both, `ingest` returns `"duplicate"` and writes nothing.
+  - **Same source:** an existing entry has the same `source`. The partner's sync passes a stable message id as `source`, and scraped text can change between syncs ("3 minutes ago", for example), so this check comes first.
+  - **Same content:** the content id is already in a file name. The id is the first 12 hex characters of the sha256 of the text, with whitespace collapsed. This is the fallback.
 - **Data folder:** `data/bank/` by default, or `$MUSE_BANK_DIR` if that is set. The `.gitignore` line is `data/`. Tests and the eval write only to a temp folder.
 - Standard library only. It runs on the Bonsai venv's Python 3.12, and the tests use `unittest`.
 
@@ -50,6 +52,8 @@ data/bank/
 **Folder rule:**
 
 - **`course/`** if a course code is found. The code is matched by `\b[A-Z]{2,6} ?\d{4}\b`, in the subject first, then the body, then the model's `course` field.
+  - Some prefixes are never a course: months, seasons, ROOM, PIN, CODE, ZOOM, REF and ID. This rejects "FALL 2026", "NOV 2026", "ROOM 1234" and "PIN 4821".
+  - A number from 2020 to 2030 after a month or season prefix is a year, and is rejected that way too. Other prefixes keep those numbers, because a course like "CS 2024" is real. Two tests cover this rule.
 - **`person/`** otherwise, when the sender is a person. That means the model says `sender_is_person: true`, and neither the address nor the name looks automated.
   - Automated addresses contain `noreply`, `news`, `notifications`, `info`, `office`, `bursar`, `registrar`, `dining`, `club`, `team`, `support` or `alerts`.
   - Automated names contain Office, Club, Dining, Team, Department, Services, Library or University.
@@ -156,6 +160,7 @@ I will not give the model today's date, so it has nothing to do date arithmetic 
 | in 3 days, in 2 weeks | S + 3 days, S + 14 days |
 
 - **Times** come out separately and can appear anywhere in the phrase, so "by 5pm Friday" gives Friday and 17:00. The forms are `5pm`, `5:00 pm`, `11:59pm`, `noon` (12:00) and `midnight` (23:59). Morning and night give no time.
+- **Known ambiguity:** a bare weekday that falls on the same weekday as S resolves to a week later. For example, "by Friday" in an email sent on a Friday becomes the next Friday, not the same day.
 - **"Before Tuesday"** is stored as Tuesday. The phrase keeps the word "before".
 - **A phrase no rule matches** is kept with `date: null` and `time: null`. It shows up in search and in the index, but never in `due`.
 
