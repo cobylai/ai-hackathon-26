@@ -29,9 +29,12 @@ class StoreCase(unittest.TestCase):
             return dict(RAW)
         self.patch = mock.patch.object(extract, "ask_model", side_effect=fake)
         self.patch.start()
+        self.patch2 = mock.patch.object(extract, "ask_for_deadline", return_value="Do the thing.")
+        self.patch2.start()
 
     def tearDown(self):
         self.patch.stop()
+        self.patch2.stop()
         self.tmp.cleanup()
 
 
@@ -79,6 +82,32 @@ class TestIngest(StoreCase):
                          ("mb771@univ.example.edu", "2026-11-12", "re: lab 6", "person"))
         self.assertEqual(e["deadlines"][0]["date"], "2026-11-13")
 
+    def test_scraped_webmail_no_headers(self):
+        text = ("lab 6\nInbox\n\nMarcus Bell <mb771@univ.example.edu>\n"
+                "Nov 12, 2026, 10:47 PM (2 days ago)\nto me\n\ncan you push your part tomorrow morning?")
+        def fake(t, kind):
+            return {"sender_name": "Marcus Bell", "sender_address": "Marcus Bell", "sender_is_person": True,
+                    "subject": "lab 6", "summary": "Push your part.", "ask": "Push your part.",
+                    "deadlines": ["tomorrow morning"]}
+        with mock.patch.object(extract, "ask_model", side_effect=fake):
+            e = bank.ingest(text, "thread:s1", "email", today=date(2026, 11, 14), root=self.root)["entry"]
+        self.assertEqual((e["sender_address"], e["sent_date"], e["sent_date_guessed"], e["folder"]),
+                         ("mb771@univ.example.edu", "2026-11-12", False, "person"))
+        self.assertEqual(e["deadlines"][0]["date"], "2026-11-13")
+
+    def test_no_date_anywhere_is_guessed(self):
+        def fake(t, kind):
+            return {"sender_name": "Kim", "sender_address": "kim@univ.example.edu", "sender_is_person": True,
+                    "subject": "hi", "summary": "Kim wants the notes.", "ask": "Send notes.",
+                    "deadlines": ["tomorrow"]}
+        with mock.patch.object(extract, "ask_model", side_effect=fake):
+            r = bank.ingest("Kim <kim@univ.example.edu>\nsend notes tomorrow?", "thread:g1", "email",
+                            today=date(2026, 11, 14), root=self.root)
+        e = r["entry"]
+        self.assertEqual((e["sent_date"], e["sent_date_guessed"]), ("2026-11-14", True))
+        self.assertEqual(e["deadlines"][0]["date"], "2026-11-15")
+        self.assertIn("~2026-11-14 | Kim |", (self.root / "index.md").read_text())
+
     def test_bad_kind(self):
         with self.assertRaises(ValueError):
             bank.ingest(EMAIL, "x", "tweet", root=self.root)
@@ -107,7 +136,8 @@ class TestRoundTrip(unittest.TestCase):
         e = {"id": "abc123abc123", "kind": "email", "folder": "other", "source": "s",
              "sender_name": 'He said "hi"\n---', "sender_address": None, "sent_date": "2026-11-01",
              "subject": "x: y", "ask": None, "deadlines": [], "course": None, "topic": None,
-             "ingested_at": "2026-11-14T00:00:00", "body": "Line one.\n---\nLine two."}
+             "sent_date_guessed": False, "ingested_at": "2026-11-14T00:00:00",
+             "body": "Line one.\n---\nLine two."}
         back = store.parse(store.render(e))
         for k in store.FIELDS:
             self.assertEqual(back[k], e[k], k)

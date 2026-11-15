@@ -19,22 +19,24 @@
       "model_only_sender_address": 10
     },
     "new": {
-      "n": 6,
-      "correct": 6,
-      "field_sender_address": 6,
-      "field_sent_date": 6,
-      "field_ask": 6,
-      "field_deadlines": 6,
-      "field_folder": 6,
-      "field_course": 6,
-      "field_summary": 6,
-      "model_only_sender_address": 6
+      "n": 8,
+      "correct": 8,
+      "field_sender_address": 8,
+      "field_sent_date": 8,
+      "field_ask": 8,
+      "field_deadlines": 8,
+      "field_folder": 8,
+      "field_course": 8,
+      "field_summary": 8,
+      "model_only_sender_address": 8
     },
-    "median_s": 3.58,
+    "median_s": 2.88,
     "due_2026_11_16_to_20": [
       "2026-11-16 23:59 'Monday 11:59pm' [e04237aaef1f]",
       "2026-11-16  'next Monday' [9cf9901b5187]",
+      "2026-11-16  'Monday' [08bf92bab58b]",
       "2026-11-17  'before Tuesday' [3f315665b1b2]",
+      "2026-11-17  'Nov 17' [1785dac841fe]",
       "2026-11-18  'Wednesday at 2:30' [ccd495727029]",
       "2026-11-18  'by 11/18' [85dc6ab9dc21]",
       "2026-11-18  'end of day Wednesday' [1296f149aeb3]",
@@ -59,7 +61,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 23.43,
+      "seconds": 3.51,
       "entry": {
         "sender_address": "wz88@univ.example.edu",
         "sent_date": "2026-11-14",
@@ -109,7 +111,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 5.71,
+      "seconds": 2.94,
       "entry": {
         "sender_address": "library-notices@univ.example.edu",
         "sent_date": "2026-11-13",
@@ -158,7 +160,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 2.4,
+      "seconds": 1.97,
       "entry": {
         "sender_address": "tb405@univ.example.edu",
         "sent_date": "2026-11-14",
@@ -205,7 +207,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 3.64,
+      "seconds": 3.14,
       "entry": {
         "sender_address": "lo23@univ.example.edu",
         "sent_date": "2026-11-11",
@@ -255,7 +257,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 3.13,
+      "seconds": 2.74,
       "entry": {
         "sender_address": null,
         "sent_date": "2026-11-14",
@@ -311,7 +313,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 2.53,
+      "seconds": 2.17,
       "entry": {
         "sender_address": "robotics@clubs.univ.example.edu",
         "sent_date": "2026-11-16",
@@ -345,6 +347,104 @@
       "error": null
     },
     {
+      "id": "n07_scraped_friend",
+      "set": "new",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 1.99,
+      "entry": {
+        "sender_address": "np219@univ.example.edu",
+        "sent_date": "2026-11-12",
+        "ask": "give my calculator back by Monday",
+        "deadlines": [
+          {
+            "phrase": "Monday",
+            "date": "2026-11-16",
+            "time": null
+          }
+        ],
+        "folder": "person",
+        "course": null,
+        "body": "Nina is requesting her calculator back for a problem set due."
+      },
+      "raw": [
+        {
+          "sender_name": "Nina Patel",
+          "sender_address": "np219@univ.example.edu",
+          "sender_is_person": true,
+          "subject": "",
+          "summary": "Nina is requesting her calculator back for a problem set due.",
+          "ask": "give my calculator back by Monday",
+          "deadlines": [
+            "Monday"
+          ],
+          "course": null,
+          "topic": "calculator"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "n08_scraped_mailroom",
+      "set": "new",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 3.86,
+      "entry": {
+        "sender_address": "mailservices-noreply@univ.example.edu",
+        "sent_date": "2026-11-10",
+        "ask": "Please pick it up by Nov 17",
+        "deadlines": [
+          {
+            "phrase": "Nov 17",
+            "date": "2026-11-17",
+            "time": null
+          }
+        ],
+        "folder": "other",
+        "course": null,
+        "body": "A package addressed to you is ready at the campus mail center and needs to be picked up."
+      },
+      "raw": [
+        {
+          "sender_name": null,
+          "sender_address": "mailservices-noreply@univ.example.edu",
+          "sender_is_person": false,
+          "subject": "Your package is ready for pickup",
+          "summary": "A package addressed to you is ready at the campus mail center and needs to be picked up.",
+          "ask": "Please pick it up by Nov 17",
+          "deadlines": [
+            "Nov 17"
+          ],
+          "course": null,
+          "topic": "package pickup"
+        }
+      ],
+      "error": null
+    },
+    {
       "id": "o01_ta_regrade",
       "set": "original",
       "correct": true,
@@ -360,7 +460,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 3.38,
+      "seconds": 7.96,
       "entry": {
         "sender_address": "pn42@univ.example.edu",
         "sent_date": "2026-11-09",
@@ -409,7 +509,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 2.67,
+      "seconds": 7.56,
       "entry": {
         "sender_address": "outing@clubs.univ.example.edu",
         "sent_date": "2026-11-10",
@@ -450,7 +550,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 3.24,
+      "seconds": 2.72,
       "entry": {
         "sender_address": "hokafor@univ.example.edu",
         "sent_date": "2026-11-11",
@@ -499,7 +599,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 3.11,
+      "seconds": 2.71,
       "entry": {
         "sender_address": "mb771@univ.example.edu",
         "sent_date": "2026-11-12",
@@ -548,7 +648,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 3.51,
+      "seconds": 2.51,
       "entry": {
         "sender_address": "dining-news@univ.example.edu",
         "sent_date": "2026-11-13",
@@ -589,7 +689,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 7.75,
+      "seconds": 3.23,
       "entry": {
         "sender_address": "dreyes@univ.example.edu",
         "sent_date": "2026-11-12",
@@ -638,7 +738,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 8.09,
+      "seconds": 2.99,
       "entry": {
         "sender_address": "jk2290@univ.example.edu",
         "sent_date": "2026-11-10",
@@ -687,7 +787,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 20.45,
+      "seconds": 2.49,
       "entry": {
         "sender_address": "sa338@univ.example.edu",
         "sent_date": "2026-11-09",
@@ -728,7 +828,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 7.6,
+      "seconds": 2.83,
       "entry": {
         "sender_address": "bursar@univ.example.edu",
         "sent_date": "2026-11-11",
@@ -778,7 +878,7 @@
       "model_only": {
         "sender_address": true
       },
-      "seconds": 7.97,
+      "seconds": 3.09,
       "entry": {
         "sender_address": "ar512@univ.example.edu",
         "sent_date": "2026-11-13",

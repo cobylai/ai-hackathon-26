@@ -64,8 +64,10 @@ The only other HTTP code is `scripts/fetch_filters.py` and
 | feature/browser-core | `.gitignore` (add/add) | union of both sides |
 | feature/web-search | none | |
 | feature/email-gmail | `harness/registry.py`, `tests/test_tools.py` | kept every tool and group (web, search, email); registry test uses email-gmail's subset check |
-| sufficiency-check (2a7af5a) | none | |
 | feature/computer-control | `harness/registry.py`, `tests/test_tools.py` | kept both imports; GROUPS keeps search + email and sets `computer: list(COMPUTER_TOOLS)`; registry test keeps the subset check (plus computer-control's `GROUPS["computer"]` assert) |
+| sufficiency-check (2a7af5a) | none | |
+| context-store (82a70a5) | `.gitignore` | union, keeps `data/` |
+| main 99000fa (final context-store 6cec2f6) | none | |
 
 ## Changes made inside harness/ (and the partner's tests, scripts, docs)
 
@@ -85,38 +87,33 @@ The only other HTTP code is `scripts/fetch_filters.py` and
 - `scripts/eval_search.py`: docstring no longer points at LM Studio.
 - `docs/plan/00-overview.md`: removed "point it at Claude (claude-haiku)".
 - `.gitignore`: union (above), plus `data/` from context-store.
-- `harness/search/bing.py` (new): Bing results parser, same `Result` shape,
-  reuses ddg's helpers; unwraps `bing.com/ck/a?u=a1<base64>` links.
-- `harness/search/engine.py`: after Google and DuckDuckGo both fail, tries Bing
-  (`_bing`, waits for `load` because Bing navigates again after
-  DOMContentLoaded). If Bing also has nothing, the earlier status word
-  (e.g. BLOCKED) is kept. Bing is not remembered like the DDG fallback, so a
-  walled network costs two failed loads per query (~1.5 s). `_run` gained an
-  optional `wait_until` argument (default unchanged).
-- `tests/test_ddg.py`: the walled-DDG test now expects a third visit (Bing).
-- `tests/test_bing.py`, `tests/pages/bing_results.html` (new): parser tests
-  on a trimmed real Bing page (result list only).
+
+A Bing fallback was briefly added to harness/search (ed93e1c) and then
+reverted (next commit) on thinker's ruling to keep harness/ untouched; it now
+lives on our side in `sufficiency/websearch.py`. Net change to harness/search: none.
+
+## Web search for gather: `sufficiency/websearch.py` (ours)
+
+`search(query) -> [{title, url, snippet}]`: the partner's
+`harness.search.engine.search` (Google, then DuckDuckGo) first; when that
+returns nothing (on this Mac it says BLOCKED: Google /sorry/, DuckDuckGo duck
+challenge), Bing results read in the same hidden browser. No bot check is
+solved or bypassed. `websearch.last_engine` says which one answered. This is
+the `search_fn` for gather; pages are opened with the partner's `open_page`.
 
 ## Live gather result (2026-11-14, online, Bonsai 2 4B, max_seconds=60)
 
-Run 1 (Bing read by our script, before the engine had Bing):
+Via `scripts/live_gather.py` -> `sufficiency.websearch.search` (all Bing, harness said BLOCKED):
 
 | Question | Answer | Source | Seconds |
 |---|---|---|---|
-| What is the capital of Australia? | Canberra | worldatlas.com/articles/what-is-the-capital-of-australia.html | 5.4 |
-| When did the Berlin Wall fall? | 9 November 1989 | en.m.wikipedia.org/wiki/Fall_of_the_Berlin_Wall | 8.1 |
-| Who wrote the novel Frankenstein? | Mary Shelley | en.m.wikipedia.org/wiki/Frankenstein | 7.6 |
+| Who painted the Mona Lisa? | Leonardo da Vinci | en.wikipedia.org/wiki/Mona_Lisa | 7.9 |
+| What year did Apollo 11 land on the Moon? | 1969 | en.m.wikipedia.org/wiki/Apollo_11 | 7.2 |
+| What is the boiling point of water in Fahrenheit? | 212 °F | en.wikipedia.org/wiki/Boiling_point | 7.8 |
 
-Run 2 (his `engine.search` end to end: Google walled -> DDG walled -> Bing):
-
-| Question | Answer | Source | Seconds |
-|---|---|---|---|
-| What year did Apollo 11 land on the Moon? | 1969 | en.m.wikipedia.org/wiki/Apollo_11 | 9.7 |
-| What is the boiling point of water in Fahrenheit? | 212 °F | en.wikipedia.org/wiki/Boiling_point | 8.2 |
-| Who painted the Mona Lisa? | Leonardo da Vinci | en.wikipedia.org/wiki/Mona_Lisa | 7.6 |
-
-From this Mac, Google answered /sorry/ and DuckDuckGo served its duck
-challenge on every try. No challenge was solved or bypassed.
+Earlier run (same path, inline in the script): capital of Australia ->
+Canberra (worldatlas.com, 5.4 s); Berlin Wall -> 9 November 1989 (wikipedia,
+8.1 s); Frankenstein -> Mary Shelley (wikipedia, 7.6 s).
 
 ## Email -> bank sync
 
@@ -129,10 +126,11 @@ MUSE_BANK_DIR=/tmp/bank uv run python scripts/sync_email.py --fixture tests/page
 
 `email_search(days=N)` rows -> `read.open_thread` + `read.read_messages` ->
 `bank.ingest(body, source="gmail:<thread_id>#<i>", kind="email", sender_name,
-sender_address, sent_date (ISO), subject)`. Read paths only: no compose,
-draft or send. One search page, so at most 10 threads per sync. Fixture run:
-3 messages -> 3 entries in 13.1 s; re-run 0 added (dedup).
+sender_address, sent_date (ISO), subject)` as kwargs. Read paths only: no
+compose, draft or send. One search page, so at most 10 threads per sync.
+Fixture run on final context-store: 3 messages -> 3 entries in 9.1 s, senders
+and dates right, `sent_date_guessed: false`; re-run adds 0 (dedup).
 
 ## Not run yet
 
-- Live Gmail sync (waits for Coby to sign in to the test account).
+- Live Gmail sync (waits for Coby to sign in to the new test account).

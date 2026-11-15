@@ -1,0 +1,24 @@
+{
+  "id": "n07_scraped_friend",
+  "kind": "email",
+  "note": "scraped webmail text, no header lines",
+  "text": "calculator\nInbox\n\nNina Patel <np219@univ.example.edu>\nNov 12, 2026, 3:14 PM (2 days ago)\nto me\n\nhii, could you give my calculator back by Monday? i have a problem set due and need it. you can leave it at my door if i'm not around\n\nthanks!\nnina\n\nReply\nForward",
+  "expected": {
+    "sender_address": "np219@univ.example.edu",
+    "sender_name": "Nina Patel",
+    "sent_date": "2026-11-12",
+    "ask_keywords": [
+      [
+        "calculator",
+        "give",
+        "return"
+      ]
+    ],
+    "deadline_dates": [
+      "2026-11-16"
+    ],
+    "folder": "person",
+    "course": null
+  },
+  "source": "fixture:n07_scraped_friend"
+}

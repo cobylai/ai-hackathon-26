@@ -12,7 +12,7 @@ from pathlib import Path
 
 FOLDERS = ("course", "person", "other")
 FIELDS = ("id", "kind", "folder", "source", "sender_name", "sender_address", "sent_date",
-          "subject", "ask", "deadlines", "course", "topic", "ingested_at")
+          "subject", "ask", "deadlines", "course", "topic", "sent_date_guessed", "ingested_at")
 
 REPO = Path(__file__).resolve().parent.parent
 

@@ -29,8 +29,19 @@ class TestResolve(unittest.TestCase):
         self.check("Thursday at noon", date(2026, 11, 10), "2026-11-12", "12:00")
         self.check("this Friday", WED11, "2026-11-13")
 
-    def test_same_weekday_is_a_week_later(self):
-        self.check("by Friday", FRI13, "2026-11-20")
+    def test_same_weekday_is_same_day(self):
+        self.check("by Friday", FRI13, "2026-11-13")
+        self.check("Friday 5pm", FRI13, "2026-11-13", "17:00")
+
+    def test_find_sent_date(self):
+        from bank.dates import find_sent_date
+        self.assertEqual(find_sent_date("subj\nInbox\n\nNina <n@x.edu>\nNov 12, 2026, 3:14 PM (2 days ago)\nto me"),
+                         D("2026-11-12"))
+        self.assertEqual(find_sent_date("Mail <m@x.edu>\nTue, Nov 10, 2026, 9:02 AM"), D("2026-11-10"))
+        self.assertEqual(find_sent_date("Sent 12 November 2026"), D("2026-11-12"))
+        self.assertEqual(find_sent_date("on 11/09/2026"), D("2026-11-09"))
+        self.assertIsNone(find_sent_date("due Nov 20 at 5pm"))  # no year: a deadline, not a sent date
+        self.assertIsNone(find_sent_date("hello\n" * 20 + "Nov 12, 2026"))  # beyond first 15 lines
 
     def test_next_weekday(self):
         self.check("next Friday", MON9, "2026-11-20")
