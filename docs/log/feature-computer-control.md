@@ -101,3 +101,6 @@
 - policy.verdict reordered: block, then allowlist (unlisted = DENY), then confirm words. Matches the docstring "anything not allowed is denied".
 - Closes a real hole: an unlisted app + a confirm-word label used to return CONFIRM, so a one-time token replay could run an action on an app off the allowlist.
 - New cases (Chrome+delete, Safari+send = DENY); only harness/computer calls verdict/check; full suite 314 passed / 4 skipped.
+
+## Self-review sweep complete (2026-11-15)
+- Read all six computer modules + CLI with fresh eyes. Two real fixes landed (stale-listing guard; allowlist-before-confirm). tools.py, direct.py, permissions.py, __main__.py, registry.py: no defects found.
