@@ -11,6 +11,7 @@ from typing import Callable
 
 from harness.browser import tools as browser_tools
 from harness.search import tools as search_tools
+from harness.email import tools as email_tools
 
 
 @dataclass(frozen=True)
@@ -76,12 +77,48 @@ TOOLS: dict[str, Tool] = {
         {"question": str},
         search_tools.research,
     ),
+    "email_search": Tool(
+        "email_search",
+        "Search Gmail; returns numbered rows.",
+        {"sender": str, "text": str, "days": int},
+        email_tools.email_search,
+    ),
+    "email_read": Tool(
+        "email_read",
+        "Read thread N from the last search, newest message first.",
+        {"n": int, "page": int},
+        email_tools.email_read,
+    ),
+    "email_asks": Tool(
+        "email_asks",
+        "Questions and dated lines from a sender's recent threads.",
+        {"sender": str, "days": int},
+        email_tools.email_asks,
+    ),
+    "email_draft": Tool(
+        "email_draft",
+        "Save a new draft; never sends.",
+        {"to": str, "subject": str, "body": str},
+        email_tools.email_draft,
+    ),
+    "email_reply_draft": Tool(
+        "email_reply_draft",
+        "Save a reply draft in thread N; never sends.",
+        {"n": int, "body": str},
+        email_tools.email_reply_draft,
+    ),
 }
 
 GROUPS: dict[str, list[str]] = {
     "web": ["goto", "read", "elements", "click", "type", "back"],
     # Kept apart from "web" so a model sees at most three tools at a time.
     "search": ["search", "open_result", "research"],
-    "email": [],
+    "email": [
+        "email_search",
+        "email_read",
+        "email_asks",
+        "email_draft",
+        "email_reply_draft",
+    ],
     "computer": [],
 }
