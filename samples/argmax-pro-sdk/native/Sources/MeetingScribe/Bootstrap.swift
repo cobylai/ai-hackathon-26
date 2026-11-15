@@ -39,8 +39,16 @@ enum Bootstrap {
         }
 
         print("Loading \(model) (first run downloads it)...")
+        // ARGMAX_MODEL_FOLDER: load the model from this on-disk folder and skip the
+        // Hugging Face downloader entirely (needed for Wi-Fi-off runs). Unset = download as before.
+        let modelFolder = ProcessInfo.processInfo.environment["ARGMAX_MODEL_FOLDER"].flatMap { $0.isEmpty ? nil : $0 }
+        if let modelFolder { print("Using local model folder \(modelFolder) (no download)") }
         let config: WhisperKitProConfig
-        if vocabulary.isEmpty {
+        if let modelFolder {
+            config = WhisperKitProConfig(
+                model: model, modelFolder: modelFolder, download: false,
+                customVocabularyConfig: vocabulary.isEmpty ? nil : .init(words: vocabulary))
+        } else if vocabulary.isEmpty {
             config = WhisperKitProConfig(model: model)
         } else {
             // Keyword spotting runs alongside ASR and overwrites matching spans of the

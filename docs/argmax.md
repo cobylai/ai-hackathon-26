@@ -23,7 +23,9 @@ say -o clip.wav --data-format=LEI16@16000 "Muse, remind me to buy oat milk tomor
 
 The transcript was: `Muse, remind me to buy oat milk tomorrow at 9. The quick brown fox jumps over the lazy dog.` Language detected: en. Every word is correct, and "nine" was written as "9".
 
-**No changes to the sample were needed.** It built and ran as it is on main.
+The sample built and ran unchanged on main. One change was added afterwards for offline use:
+
+- `samples/argmax-pro-sdk/native/Sources/MeetingScribe/Bootstrap.swift`: a new env var, `ARGMAX_MODEL_FOLDER`. When it's set, `WhisperKitProConfig` gets `modelFolder:` and `download: false`, so the Hugging Face downloader is skipped entirely. When it's unset, the sample behaves as before. It applies to both `file` and `live`.
 
 ## Speed
 
@@ -49,6 +51,8 @@ Model: `large-v3-v20240930_626MB` (Whisper large-v3 turbo, the sample default). 
 
 ## The offline question
 
+**Update (run F): the license works with no network.** With `ARGMAX_MODEL_FOLDER` set and all outbound IP blocked for the process, `file` mode transcribed the clip correctly. The first such launch took 27.9 s, a one-time load from the new folder path. The next two took **3.2 s** each, one blocked and one online. No connection succeeded (only `*:*` sockets were seen, none connected). So with the model loaded from a folder, nothing in the launch needs the network. The key is still checked online when a network exists, but a failed check doesn't stop the app. The details of the earlier runs follow.
+
 **What was observed:** remote connections, logged with `lsof` every 0.2 s while the process ran.
 
 | Run | Setup | Result | Connections seen |
@@ -72,7 +76,7 @@ Model: `large-v3-v20240930_626MB` (Whisper large-v3 turbo, the sample default). 
 
 **Still unproven:**
 - A real Wi-Fi-off run. Coby's steps are below.
-- That the license works when it is truly offline. Point 2 shows only that it doesn't fail before the model step.
+- That the license works when it is truly offline: now shown by run F with connections blocked. It is still to be confirmed with Wi-Fi off.
 - How long the cached license lasts offline.
 - Whether the queue upload or license refresh matters later.
 - Live microphone mode (not tested; it needs a mic-permission prompt).
@@ -104,6 +108,10 @@ Do steps 1–2 **while still online**.
    ```bash
    time .build/release/meeting-scribe file /tmp/clip.wav --no-speakers --out /tmp/transcripts
    ```
+   Also run it with the local model folder, which is the setup Muse should use:
+   ```bash
+   ARGMAX_MODEL_FOLDER=~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-large-v3-v20240930_626MB .build/release/meeting-scribe file /tmp/clip.wav --no-speakers --out /tmp/transcripts
+   ```
 5. Paste the whole output into the chat. A transcript means offline works. A license error or the 60 s "Model not found" error means it doesn't, and the error text says which part failed.
 6. Turn Wi-Fi back on.
 
@@ -125,5 +133,5 @@ Live mode uses the same model as file mode, so there's nothing extra to download
 ## For Muse
 
 - How text gets to Python, proposed in `docs/INTERFACES.md` section 6: a long-running Swift process writes one line of text per utterance to stdout, and Python reads it.
-- The Swift program should pass the local model folder (`modelFolder:`) so it never tries to download.
+- The Swift program should pass the local model folder (`modelFolder:` with `download: false`, as `ARGMAX_MODEL_FOLDER` does) so it never tries to download. Run F shows this works with no network.
 - Keep the 133 MB compile cache. The Swift program should use a fixed bundle or executable name, because the cache folder is named after it (`~/Library/Caches/meeting-scribe/`). A new name means a ~4-minute recompile on its first launch, so do that first launch before the demo.
