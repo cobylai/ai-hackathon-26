@@ -15,3 +15,4 @@
 - B10 note: whole Playwright cache is 1.3 GB because WebKit and the headless shell are installed too; ~/.harness is 56 MB, 47 MB of it the opt-in uBOL copy. Numbers in docs/plan/notes-bench.md.
 - B9: `scripts/live_check.py` visited 15 sites with Playwright and patchright: 5/15 unusable on Playwright (2 BLOCKED, 3 ERR), 4/15 on patchright (3 BLOCKED, 1 ERR); medians 0.37 s vs 0.32 s. Only weather.com changed from BLOCKED to OK.
 - B9 recommendation: stay on plain Playwright. patchright costs a second 570 MB browser build and removed no real wall. Notes in docs/plan/notes-botwalls.md; "Just a moment" is missing from the B6 phrase list (left open).
+- B6 test: challenge-iframe fixture now waits for the frame before classifying; removes a flake seen once in four full-file runs.
