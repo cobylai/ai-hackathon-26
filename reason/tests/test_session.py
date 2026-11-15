@@ -113,9 +113,10 @@ class Followups(unittest.TestCase):
         self.assertIn("I'll open this page", a.text)
         self.assertTrue(act.waiting())
         self.assertIn("Cancelled", self.ask("no").text)
-        a = self.ask("open the second one")
-        self.assertIn("no link to open", a.text)
-        self.assertFalse(act.waiting())
+        a = self.ask("open the second one")  # mail: Apple Mail first (playbooks/open.md), held for a yes
+        self.assertIn("in Mail", a.text)
+        self.assertTrue(act.waiting())
+        self.assertIn("Cancelled", self.ask("no").text)
 
     def test_not_followups(self):
         self.ask("what is due Monday")
