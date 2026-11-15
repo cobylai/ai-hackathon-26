@@ -43,6 +43,15 @@ def _title(page: Page) -> str:
     return (title or "(untitled)")[:60]
 
 
+def _text_of(page: Page) -> str:
+    """Main text of the current page, with the visible body as a reference."""
+    try:
+        body = page.inner_text("body")
+    except Exception:
+        body = ""
+    return page_text(page.content(), body)
+
+
 def _status_line(word: str, page: Page, suffix: str = "") -> str:
     line = f"{word} {_domain(page)} | {_title(page)}"
     return f"{line} | {suffix}" if suffix else line
@@ -93,7 +102,7 @@ def goto(url: str) -> str:
         }[word]
         return _note(word, page, message)
 
-    text = page_text(page.content())
+    text = _text_of(page)
     chunk, total = paginate(text, 1, max_chars=TEXT_CHARS)
     hint = "[more: call read(page=2)]" if total > 1 else "[no more text]"
     return _cap(f"{_status_line('OK', page, f'page 1/{total}')}\n{chunk}", hint)
@@ -112,7 +121,7 @@ def read(page: int = 1) -> str:
         return _note(word, current, message)
 
     page = max(1, int(page))
-    text = page_text(current.content())
+    text = _text_of(current)
     chunk, total = paginate(text, page, max_chars=TEXT_CHARS)
     suffix = f"page {page}/{total}"
     if not chunk:

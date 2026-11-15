@@ -18,3 +18,4 @@
 - B6 test: challenge-iframe fixture now waits for the frame before classifying; removes a flake seen once in four full-file runs.
 - B8 test-only: sign-in command is checked for no remote-debugging/headless/automation flags, mock keychain parity, and refusal on a locked profile. The human sign-in run is still pending.
 - B6 fix: "captcha" and "access denied" now only count on wall-sized pages (body <= 1500 chars). Wikipedia's CAPTCHA article (29k chars) was BLOCKED, now OK; Reddit and StackOverflow still BLOCKED live.
+- B4 fix: when trafilatura keeps <20% of the visible body (BBC homepage: 285 of 8,427 chars), fall back to body text and drop sub-20-char menu labels. BBC goto now returns 1,293 chars of headlines; article extraction unchanged.
