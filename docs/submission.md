@@ -60,7 +60,7 @@ Use the Mac app panel (Fn-Space) or the window. Speak is **off** (no spoken answ
 ## Before recording
 
 - [ ] Bonsai server running, restarted since the 127.0.0.1 change (82da364): `pkill -f mlx_vlm.server; scripts/serve_bonsai.sh 4B`; `lsof -iTCP:8080 -sTCP:LISTEN` shows `localhost`/`127.0.0.1`, not `*`.
-- [ ] Demo bank rebuilt for today (DAY=2026-11-15): sample mail ("Demo bank" in `docs/integration.md`), then sample coursework (`docs/canvas.md`). Check: `make_test_mail.py check ... --offline` gives 37/38.
+- [ ] Demo state set: `uv run python scripts/demo/demo_reset.py --today 2026-11-15` (add `--full` to rebuild the bank), which also turns demo mode on. Relaunch Flux; the status line and the menu must say **Demo data**. Run sheet: `docs/demo-runsheet.md`. Afterwards, `scripts/flux-mode live --calendar "<name>"` goes back to your own data (`docs/live-demo.md`).
 - [ ] "Flux demo" calendar has today's made-up events (one-off, not repeating), the "Lab" event Wed Nov 18 1:30–3:30pm, and nothing Thu Nov 19 at 7pm (so Milo's practice shows as free).
 - [ ] Delete the "Band practice" or "Band practice Thursday" event (Thu Nov 19 7–8pm; Antranig's full test round left one in place) from "Flux demo" if worker 14's live test step 2 added it, or the video's "You're free… Draft a yes to Milo" beat turns into a clash. Delete any test reminders in the "Flux demo" Reminders list too.
 - [ ] The demo bank includes the meeting emails m21–m23 (Milo, Greta, Ivy).
@@ -105,6 +105,7 @@ Use the Mac app panel (Fn-Space) or the window. Speak is **off** (no spoken answ
 | Real course codes and real subjects/snippets from Antranig's mailbox ("BME 3030 HW5 Oral Defense - Scheduling Correction", "BME 4080 Submission Posted: Design History File") | `tests/pages/gmail_list.html` (still in the tree; harness tests use them: `tests/test_asks.py`, `tests/test_email_search.py`), and the eval notes | 85c9e59, 496c315, 2e23640, 9a45c68 |
 | "ECE 4760" search query | email logs | 496c315, 9a45c68 |
 | Partner's full name as a sender in sample-mail screenshots | `docs/window/*.png` | (screenshots; he's an author) |
+| Antranig's Mac username in local paths (`/Users/<his name>/Desktop/...`) | `docs/test-results/antranig-full.md`, `docs/prompts/bionic-routing-eval.md` (merged with his test round) | a9db861 and earlier on partner-testing-full |
 | Keys/tokens (`ax_`, `axst_`, `sk-`, `ghp_`, `hf_`, AWS, private keys) | none found | — |
 | Phone numbers, cookies, session tokens | none found | — |
 | Real Canvas pages or `data/` | never committed (`data/canvas-templates`, the saved Gmail `template.html` and the banks live outside git) | — |

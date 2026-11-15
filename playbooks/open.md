@@ -38,7 +38,7 @@ Links or addresses written inside an email's text. Other Mail accounts. The mode
 ## Not found
 
 - event_not_found: I couldn't find "{title}" in Calendar, so I opened Calendar.
-- cannot_open_mail: I couldn't open that email itself (it isn't in Mail, and its Gmail page needs a connection). Here is what's saved.
+- cannot_open_mail: Here's that email, from what I saved:
 
 ## Never
 

@@ -25,6 +25,7 @@ sys.path.insert(0, str(ROOT))
 
 # (beat, line said, route, must contain). Keep in step with docs/demo-runsheet.md.
 STEPS = [
+    ("0:00 what's Flux", "What's Flux?", "about", ["private assistant that runs entirely on this Mac"]),
     ("0:27 catch me up", "catch me up", "catchup",
      ["Calendar", "Due today through", "Felix", "You're free Thursday, Nov 19 at 3pm. Draft a yes to Felix?"]),
     ("1:05 due this week", "What's due this week?", "due",

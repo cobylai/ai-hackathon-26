@@ -10,6 +10,7 @@ None to enter: the bank route hands over to this one when it falls short. Two pa
 
 - question: `what|what's|who|who's|whom|whose|when|where|which|why|how|is|are|was|were|do|does|did|can|could|will|would|should|has|have|tell me|define|explain`
 - personal: `my|mine`
+- when_mine: `when(?:'s|’s| is| are) my ([^?.!]+)`
 
 `question` counts only at the start (after "Flux," or "please"); `personal` anywhere.
 
@@ -43,6 +44,7 @@ The answer ends with "Source: <url>" (RULES.md). What gets filed is the question
 
 - offline: I don't have that saved, and the Mac is offline, so I can't look it up.
 - not_found: I couldn't find that on the web.
+- personal_when: I have nothing saved about {topic}, and I won't guess.
 
 ## Never
 
@@ -66,3 +68,4 @@ The checker runs with the network blocked, so web questions get a general answer
 |---|---|---|
 | Who wrote the novel Frankenstein? | general | Shelley; From general knowledge |
 | What's my blood type? | reason | I have nothing saved about that. |
+| When is my chemistry exam? | reason | chemistry |

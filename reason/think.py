@@ -241,8 +241,9 @@ def reason(q: str, today: date, root, events_fn=None):
     if a is not None:
         return a
     blocks, owners = _facts(q, today, root, events_fn)
-    if not blocks:
-        return Answer(say(RB, "nothing_saved"), "reason")
+    if not blocks:  # "When is my chemistry exam?" -> "I have nothing saved about a chemistry exam, ..."
+        from .answer import _not_saved
+        return Answer(_not_saved(q), "reason")
     facts = "\n\n".join(blocks)
     prompt = playbook.prompt(RB, "reason_prompt").format(
         today=f"{today:%A} {today:%B} {today.day}, {today.year} ({today.isoformat()})",

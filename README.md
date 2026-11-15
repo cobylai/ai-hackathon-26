@@ -1,6 +1,6 @@
 # Flux
 
-Flux is a Mac assistant for students that answers from your own mail, coursework, calendar and notes, entirely on your Mac. You hold a key and ask out loud ("catch me up", "what's due this week", "what did Felix ask me"), and it answers in about a second with Wi-Fi off, because every model call goes to a local Bonsai 2 4B and speech-to-text runs on-device with Argmax.
+Flux is a Mac assistant for students that answers from your own mail, deadlines, calendar and notes, entirely on your Mac. You hold a key and ask out loud ("catch me up", "what's due this week", "what did Felix ask me"), and it answers in about a second with Wi-Fi off, because every model call goes to a local Bonsai 2 4B and speech-to-text runs on-device with Argmax.
 
 By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 
@@ -101,7 +101,7 @@ FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check   # every 
 - Many-sender check on the demo bank (20 sample emails, 13 made-up senders), offline: **37/38** (person 14/14, unknown person 2/2, due 16/16, bank 5/6).
 - Sample coursework: 24/24 assignments match course, title, due date and link.
 - Playbook examples: 111/111 with the network blocked, on a copy of the demo bank.
-- Tests: reason 193, bank 72, sufficiency 54, applecal 10, canvas 11, discover 20, all OK; harness pytest 275 passed in Antranig's full round.
+- Tests on main: reason 203, bank 77, sufficiency 54, applecal 10, canvas 11, discover 20, all OK; harness pytest 292 passed, 3 skipped (275 in Antranig's full round).
 - Antranig's full test round (`docs/test-results/antranig-full.md`) found and fixed 11 issues, each with a test; the Fn-Space and voice rows and the Wi-Fi-off voice run still need a person at the Mac.
 - Antranig's first test round on another Mac: setup from the guide, all test suites, 11/11 typed demo questions, and a real Wi-Fi-off run where every typed answer matched the online one.
 - Voice with the network denied (`sandbox-exec`): "What's due this week?" heard exactly and answered in 0.0 s.
