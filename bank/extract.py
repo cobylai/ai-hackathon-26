@@ -30,6 +30,8 @@ HINT = ('{"sender_name": "name in the From line, or null", '
         '"deadlines": ["each phrase exactly as written"], '
         '"course": "course code or null", "topic": "a few words"}')
 
+_ANGLE = re.compile(r"([^<>\n]*)<([^<>\s@]+@[^<>\s@]+\.[^<>\s@]+)>")
+
 _NULLS = {"", "null", "none", "n/a", "na", "nothing", "no", "-"}
 
 
@@ -138,9 +140,18 @@ def build_fields(text: str, kind: str, today: date, raws: list[dict]) -> dict:
 
     sender_name = pick("sender_name") if kind == "email" else None
     sender_address = pick("sender_address") if kind == "email" else None
-    if sender_address and "@" not in str(sender_address):
-        sender_address = None
-    sent = hdr.get("sent_date") or today
+    if sender_address:
+        sender_address = str(sender_address).strip().strip("<>").lower()
+    if kind == "email" and not hdr.get("sender_address") and (
+            not sender_address or "@" not in sender_address or sender_address not in text.lower()):
+        # Scraped webmail: no From line. Take the first "Name <addr>" near the top.
+        m = _ANGLE.search("\n".join(text.splitlines()[:15]))
+        sender_address = m.group(2).lower() if m else None
+        if m and not sender_name and m.group(1).strip():
+            sender_name = m.group(1).strip().strip('"')
+    sent = hdr.get("sent_date") or dates.find_sent_date(text)
+    guessed = sent is None
+    sent = sent or today
     subject = pick("subject")
     summary = next((str(_clean(r.get("summary"))) for r in raws if _clean(r.get("summary"))), "")
     ask = next((str(_clean(r.get("ask"))) for r in raws if _clean(r.get("ask"))), None)
@@ -173,6 +184,7 @@ def build_fields(text: str, kind: str, today: date, raws: list[dict]) -> dict:
         "sender_name": sender_name,
         "sender_address": sender_address,
         "sent_date": sent.isoformat(),
+        "sent_date_guessed": guessed,
         "subject": subject,
         "ask": ask,
         "deadlines": deadlines,

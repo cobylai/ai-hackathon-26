@@ -32,7 +32,8 @@ def index_line(e: dict) -> str:
     due = "due " + "; ".join(dls) if dls else "no deadline"
     rel = Path(e["path"]).relative_to(Path(e["path"]).parents[1]).as_posix() if e.get("path") \
         else store.entry_relpath(e)
-    return f"{e.get('sent_date')} | {who} | {where} | {summ} | {due} | {rel}"
+    sent = ("~" if e.get("sent_date_guessed") else "") + str(e.get("sent_date"))
+    return f"{sent} | {who} | {where} | {summ} | {due} | {rel}"
 
 
 def rebuild_index(root: Path | None = None) -> Path:
