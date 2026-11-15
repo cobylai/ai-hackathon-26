@@ -1,6 +1,7 @@
 """Email -> bank sync: read the last N days of Gmail and file each message.
 
     MUSE_BANK_DIR=~/muse-bank uv run python scripts/sync_email.py 7
+    (live mail is refused for a bank folder named *demo* or *test*; --allow-demo overrides)
     uv run python scripts/sync_email.py --fixture tests/pages/gmail_thread.html
 
 Uses only the partner's read paths: harness.email.search (email_search rows,
@@ -43,6 +44,15 @@ def iso_date(raw: str) -> str | None:
     return None
 
 
+def check_live_bank(root: Path) -> None:
+    """Live (real) mail must not land in a sample-mail demo or test bank."""
+    name = root.name.lower()
+    if "demo" in name or "test" in name:
+        raise SystemExit(f"Refusing to sync live mail into {root}: it looks like a demo/test "
+                         "bank (sample mail). Use MUSE_BANK_DIR=~/muse-bank, or pass "
+                         "--allow-demo if you really mean it.")
+
+
 def file_thread(thread_id: str, subject: str | None, messages, ingest) -> list[dict]:
     """messages = read_messages() output, newest first: [(sender, date, body)]."""
     out = []
@@ -57,7 +67,11 @@ def file_thread(thread_id: str, subject: str | None, messages, ingest) -> list[d
     return out
 
 
-def sync(days: int, ingest) -> list[dict]:
+def sync(days: int, ingest, *, root: Path | None = None, allow_demo: bool = False) -> list[dict]:
+    """Live Gmail -> ingest. Refuses a demo/test bank (root, else $MUSE_BANK_DIR) unless allow_demo."""
+    if not allow_demo:
+        from bank import bank_dir
+        check_live_bank(Path(root) if root else bank_dir())
     from harness.browser.session import get_session
     from harness.email import read, search
     from harness.email.status import signed_in
@@ -101,12 +115,17 @@ def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("days", nargs="?", type=int, default=7)
     ap.add_argument("--fixture", help="saved Gmail thread HTML instead of live mail")
+    ap.add_argument("--allow-demo", action="store_true",
+                    help="allow live mail into a bank folder named *demo* or *test*")
     a = ap.parse_args(argv)
     from bank import bank_dir, ingest
 
-    print(f"bank: {bank_dir()}")
+    root = bank_dir()
+    if not a.fixture and not a.allow_demo:
+        check_live_bank(root)  # before the browser starts
+    print(f"bank: {root}")
     t0 = time.monotonic()
-    rs = sync_fixture(a.fixture, ingest) if a.fixture else sync(a.days, ingest)
+    rs = sync_fixture(a.fixture, ingest) if a.fixture else sync(a.days, ingest, allow_demo=a.allow_demo)
     added = sum(r["status"] == "added" for r in rs)
     print(f"{len(rs)} message(s), {added} added, {time.monotonic() - t0:.1f}s")
 

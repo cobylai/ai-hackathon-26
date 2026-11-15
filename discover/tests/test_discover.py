@@ -199,6 +199,50 @@ class Discover(unittest.TestCase):
         self.assertEqual(seen, [self.root])
         self.assertIn("Checked your mail first (2 new)", a.text)
 
+    def test_sync_at_most_every_30_minutes(self):
+        seen = []
+        self.deps["online"] = lambda: True
+        self.deps["sync"] = lambda root: seen.append(1) or 0
+        self.ask("discover")
+        self.ask("stop")
+        self.ask("discover")
+        self.assertEqual(len(seen), 1)
+
+    def test_demo_bank_skips_mail_sync_quietly(self):
+        import io
+        from contextlib import redirect_stderr
+        demo = self.root / "muse-demo-bank"
+        demo.mkdir()
+        for e in store.all_entries(self.root):
+            store.write_entry({k: v for k, v in e.items() if k != "path"}, demo)
+        self.deps["online"] = lambda: True
+        self.deps["sync"] = session._default_sync  # the real one: it must stop before Gmail
+        err = io.StringIO()
+        with mock.patch("harness.browser.session.get_session", side_effect=AssertionError("Gmail opened")), \
+                redirect_stderr(err):
+            a = session.handle("discover", DAY, demo, deps=self.deps)
+        self.assertNotIn("mail", a.text.splitlines()[0].lower())
+        self.assertIn("I found", a.text)
+        self.assertTrue(session.waiting())
+        self.assertEqual(err.getvalue().count("\n"), 1)
+        self.assertIn("mail sync skipped", err.getvalue())
+        self.assertEqual(state.since_sync(demo), float("inf"))  # not stamped
+
+    def test_relation_guess_only_when_its_question_comes_up(self):
+        self.deps["events"] = lambda s, e: lab_events(8)  # the Lab question outranks Lena's
+        self.ask("discover")
+        self.assertEqual(self.relations, [])
+        while session.waiting() and not self.relations:
+            self.ask("skip")
+        self.assertEqual(self.relations, ["Lena Marsh"])
+        self.assertIn("Is Lena Marsh your TA?", session._run["queue"][0]["question"])
+
+    def test_unusable_relation_guess_is_dropped(self):
+        self.deps["relation"] = lambda name, es: None
+        asked, _ = self.run_all("skip")
+        self.assertNotIn("relation", [c["kind"] for c in asked])
+        self.assertTrue(all(not c.get("lazy") for c in asked))
+
     # ---- review ----
 
     def test_learned_and_unlearn(self):
