@@ -483,7 +483,8 @@ def _deps(deps: dict | None) -> dict:
             "add_event": do_add_event, "add_reminder": do_add_reminder, **(deps or {})}
 
 
-def plan_item(kind: str, item_kind: str, obj: dict, today: date, root=None, deps: dict | None = None):
+def plan_item(kind: str, item_kind: str, obj: dict, today: date, root=None, deps: dict | None = None,
+              when: str = ""):
     """The agent loop's proposal (reason/agent.py) as the usual preview, held for a yes.
     kind: "calendar" | "remind" | "open"; obj: a bank entry, or an event for "open".
     Nothing runs until handle() gets the yes; the writes keep their block list and log."""
@@ -491,7 +492,7 @@ def plan_item(kind: str, item_kind: str, obj: dict, today: date, root=None, deps
     if kind == "calendar":
         return _hold_event(obj, obj.get("subject") or "it", today, d)
     if kind == "remind":
-        return _hold_reminder(obj, obj.get("subject") or "it", "", today, d)
+        return _hold_reminder(obj, obj.get("subject") or "it", when, today, d)
     if kind == "open":
         return plan_row({"kind": "event" if item_kind == "event" else "entry",
                          ("event" if item_kind == "event" else "entry"): obj}, d)

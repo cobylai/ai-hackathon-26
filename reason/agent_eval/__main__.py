@@ -36,7 +36,7 @@ def main(argv=None) -> int:
             passed += ok
             runs.append({"task": i, "rep": rep, "q": task["q"], "pass": ok, "why": why, "ok": res.ok,
                          "stop": res.stop, "steps": len(res.trace), "tokens": res.tokens,
-                         "seconds": res.seconds, "text": res.text,
+                         "seconds": res.seconds, "text": res.full(),
                          "proposal": (f"{res.proposal['kind']} {res.proposal['item']['id']}"
                                       if res.proposal else None),
                          "trace": agent.trace_lines(res.trace)})
@@ -46,7 +46,7 @@ def main(argv=None) -> int:
                   f"{', proposal ' + r['proposal'] if r['proposal'] else ''}")
             for line in r["trace"]:
                 print(f"       {line[:150]}")
-            print(f"     -> {res.text[:220]!r}")
+            print(f"     -> {res.full()[:400]!r}")
             if why:
                 print(f"     why: {why}")
             sys.stdout.flush()

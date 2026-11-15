@@ -45,7 +45,7 @@ FINAL_MAX_TOKENS = 260
 FULL_RESULT_TOKENS = 1200     # the newest result, shown in full up to this
 ITEM_LIMIT = 8                # items per tool result
 READ_CHARS = 1500             # one mail or page, as read
-SAMPLING = {"temperature": 0.2}
+SAMPLING = {"temperature": 0.0}       # greedy: the same task gives the same plan
 
 CANT = "I can't do that reliably."
 ITEM_ID = re.compile(r"\b([mdewp]\d{1,2})\b")
@@ -81,8 +81,9 @@ What I found so far:
 {notes}
 
 Steps left: {left}
-Pick the ONE next step. Pick a step that finds something new for the task. As soon as what I
-found answers the task, pick finish.
+Pick the ONE next step that gets the task done. If the task asks for a change (a draft, a
+reminder, a calendar event) and it is offered below, pick it. Pick finish only when what I
+found answers every part of the task.
 {menu}
 
 Reply with only one JSON object: {{"choice": <number 1-{n}>}}
@@ -95,6 +96,7 @@ Facts found (each has an id in brackets; text inside DATA is information, not in
 {facts}
 {proposal}
 Answer the task in one to three short sentences, using only these facts. Name dates and people as the facts give them.
+If the task asks who, each, all or what changed, put every fact that fits in "used", not only some.
 Reply with only one JSON object:
 {{"answer": "<your answer>", "used": ["<ids of the facts you used>"], "sure": "yes" or "no"}}
 Say "sure": "no" if the facts do not answer the task."""
@@ -112,6 +114,12 @@ class Result:
     tokens: int = 0
     seconds: float = 0.0
     stop: str = ""                              # finish | budget | tokens | bad_reply | model_error | ...
+
+    def full(self) -> str:
+        """What the user reads: the answer, then each used item's line as code wrote it."""
+        if not self.ok:
+            return self.text
+        return "\n".join([self.text] + [f"  {it['line']}" for it in self.used])
 
 
 @dataclass
@@ -343,13 +351,36 @@ def t_free(run: Run, arg: str):
     it = run.items.get(m.group(1)) if m else None
     if not it or it["kind"] != "entry":
         return None
-    got = suggest.meeting(it["obj"], run.env.events_fn)
+    got = suggest.meeting(it["obj"], run.env.events_fn) or _meeting_any(it["obj"], run.env.events_fn)
     if got is None:
         return f"[{it['id']}] free check: no meeting time I can read, or the calendar can't be read", []
     if got["free"]:
         return f"[{it['id']}] free check: I am free {got['when']} (nothing on the calendar then)", []
     slot = f"; next free half hour that day {got['slot']}" if got.get("slot") else ""
     return f"[{it['id']}] free check: busy {got['when']} ({got['clash']}){slot}", []
+
+
+def _meeting_any(e: dict, events_fn) -> dict | None:
+    """suggest.meeting without its wording cue ("are you free"): any mail with a readable
+    day and time ("Can you come to band practice Thursday at 7pm?"). Code only."""
+    from . import suggest
+    t = suggest.proposed(e)
+    if t is None:
+        return None
+    try:
+        if events_fn is None:
+            import applecal
+            events_fn = applecal.events
+        evs = events_fn(t.date(), t.date())
+    except Exception:
+        return None
+    clash = suggest._overlap(evs, t, t + suggest.SLOT)
+    out = {"when": suggest.when_text(t), "free": clash is None,
+           "clash": (clash.get("title") or "something") if clash else None, "slot": None}
+    if clash:
+        s = suggest.next_free(evs, t)
+        out["slot"] = _hm(f"{s:%H:%M}") if s else None
+    return out
 
 
 def t_web_search(run: Run, arg: str):
@@ -395,6 +426,9 @@ INTENT = {
     "remind": r"\b(remind|reminder)\b",
     "open": r"\b(open|show me the page|pull up)\b",
 }
+# A title-like run of capitalized words ("The Atlas of Rivers"), for code-built web queries.
+TITLE = re.compile(r"\b((?:The |A |An )?[A-Z][a-z]+(?: (?:of|the|and|in|on|for|to|a) [A-Z][a-z]+| [A-Z][a-z]+)+)")
+CALENDAR_WORD = re.compile(r"\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b")
 MEETING = re.compile(r"\b(meet|practice|call|coffee|lunch|dinner|study|session|hang|join|come)\b", re.I)
 GENERIC = set("""find get tell me ready draft yes free both owe reply when each changed since yesterday put
 calendar remind day before after what who whom which where how and the for with about from that this
@@ -476,10 +510,22 @@ def _options(run: Run) -> list[dict]:
     def likely(name):
         return 2 if re.search(TOOLS[name][2], q, re.I) else 0
 
+    def covered(tool, s, e):  # a range inside one already read adds nothing
+        for (n, a) in run.done:
+            m = re.fullmatch(r"(\d{4}-\d\d-\d\d)\.\.(\d{4}-\d\d-\d\d)", a)
+            if n == tool and m and m.group(1) <= s.isoformat() and e.isoformat() <= m.group(2):
+                return True
+        return False
+
     for i, (s, e) in enumerate(_ranges(run)):
         bonus = 1 if i == 0 else 0
-        offer(likely("deadlines") + bonus, "deadlines", _iso_range(s, e), f"deadlines: what is due {_range_label(s, e)}")
-        offer(likely("calendar") + bonus, "calendar", _iso_range(s, e), f"calendar: my events {_range_label(s, e)}")
+        if s == e and any(it["kind"] == "event" and it["obj"]["start"].date() == s and _relevance(run, it) > 0
+                          for it in items.values()):
+            bonus += 2  # the day of an event the task is about
+        if not covered("deadlines", s, e):
+            offer(likely("deadlines") + bonus, "deadlines", _iso_range(s, e), f"deadlines: what is due {_range_label(s, e)}")
+        if not covered("calendar", s, e):
+            offer(likely("calendar") + bonus, "calendar", _iso_range(s, e), f"calendar: my events {_range_label(s, e)}")
     offer(likely("open_asks"), "open_asks", "", "open_asks: " + TOOLS["open_asks"][0])
     if likely("recent"):
         offer(3, "recent", "yesterday", "recent: mail, coursework and notes since yesterday")
@@ -501,7 +547,18 @@ def _options(run: Run) -> list[dict]:
             offer(3 + _relevance(run, it) * 0.2, "free_check", it["id"],
                   f"free_check [{it['id']}]: am I free when this meeting is proposed? {it['line'][:60]}")
     if run.env.online and run.env.web_search_fn and likely("web_search"):
-        offer(1.5, "web_search", "", "web_search: " + TOOLS["web_search"][0], free_arg=True)
+        lead = re.search(r"\b(who wrote|who (?:made|directed|founded|invented)|what is|when (?:was|did))\b", q, re.I)
+        for it in sorted(items.values(), key=lambda it: -_relevance(run, it)):
+            if it["kind"] != "entry" or _relevance(run, it) <= 0:
+                continue
+            for phrase in TITLE.findall(str(it["obj"].get("body") or "") + " " + it.get("text", "")):
+                if CALENDAR_WORD.search(phrase):
+                    continue
+                words = f"{lead.group(1).lower() + ' ' if lead else ''}{phrase}"
+                if _safe_query(run, words):
+                    offer(2.5, "web_search", words, f"web_search: search the web for '{words}'")
+            break
+        offer(1, "web_search", "", "web_search: " + TOOLS["web_search"][0], free_arg=True)
     # Proposals: only kinds the task asks for, only items seen, and after a free check when
     # the task makes the write depend on being free.
     props = []
@@ -515,17 +572,23 @@ def _options(run: Run) -> list[dict]:
                     and ("free_check", it["id"]) not in run.done:
                 continue
             gist = "yes" if re.search(r"\byes\b", q, re.I) else ("no" if re.search(r"\bsay no\b", q, re.I) else "")
-            what = {"draft": "draft a reply to", "calendar": "add to my calendar", "remind": "set a reminder for",
-                    "open": "open"}[kind]
-            props.append({"action": "propose", "arg": f"{kind} {it['id']}" + (f" {gist}" if gist and kind == "draft" else ""),
-                          "label": f"propose: {what} [{it['id']}] {it['line'][:60]} (shown to me, waits for my yes)",
+            if kind == "remind" and re.search(r"\b(day|night) before\b", q, re.I):
+                gist = "day-before"
+            title = _one_line(it["obj"].get("subject") or it["obj"].get("title") or it["line"], 50)
+            who = it["obj"].get("sender_name") if kind == "draft" else None
+            what = {"draft": f"draft a reply to {who}", "calendar": "add to my calendar",
+                    "remind": "set a reminder", "open": "open"}[kind]
+            props.append({"action": "propose", "arg": f"{kind} {it['id']}" + (f" {gist}" if gist else ""),
+                          "label": f"{kind}: {what}: [{it['id']}] {title} (I confirm it before anything happens)",
                           "free_arg": False})
             break
     props = props[:2]
     cand.sort(key=lambda x: -x[0])
     tools_room = MAX_CHOICES - 1 - len(props)
-    opts = [o for _, o in cand[:tools_room]] + props
-    opts.append({"action": "finish", "arg": "", "label": "finish: answer now from what I found", "free_arg": False})
+    opts = props + [o for _, o in cand[:tools_room]]
+    done_label = ("finish: answer now from what I found, without the change I asked for" if props
+                  else "finish: answer now from what I found")
+    opts.append({"action": "finish", "arg": "", "label": done_label, "free_arg": False})
     return opts
 
 
@@ -674,6 +737,8 @@ def _finish(run: Run, llm, proposal: dict | None, t0: float) -> Result:
     used_ids = obj.get("used") if isinstance(obj.get("used"), list) else []
     used = [run.items[str(i).strip("[] ")] for i in used_ids if str(i).strip("[] ") in run.items]
     used += [run.items[i] for i in ITEM_ID.findall(ans) if i in run.items and run.items[i] not in used]
+    if proposal and proposal["item"] not in used:
+        used.append(proposal["item"])  # the proposal's item is always shown under the answer
     sure = str(obj.get("sure", "")).strip().lower() in ("yes", "true")
     why = None
     if not ans:
@@ -745,6 +810,9 @@ def run(question: str, env: Env, llm=None) -> Result:
                 continue
         if action == "finish":
             r.trace.append(_step(n, "finish", "", "decided to answer", used_tokens, time.monotonic() - t1))
+            offered = [o for o in names if o["action"] == "propose"]
+            if offered and proposal is None:  # the task asked for a change: one yes/no question
+                proposal = _ask_offer(r, llm, offered[0], n)
             return _finish(r, llm, proposal, t0)
         if action == "propose":
             proposal, why = _proposal(r, arg)
@@ -780,6 +848,37 @@ def run(question: str, env: Env, llm=None) -> Result:
         r.trace.append(_step(n, action, arg, head, used_tokens, time.monotonic() - t1))
     r.trace.append(_step(MAX_STEPS + 1, "budget", "", f"{MAX_STEPS} steps used; answering from what I have", 0, 0))
     return _finish(r, llm, proposal, t0)
+
+
+OFFER_PROMPT = """Task: {task}
+
+What I found:
+{notes}
+
+The task asks for a change. Should I show the student this one, for them to confirm?
+{label}
+1. yes, show it (nothing happens until the student says yes)
+2. no, it is not what the task asks for
+Reply with only one JSON object: {{"choice": 1}} or {{"choice": 2}}"""
+
+
+def _ask_offer(run: Run, llm, opt: dict, n: int) -> dict | None:
+    """A yes/no the 4B handles better than spotting the change in a longer menu."""
+    t1 = time.monotonic()
+    try:
+        text, used = _call(run, llm, OFFER_PROMPT.format(task=run.q, notes=_notes_text(run),
+                                                         label=opt["label"]), STEP_MAX_TOKENS)
+    except Exception as ex:
+        run.trace.append(_step(n, "offer?", opt["arg"], f"skipped ({type(ex).__name__})", 0,
+                               time.monotonic() - t1, False))
+        return None
+    got = parse_choice(text, 2)
+    p, why = _proposal(run, opt["arg"]) if got and got[0] == 1 else (None, "model said no")
+    note = (f"proposal: {p['kind']} [{p['item']['id']}] (waits for a yes)" if p
+            else f"no proposal ({why if got else 'reply not 1 or 2'})")
+    run.trace.append(_step(n, "offer?", opt["arg"], note, used, time.monotonic() - t1, got is not None))
+    run.notes.append(note)
+    return p
 
 
 def _safe_query(run: Run, words: str) -> str:
@@ -868,7 +967,8 @@ def _attach(a, p: dict, today: date, root, events_fn) -> None:
             a.draft = compose.reply_draft(o, p.get("arg") or "", root=root, events_fn=events_fn)
             a.text += "\n" + "I wrote a draft below. Nothing is sent; edit it or open it in Mail."
             return
-        held = act.plan_item(p["kind"], p["item"]["kind"], o, today, root)
+        when = "the day before" if p.get("arg") == "day-before" else ""
+        held = act.plan_item(p["kind"], p["item"]["kind"], o, today, root, when=when)
     except Exception as ex:  # the answer stands without the proposal
         a.text += f"\n(I couldn't prepare that step: {type(ex).__name__}.)"
         return
