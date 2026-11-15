@@ -96,6 +96,14 @@ def test_blocked_and_login_pages(btools, site):
     assert login.startswith("LOGIN")
 
 
+def test_page_recovers_after_the_browser_is_killed(btools, session, site):
+    btools.goto(site.url("hello.html"))
+    session._context.close()  # the browser is gone, as it was during Run 4
+    out = check(btools.goto(site.url("article.html")))
+    assert out.startswith("OK")
+    assert "The Lighthouse Keeper" in out
+
+
 def test_navigation_failure(btools):
     out = check(btools.goto("http://127.0.0.1:1/"))
     assert out.startswith("ERR")

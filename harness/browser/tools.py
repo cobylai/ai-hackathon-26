@@ -7,6 +7,11 @@ from urllib.parse import urlparse
 
 from playwright.sync_api import Page
 
+try:  # not exported from playwright.sync_api in this version
+    from playwright._impl._errors import TargetClosedError
+except ImportError:  # pragma: no cover - older or newer Playwright
+    from playwright.sync_api import Error as TargetClosedError
+
 from harness import config
 from harness.browser import blocking, state
 from harness.browser import elements as elements_mod
@@ -26,10 +31,17 @@ _blocked_page: Page | None = None
 
 
 def _page() -> Page:
-    """The shared page, with request blocking installed once."""
+    """The shared page, with request blocking installed once.
+
+    If the browser was killed or crashed mid-session (S8 saw this under load),
+    bring it back once instead of failing every later tool call. A profile lock
+    is a different problem: that one is reported to the caller.
+    """
     global _blocked_page
     try:
         page = get_session().start().page
+    except TargetClosedError:
+        page = get_session().restart().page
     except Exception as exc:
         text = " ".join(str(exc).split())
         if "ProcessSingleton" in text or "profile directory" in text:

@@ -46,11 +46,18 @@ class Session:
             self._page = pages[0] if pages else self._context.new_page()
         return self._page
 
+    def restart(self) -> "Session":
+        """Close and reopen the browser; used when the context dies under us."""
+        self.stop()
+        return self.start()
+
     def stop(self) -> None:
-        """Close the browser and stop Playwright. Safe to call twice."""
+        """Close the browser and stop Playwright. Safe to call twice, even if it died."""
         if self._context is not None:
             try:
                 self._context.close()
+            except Exception:
+                pass  # the browser was already gone
             finally:
                 self._context = None
                 self._page = None

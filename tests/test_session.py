@@ -25,6 +25,14 @@ def test_get_session_is_shared():
     assert isinstance(get_session(), Session)
 
 
+def test_restart_reopens_the_browser(session, site):
+    session.page.goto(site.url("hello.html"))
+    assert session.page.title() == "Hello Harness"
+    session.restart()
+    session.page.goto(site.url("hello.html"))
+    assert session.page.title() == "Hello Harness"
+
+
 def profile_dir_from_env(env: dict) -> str:
     proc = subprocess.run(
         [sys.executable, "-c", "from harness import config; print(config.PROFILE_DIR)"],

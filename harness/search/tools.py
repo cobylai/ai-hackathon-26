@@ -10,6 +10,7 @@ from __future__ import annotations
 from harness import config
 from harness.browser import state
 from harness.browser import tools as browser_tools
+from harness.browser.session import get_session
 from harness.browser.text import page_text, paginate
 from harness.search import cache, engine, loop
 from harness.search.google import Result
@@ -79,24 +80,31 @@ def open_page(url: str) -> tuple[str, str]:
     """Open a URL in the shared browser; return (status word, full page text).
 
     A page read in the last 24 hours comes back from the SQLite cache instead.
+    If the browser died mid-session, it is restarted once and the read retried.
     """
     cached = cache.get(url)
     if cached is not None:
         return "OK", cached
-
-    page = browser_tools._page()
     try:
-        response = page.goto(url, wait_until="domcontentloaded", timeout=20_000)
+        return _load(url)
+    except browser_tools.TargetClosedError:
+        get_session().restart()
+        try:
+            return _load(url)
+        except Exception:
+            return "ERR", ""
     except Exception:
         return "ERR", ""
+
+
+def _load(url: str) -> tuple[str, str]:
+    page = browser_tools._page()
+    response = page.goto(url, wait_until="domcontentloaded", timeout=20_000)
     status = response.status if response is not None else None
     word = state.classify(page, status=status)
     if word != "OK":
         return word, ""
-    try:
-        text = page_text(page.content())
-    except Exception:
-        return "ERR", ""
+    text = page_text(page.content())
     cache.put(url, text)
     return "OK", text
 

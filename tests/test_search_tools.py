@@ -109,6 +109,51 @@ def test_empty_search_says_so(stool, monkeypatch):
     assert out.startswith("BLOCKED search | no results")
 
 
+class _FakePage:
+    url = "https://example.test/"
+
+    def goto(self, url, wait_until=None, timeout=None):
+        return type("R", (), {"status": 200})()
+
+    def content(self):
+        return (
+            "<html><head><title>Example</title></head><body><article>"
+            "<p>Hello page text.</p></article></body></html>"
+        )
+
+    def title(self):
+        return "Example"
+
+    def inner_text(self, selector):
+        return "Hello page text."
+
+
+def test_open_page_restarts_a_dead_browser(monkeypatch):
+    from harness.browser import tools as browser_tools
+
+    page = _FakePage()
+    counters = {"calls": 0, "restarts": 0}
+
+    def flaky_page():
+        counters["calls"] += 1
+        if counters["calls"] == 1:
+            raise browser_tools.TargetClosedError("Browser closed")
+        return page
+
+    class FakeSession:
+        def restart(self):
+            counters["restarts"] += 1
+            return self
+
+    monkeypatch.setattr(browser_tools, "_page", flaky_page)
+    monkeypatch.setattr(tools, "get_session", lambda: FakeSession())
+
+    word, text = tools.open_page("https://example.test/retry")
+    assert word == "OK"
+    assert "Hello page text" in text
+    assert counters["restarts"] == 1
+
+
 def test_registry_exposes_the_search_group(stool, monkeypatch, site):
     assert registry.GROUPS["search"] == ["search", "open_result", "research"]
     entry = registry.TOOLS["search"]

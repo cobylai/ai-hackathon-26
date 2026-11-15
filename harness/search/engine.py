@@ -11,7 +11,7 @@ from urllib.parse import quote_plus
 
 from playwright.sync_api import Page
 
-from harness.browser.session import get_session
+from harness.browser import tools as browser_tools
 from harness.browser.state import classify
 from harness.search import ddg, google
 from harness.search.google import Result
@@ -76,7 +76,8 @@ def search(query: str, page: Page | None = None) -> list[Result]:
     query = " ".join((query or "").split())
     if not query:
         return []
-    current = page if page is not None else get_session().start().page
+    # `_page()` installs ad blocking and restarts a dead browser once.
+    current = page if page is not None else browser_tools._page()
 
     if not in_fallback():
         results = _run(
