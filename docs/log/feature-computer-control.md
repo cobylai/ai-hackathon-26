@@ -83,3 +83,7 @@
 - merge-tree vs main: email-gmail, browser-core, web-search conflict only in README/tests/test_state.py (resolutions already logged); agent-* branches merge clean.
 - Not wiring ui tools into reason/act.py: four agent-* branches are live in reason/, edits there would collide.
 - Computer tests on main: 91 passed. Full suite not re-runnable locally: fleet load avg >600 hangs browser tests; CI remains the clean signal (304 passed / 3 skipped).
+
+## Full-suite verification (2026-11-15)
+- Fleet load fell below ~70, so the full suite ran clean on branch head 1f59a04: 311 passed, 4 skipped (opt-in live tests), 2m53s.
+- Last round's 7-min timeout was fleet contention (load >600), not a regression.
