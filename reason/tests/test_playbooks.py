@@ -2,6 +2,7 @@
 import re
 import string
 import unittest
+from datetime import date
 from pathlib import Path
 
 import importlib
@@ -81,6 +82,20 @@ class PromptCopies(unittest.TestCase):
 
     def test_person_prompt_formats(self):
         ans.PERSON_PROMPT.format(today="t", question="q", who="w", notes="n")
+
+
+class CheckCalendar(unittest.TestCase):
+    """playbook_check reads a fixed demo calendar, so Q10's leftover event cannot skew it."""
+
+    def test_fixture_is_the_six_demo_events(self):
+        check = importlib.import_module("reason.playbook_check")
+        wed = check.fixture_events(date(2026, 11, 18), date(2026, 11, 18))
+        self.assertEqual([(e["title"], e["start"].strftime("%H:%M")) for e in wed], [("Lab", "13:30")])
+        thu = check.fixture_events(date(2026, 11, 19), date(2026, 11, 19))
+        self.assertEqual([e["title"] for e in thu], ["Office hours"])
+        week = check.fixture_events(date(2026, 11, 16), date(2026, 11, 22))
+        self.assertEqual(len(week), 6)
+        self.assertFalse([e for e in week if e["title"] == "Band practice Thursday"])
 
 
 if __name__ == "__main__":
