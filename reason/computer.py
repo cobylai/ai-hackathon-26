@@ -7,7 +7,7 @@ from what the user said, never from text read on screen or in an email.
     reminder_for(entry, when)    {"name", "due", "remind_at", "note"} | None
     add_event(ev) / add_reminder(r) / show_event(row_event)
 
-Every action is logged in the partner's ~/.harness/actions.log and checked against his
+Every action is logged in the harness's ~/.harness/actions.log and checked against its
 block list and STOP file.
 """
 from __future__ import annotations
@@ -50,7 +50,7 @@ class Blocked(RuntimeError):
 
 
 def _guard(app: str, action: str, label: str) -> None:
-    """The partner's STOP file and block list, then one log line."""
+    """The harness STOP file and block list, then one log line."""
     from harness.computer import policy
     if policy.stopped():
         raise Blocked(policy.STOPPED_MESSAGE)

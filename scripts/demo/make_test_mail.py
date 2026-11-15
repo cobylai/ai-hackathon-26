@@ -183,7 +183,7 @@ def extra_mail() -> list[tuple]:
     ]
 
 
-# The video's staged set (thinker ruling 2: short lists on screen). Lab report: Lena's format
+# The video's staged set (short lists on screen). Lab report: Lena's format
 # mail + Jonah's template mail; tomorrow: Hugo's vote; Tuesday: Tess; Felix's Thursday-at-3
 # meeting; the $48.20 bill; Omar's no-deadline ask; the newsletter with no ask.
 VIDEO_KEYS = ("m02", "m04", "m05", "m11", "d01", "d03", "d05", "d06")

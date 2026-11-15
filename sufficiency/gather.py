@@ -4,7 +4,7 @@ search_fn and open_fn are passed in (see docs/INTERFACES.md §2). Their shapes a
 assumed only in _hits() and _page() below:
     search_fn(query) -> [{"title", "url", "snippet"}, ...]
     open_fn(url)     -> {"title", "text"}   (a plain string is also accepted)
-The partner's real shapes are accepted too (harness/search):
+The harness's real shapes are accepted too (harness/search):
     engine.search(q)    -> [Result(title, url, domain, snippet), ...]
     tools.open_page(u)  -> (status_word, text); text is used only when status is "OK"
 """

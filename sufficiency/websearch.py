@@ -1,4 +1,4 @@
-"""search_fn for gather(): the partner's search first, Bing when that comes back empty.
+"""search_fn for gather(): the harness search first, Bing when that comes back empty.
 
     from sufficiency.websearch import search
     search("capital of Australia") -> [{"title", "url", "snippet"}, ...]

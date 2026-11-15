@@ -15,13 +15,13 @@ At most two small next steps under an answer, each one line and one button, unde
 
 1. Only after a due, catchup, person, bank or followup answer. Take the bank entries that answer listed or named as its sources, in order. None: no suggestions.
 2. An email with a `meeting` cue: work out the proposed day (the entry's deadlines, else `bank.dates.resolve_date` on the ask) and time (the deadline's time, else `resolve_time`, else `bare_time`: 1–7 is pm, 8–11 am, 12 noon). With both, read that day from Apple Calendar. An event (not all-day) overlapping the hour from that time is a clash: say `busy` with its title only. No clash: say `free`. No day, no time, or the calendar can't be read: go on to step 3 for this email and say nothing about free or busy.
-3. Any other email with an ask: `reply`. A free meeting also gets `calendar` (worker 14's `computer.event_for`, only when its start is that same time).
+3. Any other email with an ask: `reply`. A free meeting also gets `calendar` (`computer.event_for`, only when its start is that same time).
 4. A Canvas item with a link: `open`. On a due or catchup answer, a Canvas item or an email with an upcoming deadline also gets `remind` (`computer.reminder_for`: 2 hours before a timed deadline, else 9am that day).
 5. Meeting emails first, then the rest in the answer's order; each entry's own suggestions together, best first. Skip any suggestion already dismissed, drafted, opened or added in this chat. Keep at most two. A click on `calendar` or `remind` runs `computer.add_event` / `add_reminder` (block list, log), and the row says what was added.
 
 ## May look
 
-The answer's own entries, and Apple Calendar for the one day an email proposes. After a click only: the Flux calendar or the "Flux demo" reminders list, through worker 14's `reason/computer.py`.
+The answer's own entries, and Apple Calendar for the one day an email proposes. After a click only: the Flux calendar or the "Flux demo" reminders list, through `reason/computer.py`.
 
 ## May not look
 

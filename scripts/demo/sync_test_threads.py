@@ -2,9 +2,9 @@
 
     FLUX_BANK_DIR=data/bank-test uv run python scripts/demo/sync_test_threads.py [data/test-threads]
 
-Each page from make_test_threads.py is opened as a local file in the partner's
-hidden browser (his Session class, on a scratch profile under data/ so it never
-competes with the signed-in Gmail profile; every non-file request is aborted), read with his
+Each page from make_test_threads.py is opened as a local file in the harness's
+hidden browser (its Session class, on a scratch profile under data/ so it never
+competes with the signed-in Gmail profile; every non-file request is aborted), read with its
 read.read_messages, and filed with the live sync's file_thread -> bank.ingest.
 Then each bank entry's sender name, address, sent date and subject are checked
 against truth.json.

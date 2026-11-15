@@ -21,7 +21,7 @@ Both are tried on the question with its end punctuation removed. Group 1 is what
 2. Read the date and time from the entry's stored deadlines, which the bank's date code worked out at ingest. If it has none, find date phrases in its ask and summary with the same date code, against the sent date. The model is never asked for a time. No date: `no_time` / `no_date`.
 3. Calendar: the title is the subject and the event lasts one hour from that time, or is all-day when there's no time. The place is added only when code finds one in the text ("in Lincoln Hall 101"). A calendar row is already on the calendar: `already_on_calendar`. Show `event_preview` and wait for a yes.
 4. Reminder: the name is the ask (else the subject), due at the deadline. The alert is the day before at 9am when asked, else 2 hours before a timed deadline, else 9am on the day. Show `reminder_preview` and wait for a yes.
-5. On yes, check the partner's STOP file and block list, log the action, and create the event in the Flux calendar (FLUX_CALENDAR, "Flux demo") or the reminder in the "Flux demo" Reminders list. No means nothing is created.
+5. On yes, check the harness STOP file and block list, log the action, and create the event in the Flux calendar (FLUX_CALENDAR, "Flux demo") or the reminder in the "Flux demo" Reminders list. No means nothing is created.
 
 ## May look
 

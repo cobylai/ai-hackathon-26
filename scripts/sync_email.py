@@ -4,7 +4,7 @@
     (live mail is refused for a bank folder named *demo* or *test*; --allow-demo overrides)
     uv run python scripts/sync_email.py --fixture tests/pages/gmail_thread.html
 
-Uses only the partner's read paths: harness.email.search (email_search rows,
+Uses only the harness read paths: harness.email.search (email_search rows,
 each with a thread_id), read.open_thread and read.read_messages. It never
 opens compose, never drafts, never sends. Each message's sender, date and body
 go to bank.ingest, which calls local Bonsai. --fixture reads a saved Gmail

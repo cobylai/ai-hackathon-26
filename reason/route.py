@@ -48,7 +48,7 @@ def due_range(question: str, today: date) -> tuple[date, date, str]:
         s = _monday(today) + timedelta(days=7)
         return s, s + timedelta(days=6), "next week"
     if re.search(r"\bthis week\b|\bthe week\b|\bend of (the )?week\b", q):
-        # On Sat/Sun "this week" means today through the coming Sunday (thinker ruling).
+        # On Sat/Sun "this week" means today through the coming Sunday.
         extra = 7 if today.weekday() >= 5 else 0
         return today, _monday(today) + timedelta(days=6 + extra), "this week"
     if re.search(r"\b(this )?weekend\b", q):

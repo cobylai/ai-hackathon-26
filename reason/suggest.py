@@ -190,7 +190,7 @@ REMIND_ROUTES = ("due", "catchup")
 
 
 def _calendar(e: dict, m: dict, today: date | None) -> dict | None:
-    """'Add to calendar' for a free meeting time: worker 14's event_for, only if it is that time."""
+    """'Add to calendar' for a free meeting time: event_for, only if it is that time."""
     from . import computer
     ev = computer.event_for(e, today)
     if not ev or ev.get("all_day") or ev["start"].isoformat() != m["start"]:
@@ -201,7 +201,7 @@ def _calendar(e: dict, m: dict, today: date | None) -> dict | None:
 
 
 def _remind(e: dict, today: date | None) -> dict | None:
-    """'Remind me' for a due item: worker 14's reminder_for (alert 2 hours before, or 9am that day)."""
+    """'Remind me' for a due item: reminder_for (alert 2 hours before, or 9am that day)."""
     from . import computer
     r = computer.reminder_for(e, "", today)
     if not r or (today and r["due"].date() < today):
@@ -262,7 +262,7 @@ def for_answer(a, session=None, today: date | None = None, root=None, events_fn=
 
 
 def run(s: dict) -> str:
-    """A clicked 'Add to calendar' or 'Remind me': worker 14's writes (block list, log). Never sends."""
+    """A clicked 'Add to calendar' or 'Remind me': the computer module's writes (block list, log). Never sends."""
     from . import computer
     try:
         if s["kind"] == "calendar":

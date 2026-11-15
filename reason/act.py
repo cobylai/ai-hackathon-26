@@ -6,7 +6,7 @@ None means "not an action request and not a yes/no to one": answer() goes on to 
 other routes. Otherwise the Answer is either a preview ending in "Say or type yes ...",
 with one action held for TTL seconds, or the result of running/cancelling the held one.
 
-The partner's tools do the work: harness.computer.tools.app_open (allowlist, block list,
+The harness tools do the work: harness.computer.tools.app_open (allowlist, block list,
 log), harness.email.search + harness.email.draft.reply (drafts only; there is no send
 path anywhere). Drafts are saved only when the signed-in Gmail is TEST_ACCOUNT.
 """

@@ -303,7 +303,7 @@ def _web(question: str, today: date, root, search_fn=None, open_fn=None, ingest_
     from sufficiency.junk import looks_blocked
     if search_fn is None or open_fn is None:
         from harness.search import tools  # loads Playwright; web route only
-        from sufficiency import websearch  # partner's engine.search, then Bing
+        from sufficiency import websearch  # harness engine.search, then Bing
         search_fn = search_fn or websearch.search
         open_fn = open_fn or tools.open_page
     ingest_fn = ingest_fn or bank.ingest
@@ -415,7 +415,7 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
         a = _near_person(q, near, today, root)  # "Elena asked me" -> Lena (misheard by voice)
     elif (name := route.asked_name(q)):
         # Shaped like a person question but nobody by that name is a sender: stop here.
-        # A wrong answer about a person is worse than none (thinker ruling).
+        # A wrong answer about a person is worse than none.
         a = Answer(say("person", "no_sender", name=name[:1].upper() + name[1:]), "person")
     elif (got := chat.handle(q)) is not None:  # "who are you": a fixed reply about Flux
         a = got

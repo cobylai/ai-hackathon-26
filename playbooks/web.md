@@ -19,7 +19,7 @@ None to enter: the bank route hands over to this one when it falls short. Two pa
 1. Only a clear factual question goes on (RULES.md rule 9): it starts with a question word or ends with "?", and it isn't about the user's own things ("my"). Anything else never reaches the web: a question about the user goes to `reason-over-data.md`, anything else to `general.md`. Nothing is sent to a search engine.
 2. Check the network: one connect to www.bing.com:443, 2 seconds.
 3. Offline: say `offline` and stop.
-4. Online: search and read pages (`gather`: the partner's search, then Bing; at most 3 searches and 60 seconds). Each page goes to the same judge as the bank route, with the quote check.
+4. Online: search and read pages (`gather`: the harness search, then Bing; at most 3 searches and 60 seconds). Each page goes to the same judge as the bank route, with the quote check.
 5. Nothing found: the general route (`general.md`) answers from the model's own knowledge, labelled as such. Offline, it goes there directly.
 6. Found: answer, the quoted line (if the answer doesn't already contain it) and the page's url as the source. Do not file it yet: say `save_ask` and wait. On yes, file the answer in the bank under that url so it can be asked offline later, then say `saved`, `already_saved` or `save_failed`; on no, file nothing.
 

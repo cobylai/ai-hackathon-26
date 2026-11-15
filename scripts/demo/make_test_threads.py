@@ -5,7 +5,7 @@
 
 The template is a single-message thread page saved from the test account
 (gitignored, under data/). Each output page keeps Gmail's real message markup
-(the classes the partner's reader looks for) but has the sender name, address,
+(the classes the harness reader looks for) but has the sender name, address,
 date, subject and body replaced with one email from scripts/demo/make_test_mail.py
 (same senders, text and fixed seed as brief M). Gmail's scripts are dropped, so
 the page opens offline as a local file. Also writes truth.json (brief M's shape).

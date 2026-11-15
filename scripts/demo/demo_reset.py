@@ -93,7 +93,7 @@ def clear_state(bank: Path) -> None:
 
 
 def set_demo_mode() -> str:
-    """Demo mode on (worker 20's switch): scripts/flux-mode demo, else ~/.flux/mode = demo."""
+    """Demo mode on: scripts/flux-mode demo, else ~/.flux/mode = demo."""
     fm = ROOT / "scripts" / "flux-mode"
     if fm.exists():
         subprocess.run([str(fm), "demo"], cwd=ROOT, check=True)

@@ -10,7 +10,7 @@ By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 
 | Rule (2026-11-14 kickoff) | How |
 |---|---|
-| Every LLM call is Bonsai 2 | One client, `llm/client.py`, makes every model call. It talks only to the local Bonsai 2 server and raises unless `BONSAI_BASE_URL` is localhost. The partner's `harness/llm.ask` was rewired to call it. A repo search for other model callers (chat/completions, anthropic, openai, lmstudio, ollama, httpx/requests/urlopen) finds none outside `samples/`. The server script binds 127.0.0.1. |
+| Every LLM call is Bonsai 2 | One client, `llm/client.py`, makes every model call. It talks only to the local Bonsai 2 server and raises unless `BONSAI_BASE_URL` is localhost. `harness/llm.ask` calls it too. A repo search for other model callers (chat/completions, anthropic, openai, lmstudio, ollama, httpx/requests/urlopen) finds none outside `samples/`. The server script binds 127.0.0.1. |
 | Argmax is required | Push-to-talk speech-to-text runs through the Argmax Pro SDK (`voice/swift`, Whisper large-v3 turbo loaded from a local folder, downloads off). |
 | Runs with Wi-Fi off | Mail, coursework, notes and web answers are filed into a local bank (markdown files) while online; with Wi-Fi off, Flux answers from the bank and Apple Calendar's local copy. Web and draft requests say they're offline instead of failing. |
 | 32k context | Before every send the client counts tokens with Bonsai's own tokenizer and raises `BudgetError` if prompt plus reply would pass 32,768. It never truncates silently. Long mail is split at 6,000 tokens, and web pages are judged in 6,000-token chunks. |
@@ -116,9 +116,8 @@ FLUX_BANK_DIR=~/flux-demo-check-bank uv run python -m reason.playbook_check   # 
 - **Calendar:** one calendar (reading every calendar on a busy Mac took over a minute); repeating events show only once.
 - **No live Canvas sync:** coursework in the demo comes from saved Canvas pages rewritten into sample assignments; nothing files real Canvas pages into the live bank yet.
 - **Free/busy and drafts** need the meeting email's day and time to be readable; otherwise the suggestion is a plain "Draft a reply". Apple Mail opens only messages in the test account.
-- **Mac app:** Developer ID signed, notarization pending (until then, right-click → Open the first time). Each Mac needs its own Argmax key.
+- **Mac app:** Developer ID signed and notarized. Each Mac needs its own Argmax key.
 - **Final partner test round**, including Wi-Fi off by voice, has no results in the repo yet.
-- **Release page:** built on a cobydev branch, not deployed; link to come.
 
 ## Hackathon rules (from the 2026-11-14 kickoff)
 
@@ -130,4 +129,4 @@ FLUX_BANK_DIR=~/flux-demo-check-bank uv run python -m reason.playbook_check   # 
 
 ## Samples
 
-`samples/` is a copy of [iBrushC/local-ai-hackathon-samples](https://github.com/iBrushC/local-ai-hackathon-samples) @ `5c72a8d`, with two fixes so the Argmax sample builds against SDK 3.1.8: `Package.swift` declares tools-version 6.0 (with 5.10, `.macOS(.v15)` fails to compile), and `LiveCommand.swift` awaits `speakerKit.makeStreamSession` with `try await`. The Bonsai sample server (`samples/bonsai-models/mlx/start.sh`) also works, but `scripts/serve_bonsai.sh` is what Flux uses: headless, offline flags, localhost only.
+`samples/bonsai-models/` is the Bonsai 2 sample from [iBrushC/local-ai-hackathon-samples](https://github.com/iBrushC/local-ai-hackathon-samples) @ `5c72a8d`. Its server (`samples/bonsai-models/mlx/start.sh`) works, but `scripts/serve_bonsai.sh` is what Flux uses: headless, offline flags, localhost only.

@@ -87,7 +87,7 @@ PAGE = """<!doctype html>
   svg { display: block; flex: none; }
   [hidden] { display: none !important; }
 
-  /* saved chats: a column on the left (worker 18's list; hooks #chats #newchat .chday .chat[data-id].on .chtitle .chdel) */
+  /* saved chats: a column on the left (hooks #chats #newchat .chday .chat[data-id].on .chtitle .chdel) */
   #chats { width: 232px; flex: none; background: var(--side); border-right: 1px solid var(--line); display: none;
            flex-direction: column; min-height: 0; }
   body.chatsopen #chats { display: flex; }

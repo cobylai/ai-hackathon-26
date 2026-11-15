@@ -20,7 +20,7 @@ A plain "draft a reply to …" goes to the compose route (`compose.md`, Open in 
 2. Match `draft` or `open`. If neither matches, this route passes and the other routes run.
 3. Open: a listed app gets `open_app_preview`. If the target has a `page` word, pick a bank entry whose source is a web or file link: the best match for any named words, otherwise the Canvas assignment due soonest, otherwise the newest link. Show `open_page_preview` and hold the action.
 4. Draft: offline says `needs_net`. Otherwise take the sender's newest email in the bank, have the model write the body with the prompt below, show `draft_preview`, and hold the action.
-5. On yes, run it with the partner's tools. An app goes through `app_open` (allow list, block list, log). A page goes through `open_path`, logged as `Browser open_url`. A draft first checks that the Gmail tab title shows `ilovelocalai@gmail.com`, then runs `email_search` by the sender's address, picks the thread with the same subject, and calls `draft.reply`.
+5. On yes, run it with the harness tools. An app goes through `app_open` (allow list, block list, log). A page goes through `open_path`, logged as `Browser open_url`. A draft first checks that the Gmail tab title shows `ilovelocalai@gmail.com`, then runs `email_search` by the sender's address, picks the thread with the same subject, and calls `draft.reply`.
 
 ## May look
 
@@ -68,7 +68,7 @@ Previews end with `ask_yes`. A draft preview shows the head, To and Subject line
 
 - Never act without showing exactly what it will do and getting a yes.
 - Never send mail. Draft only, and only in `ilovelocalai@gmail.com`.
-- Never open an app that isn't on the list or is on the partner's block list.
+- Never open an app that isn't on the list or is on the harness block list.
 - Never let the model choose the action, the recipient or the thread. The model only writes the draft body.
 
 ## Prompt
