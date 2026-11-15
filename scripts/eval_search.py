@@ -112,6 +112,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--ids", default=None, help="comma-separated question ids")
     parser.add_argument("--json", type=Path, default=None, help="write raw rows here")
+    parser.add_argument(
+        "--pause-seconds", type=float, default=0.0, help="wait between questions (pacing)"
+    )
     args = parser.parse_args(argv)
 
     items = load_questions(args.questions, args.limit)
@@ -120,7 +123,9 @@ def main(argv: list[str] | None = None) -> int:
         items = [item for item in items if item["id"] in wanted]
     rows: list[dict] = []
     try:
-        for item in items:
+        for index, item in enumerate(items):
+            if index and args.pause_seconds:
+                time.sleep(args.pause_seconds)
             row = run_one(item)
             rows.append(row)
             print(

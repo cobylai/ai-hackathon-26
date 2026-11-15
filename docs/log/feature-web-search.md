@@ -21,3 +21,5 @@
 - S8 fix 3: `rank.top_chunks` with k>=2 always keeps the page's opening chunk and lets BM25 fill the remaining slot, so definitions and dates in the first paragraph are read even when the question words are spread over a long page; k=1 still returns the single best chunk.
 - S8 fix 4: the loop opens at most 2 pages per round (was 3); the third page rarely changed an answer in Run 1 and dominated the model input (q05: 14 calls, 15.6k chars).
 - S8 fix 5: `llm.ask` leaves the server's exact `prompt_tokens`/`completion_tokens` in `llm.last_usage` (empty on failure, additive to the shared seam), and `scripts/eval_search.py` now prints a real prompt-token column instead of estimating chars/4.
+- S8 Run 3 (cold cache, 20 s pacing, all five fixes): 12/12 pass, median 19.0 s, median 9,900 chars / 2,842 real prompt tokens, 47 pages, 1 BLOCKED (2.1%), 140 model calls. Pass rate and time targets met; the 8,000-char input target is still missed by 24%.
+- S8 Run 3 note: Google answered every query this time, so the wall fixes are covered by tests but were not exercised live. Run 1's six productive questions went 4/6 to 6/6, mostly from the opening-chunk rule (q02, q04).

@@ -78,13 +78,53 @@ The sentence existed on some opened page but not in the two BM25 chunks that wer
 or it was dropped at the note step. Definition and date answers usually sit in a page's
 opening chunk, which BM25 does not favour when the question words are all over the page.
 
-## What I would change, in order
+## Run 3, after the five fixes (cold cache, 20 s between questions)
 
-1. **Classify the DDG challenge as `BLOCKED`** (add "bots use duckduckgo too" / "confirm this search was made by a human" to `state.BLOCKED_PHRASES`). Then `search` tells the model `BLOCKED` instead of "0 results", and the tool status is honest.
-2. **Only remember the fallback when it works.** Set the ten-minute window only if DuckDuckGo returned results; when both engines fail, clear it (or retry Google after a minute) so a dead DDG cannot poison the rest of the session.
-3. **Always rank the page's opening chunk**, or use k=3 at size 400, for definition and date questions. That is where "HTTP stands for Hypertext Transfer Protocol" and "the wall fell in 1989" usually are.
-4. **Spend fewer model calls.** q05 used 14 calls and 15.6k chars for one answer; two pages per round would have roughly halved it without changing the result.
-5. **Report real tokens.** `ask` throws away the `usage` block; returning it would replace the chars/4 estimate with exact prompt tokens.
+The five fixes below were applied first, one commit each: DDG challenge classified `BLOCKED`,
+fallback remembered only on success, opening chunk always read, two pages per round, real prompt
+tokens from `ask`. The page cache was cleared before the run (backup kept outside the repo), so it
+is cold like Run 1. `--pause-seconds 20` between questions; still no wall workaround.
+
+| # | kind | pass | rounds | pages | blocked | model calls | input chars | prompt tokens | seconds |
+|---|---|---|---|---|---|---|---|---|---|
+| q01 | weather | yes | 2 | 2 | 0 | 9 | 7827 | 2411 | 16.2 |
+| q02 | date | yes | 3 | 5 | 0 | 13 | 13399 | 3687 | 25.3 |
+| q03 | date | yes | 3 | 4 | 0 | 12 | 10583 | 3177 | 18.9 |
+| q04 | definition | yes | 2 | 4 | 0 | 10 | 7368 | 1897 | 11.7 |
+| q05 | definition | yes | 3 | 4 | 0 | 13 | 12689 | 3606 | 27.9 |
+| q06 | definition | yes | 3 | 4 | 0 | 11 | 8827 | 2382 | 14.7 |
+| q07 | recent | yes | 3 | 5 | 0 | 15 | 14513 | 4423 | 28.2 |
+| q08 | recent | yes | 3 | 4 | 0 | 11 | 9320 | 2776 | 18.3 |
+| q09 | howto | yes | 3 | 6 | 0 | 12 | 10479 | 2909 | 22.4 |
+| q10 | howto | yes | 3 | 3 | 1 | 11 | 8163 | 2270 | 19.2 |
+| q11 | fact | yes | 3 | 3 | 0 | 12 | 12028 | 3497 | 24.2 |
+| q12 | fact | yes | 3 | 3 | 0 | 11 | 8922 | 2620 | 17.2 |
+
+- **pass 12/12** (target 9/12, met)
+- median **19.0 s** (target under 20 s, met)
+- median **9,900 chars** of model input, median **2,842 real prompt tokens** (target under 8,000 chars, missed by 24%)
+- 47 pages opened, **1 BLOCKED** (2.1%), 140 model calls, 124,118 chars / 35,655 tokens in total
+- rounds: two questions finished in 2 rounds, ten used all 3
+- the six questions that had reached the web in Run 1 now score **6/6** at median 17.5 s and 9,705 chars (Run 1: 4/6, 20.1 s, 10,661 chars)
+
+No search-level wall appeared this run: Google answered every query, so the wall fixes were
+exercised by their tests rather than live. The single BLOCKED page (q10) was one result behind a
+bot check; the loop skipped it and answered from the others.
+
+## The five fixes, applied
+
+1. **Classify the DDG challenge as `BLOCKED`** (`a09c632`). "bots use duckduckgo too", "confirm this search was made by a human" and "select all squares containing" are now in `state.BLOCKED_PHRASES`; `search` reports `BLOCKED` instead of "0 results".
+2. **Remember the fallback only when it works** (`b58c9bc`). The ten-minute window is set only when DuckDuckGo returns results, and cleared when both engines fail or a remembered fallback stops answering.
+3. **Always read the page's opening chunk** (`6d0271e`). With k=2 the first chunk keeps one slot and BM25 fills the other; this is what turned q02 and q04 from failures into passes. k=1 still returns the single best chunk.
+4. **Two pages per round** (`6a5ae4c`). Each round now opens at most two pages. Median model calls per question is unchanged (11.5, the same as Run 1's productive six) because every question now reaches three rounds, but the per-round cost is bounded lower: the worst question needed 15 calls and 28.2 s (Run 1: 14 calls, 35.5 s).
+5. **Real token counts** (`a207a97`). `ask` leaves the server's `prompt_tokens`/`completion_tokens` in `llm.last_usage`, and the eval reports them instead of chars/4.
+
+## Still open
+
+- **Input is still 24% over the 8,000-char target.** The note calls dominate: up to 4 chunks per round at ~600 chars plus prompt text. Options: one chunk per page once the opening chunk has scored, a smaller results listing, or accept the real-token metric (median 2,842) as the budget instead of characters.
+- **The char target should probably become a token target**, now that exact tokens exist; 8,000 chars was only ever a stand-in for about 2,000 tokens.
+- **Record which engine answered each query.** Run 1 walled Google after ~25 searches, Run 3 saw none, so "pass rate" depends on Google's mood; an engine column (google/ddg) would say which.
+- **Three rounds is the common case** (10 of 12). The second page per round is cheap, but a stop rule such as "enough after a round that added two notes" might cut a round without losing answers.
 
 Measurement: input chars = `len(llm.SYSTEM) + len(prompt)` for every `ask` call, which is
 what the model is sent, not counting the browser's page text that never reached it.
