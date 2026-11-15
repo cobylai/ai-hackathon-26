@@ -10,7 +10,7 @@ import os
 import re
 from pathlib import Path
 
-FOLDERS = ("course", "person", "other")
+FOLDERS = ("course", "person", "other", "me")  # me: notes the user asked Muse to remember (bank/me.py)
 FIELDS = ("id", "kind", "folder", "source", "sender_name", "sender_address", "sent_date",
           "subject", "ask", "deadlines", "course", "topic", "sent_date_guessed", "ingested_at")
 

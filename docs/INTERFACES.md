@@ -174,6 +174,26 @@ rebuild_index()                  # -> path of data/bank/index.md (every ingest a
   ("HIST 2147 Maps and Empires"), `subject` = assignment title, `source` = the assignment page's
   `file://` link, `deadlines` = the due date and time read from the page. They show up in `due`
   like mail and stay out of the person route (it only uses `kind="email"` senders). See `docs/canvas.md`.
+- **Notes about the user** (`bank/me.py`), no model call:
+  ```python
+  remember(fact, today=None)  # -> {"status": "added" | "duplicate", "path", "entry"}; the user's own words
+  notes()                     # -> [entry], newest first
+  forget(text)                # -> {"status": "removed" | "none" | "ambiguous", "removed": entry|None, "candidates": [entry]}
+                              #    most shared words wins; a tie removes nothing; "" removes the newest
+  ```
+  A note is an ordinary entry with `kind="me"`, `folder="me"` (`data/bank/me/…`), `sender_name="you"`, subject and body the fact, no deadlines. So `search` and the index find it.
+- **Person pages** (`bank/people.py`, `from bank import people`), no model call. One file per person, `<bank>/people/<slug>.md`, JSON front matter `name, aliases, relation, facts: [{fact, source, added}], updated_at` and a readable body. No files until something writes one. Pages aren't entries: `search` and `due` don't read them.
+  ```python
+  people.set_fact(name, fact, source=None)  # -> page; made if missing; exact repeats skipped
+  people.set_relation(name, relation)       # -> page; "lab partner", "TA for ENGRD 2700"
+  people.add_alias(name, alias)             # -> page
+  people.remove_fact(name, fact)            # -> bool
+  people.get(name)   # -> {name, aliases, relation, facts, updated_at, path, entries} | None
+                     #    name: full name, alias, or one word of the name; entries = by_person, live, newest first;
+                     #    a sender with no page gets an empty page (path None); no page and no mail -> None
+  people.names()     # -> [name]
+  ```
+  This is the API the discovery piece writes to. Only write what the user said or confirmed, or what the mail shows (`playbooks/RULES.md` rule 7); put the entry path or url in `source`.
 
 ## 6. Reasoning layer — **built** (`reason/`, on `main`)
 
@@ -183,10 +203,16 @@ One entry point for typed and spoken questions. Code picks the route, never the 
 from reason import answer
 answer(question, today=None) -> Answer
     # Answer: text (ends with "Source: sender, Nov 12" or the url), route, sources, seconds
-    # route: "due" | "person" | "bank" | "web" | "offline" | "not_found"
+    # route: "remember" | "forget" | "about_me" | "people" | "due" | "calendar" | "person"
+    #        | "bank" | "web" | "offline" | "not_found"
 ```
 
+- **Remember / forget / about_me / people** (checked first, `reason/me.py`, `playbooks/remember.md`, `playbooks/people.md`), all code, no model call:
+  - "Remember (that) …", "note that …", "don't forget …" files a note (`bank.remember`). "Forget (that) …" deletes the best match; a tie asks which. "What do you know about me" lists the notes.
+  - "Who is <name>" or "what do you know about <name>", when every word is a sender's or a page's name: their page (relation, facts) and their newest 5 emails.
+  - "When is my lab" reaches a note through the bank route; the source reads "your note, Nov 14".
 - **Due:** the question says due/deadline. Code picks the date range, calls `bank.due` and writes the list. No model call.
+- **Calendar:** checked after due. Triggers on "calendar", "schedule", "my/next meeting/event/appointment", "what do I have", "am I free". `applecal.events(start, end)` reads one Calendar.app calendar with osascript (`MUSE_CALENDAR`, default "Muse demo"), over the due route's date ranges or the next upcoming event. Code writes the list. No model call, no network. Details are in `docs/calendar.md`.
 - **Person:** a question word is a sender's name.
   - "What did <name> ask / want / need": code lists that sender's newest 8 entries as date, subject and ask (or "no ask" and the summary). No model call.
   - Other person questions: `bank.by_person`, then Bonsai answers from those entries only.
@@ -198,6 +224,8 @@ answer(question, today=None) -> Answer
 - **Chat loop:** `python -m reason [--today YYYY-MM-DD]`. An empty line records voice; the next Enter stops it.
 - **Chat window:** `python -m reason.web [--today] [--port 8765]` serves one local page from the standard library, with no remote assets. It has a type box, hold-to-talk, a source line under each answer, and an "online/offline · N items in bank" label. Clicking the label lists the bank (`GET /bank`).
 - **Bank to use:** set `MUSE_BANK_DIR`. The demo uses `~/muse-demo-bank` (sample mail, see `docs/integration.md`).
+- **Playbooks** (`playbooks/`): one markdown file per route (`remember` (remember, forget, about_me), `people`, `due`, `calendar`, `person`, `bank`, `web`) plus `RULES.md` for every route. Code reads each route's trigger patterns, reply wording, not-found lines and prompt text from its file (`reason/playbook.py`: `say(book, key, **values)`, `prompt(book, key)`, `trigger(book, key)`), read once per start. The order of steps stays in code; `STEPS` in `reason/answer.py` must match each file's numbered steps (a test checks it). **A new route adds its own `playbooks/<route>.md`** in the same sections (listed in `RULES.md`), with examples, and its count in `STEPS`.
+- **Checker:** `MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check [--today 2026-11-15] [--only due]` runs every playbook's examples on a temporary copy of the bank, network blocked. Keep a playbook or prompt change only if it passes and brief M's score (`scripts/make_test_mail.py check`) doesn't drop.
 
 ## 7. Voice input — **built** (`voice/`, on `main`)
 

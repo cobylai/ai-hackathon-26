@@ -11,12 +11,14 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
-from . import store
+from . import people, store
 from .index import rebuild_index
+from .me import forget, notes, remember
 from .query import by_person, due, search
 from .store import bank_dir
 
-__all__ = ["ingest", "search", "by_person", "due", "rebuild_index", "bank_dir"]
+__all__ = ["ingest", "search", "by_person", "due", "rebuild_index", "bank_dir",
+           "remember", "notes", "forget", "people"]
 
 
 def ingest(text: str, source: str, kind: str, *, sender_name: str | None = None,

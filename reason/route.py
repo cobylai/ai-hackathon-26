@@ -1,6 +1,7 @@
 """Routing in code: which route a question takes, and the date range for due questions.
 
 Pure functions, no model, no network, no bank reads (the sender list is passed in).
+Trigger words come from playbooks/<route>.md (reason/playbook.py).
 """
 from __future__ import annotations
 
@@ -9,11 +10,12 @@ from datetime import date, timedelta
 
 from bank.dates import resolve_date
 
+from . import playbook
+
 WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 _WD = {d: i for i, d in enumerate(WEEKDAYS)}
 _WD_RE = r"(" + "|".join(WEEKDAYS) + r")"
 
-_DUE = re.compile(r"\b(due|deadlines?)\b", re.I)
 
 # Title words and automated-sender words never count as a person's name.
 TITLES = set("prof professor dr mr mrs ms mx sir dean".split())
@@ -32,7 +34,7 @@ _WORD = re.compile(r"[A-Za-z][A-Za-z'\-]*")
 
 
 def is_due(question: str) -> bool:
-    return bool(_DUE.search(question or ""))
+    return bool(playbook.trigger("due", "due").search(question or ""))
 
 
 def _monday(d: date) -> date:
@@ -76,6 +78,22 @@ def due_range(question: str, today: date) -> tuple[date, date, str]:
     return today, today + timedelta(days=6), "in the next 7 days"
 
 
+
+
+def is_calendar(question: str) -> bool:
+    """Calendar questions: 'what's on my calendar tomorrow', 'when is my next meeting',
+    'what do I have this week'. Checked after due and before person. 'What did <name>
+    say about the meeting' stays a person question."""
+    q = question or ""
+    return bool(playbook.trigger("calendar", "calendar").search(q)
+                or playbook.trigger("calendar", "next_event").search(q)) and not asked_name(q)
+
+
+def is_next_event(question: str) -> bool:
+    """'When is my next meeting' / 'next event': the first upcoming event."""
+    return bool(playbook.trigger("calendar", "next_event").search(question or ""))
+
+
 def _day(d: date) -> str:
     return f"{d:%a} {d:%b} {d.day}"
 
@@ -90,22 +108,17 @@ def name_words(sender_name: str | None, sender_address: str | None) -> set[str]:
     return {w.lower() for w in words if len(w) >= 3 and w.lower() not in TITLES}
 
 
-_ASKED = re.compile(r"\bwhat\s+(?:did|has|does|do)\s+([A-Za-z][A-Za-z'\-]*)\s+(?:ever\s+|just\s+)?"
-                    r"(?:ask|asked|say|said|send|sent|want|wanted)\b", re.I)
 _PRONOUNS = set("i you he she they we it someone anyone everyone people that this".split())
-
-
-_ASK_VERB = re.compile(r"\b(ask|asks|asked|asking|want|wants|wanted|need|needs|needed)\b", re.I)
 
 
 def is_ask_question(question: str) -> bool:
     """'What did Emily ask / want / need': answered as a code-written list of asks."""
-    return bool(_ASK_VERB.search(question or ""))
+    return bool(playbook.trigger("person", "ask").search(question or ""))
 
 
 def asked_name(question: str) -> str | None:
     """The name in "what did <name> ask/say/send/want", or None (pronouns don't count)."""
-    m = _ASKED.search(question or "")
+    m = playbook.trigger("person", "asked_name").search(question or "")
     if not m:
         return None
     name = re.sub(r"'s$|'$", "", m.group(1))
@@ -133,3 +146,49 @@ def person_in(question: str, names: set[str]) -> str | None:
         elif w not in COMMON:  # lowercase mode, or the sentence-case first word
             return w
     return None
+
+
+# ---- notes about the user, and person pages (playbooks/remember.md, people.md) ----
+
+_LEAD = re.compile(r"^[\s\-–•*]*(?:(?:hey|ok|okay)[\s,]+)?(?:(?:muse|hearth)[\s,!.:]+)?(?:please[\s,]+)?", re.I)
+
+
+def _lead(question: str) -> str:
+    """Drop what comes before the command: a list dash from voice, "Muse,", "please"."""
+    return _LEAD.sub("", question or "", count=1).strip()
+
+
+def _after(book: str, key: str, question: str) -> str | None:
+    t = _lead(question)
+    m = playbook.trigger(book, key).match(t)
+    return None if not m else t[m.end():].strip(" ,:")
+
+
+def remember_text(question: str) -> str | None:
+    """'Remember that my lab is Tuesdays at 2' -> 'my lab is Tuesdays at 2'. A question
+    ("remember that thing Felix said?") or "do you remember …" is not a command: None."""
+    if (question or "").strip().endswith("?"):
+        return None
+    rest = _after("remember", "remember", question)
+    return None if rest is None else rest.rstrip(" .!")
+
+
+def forget_text(question: str) -> str | None:
+    """'Forget that my lab is Tuesdays at 2' -> 'my lab is Tuesdays at 2'; 'forget that' -> ''."""
+    rest = _after("remember", "forget", question)
+    if rest is None:
+        return None
+    return "" if rest.lower().strip(" .!") in ("", "it", "this", "that") else rest
+
+
+def is_about_me(question: str) -> bool:
+    return bool(playbook.trigger("remember", "about_me").search(question or ""))
+
+
+def who_text(question: str) -> str | None:
+    """'Who is Felix?' / 'What do you know about Felix Ambrose?' -> 'Felix' / 'Felix Ambrose'."""
+    rest = _after("people", "who", question)
+    if rest is None:
+        return None
+    rest = re.sub(r"'s$|'$", "", rest.strip(" ?.!"))
+    return rest or None
