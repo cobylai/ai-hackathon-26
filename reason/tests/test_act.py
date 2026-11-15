@@ -14,6 +14,7 @@ from unittest import mock
 
 from bank import store
 from reason import act, answer
+from reason.playbook import say
 from reason.tests.test_reason import E
 
 FELIX = E("b00000000001", "person", "Felix Wu", "felix.wu@example.com", "2026-11-13",
@@ -68,7 +69,7 @@ class Act(unittest.TestCase):
         a = self.h("open my calendar")
         self.assertEqual(a.route, "act")
         self.assertIn("I'll open Calendar.", a.text)
-        self.assertIn(act.ASK_YES, a.text)
+        self.assertIn(say("act", "ask_yes"), a.text)
         self.assertTrue(act.waiting())
         self.assertEqual(self.calls, [])
         a = self.h("Yes.")
@@ -83,20 +84,20 @@ class Act(unittest.TestCase):
 
     def test_no_cancels(self):
         self.h("open notes")
-        self.assertEqual(self.h("no").text, act.CANCELLED)
-        self.assertEqual(self.h("yes").text, act.NOTHING_HELD)
+        self.assertEqual(self.h("no").text, say("act", "cancelled"))
+        self.assertEqual(self.h("yes").text, say("act", "nothing_held"))
         self.assertEqual(self.calls, [])
 
     def test_other_input_drops_the_held_action(self):
         self.h("open notes")
         self.assertIsNone(self.h("what is due Monday"))
-        self.assertEqual(self.h("yes").text, act.NOTHING_HELD)
+        self.assertEqual(self.h("yes").text, say("act", "nothing_held"))
         self.assertEqual(self.calls, [])
 
     def test_held_action_expires(self):
         self.h("open notes")
         with mock.patch("reason.act.time.monotonic", return_value=act._held.at + act.TTL + 1):
-            self.assertEqual(self.h("yes").text, act.NOTHING_HELD)
+            self.assertEqual(self.h("yes").text, say("act", "nothing_held"))
         self.assertEqual(self.calls, [])
 
     def test_app_not_on_list_is_refused(self):
@@ -156,7 +157,7 @@ class Act(unittest.TestCase):
 
     def test_draft_offline_says_it_needs_a_connection(self):
         a = self.h("draft a reply to Felix saying yes", online=lambda: False)
-        self.assertEqual(a.text, act.NEEDS_NET)
+        self.assertEqual(a.text, say("act", "needs_net"))
         self.assertFalse(act.waiting())
 
     def test_draft_unknown_sender(self):
@@ -216,7 +217,7 @@ class Act(unittest.TestCase):
     def test_answer_routes_actions_first(self):
         with mock.patch("reason.act._default_online", return_value=False):
             a = answer("draft a reply to Felix saying yes", root=self.root)
-        self.assertEqual((a.route, a.text), ("act", act.NEEDS_NET))
+        self.assertEqual((a.route, a.text), ("act", say("act", "needs_net")))
 
     def test_never_sends(self):
         src = Path(act.__file__).read_text()

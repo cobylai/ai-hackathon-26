@@ -28,7 +28,7 @@ GATHER_SECONDS = 60
 
 # Wording and prompts come from playbooks/<route>.md. STEPS is how many numbered steps
 # each playbook lists; the code below runs them in that order (a test checks the count).
-STEPS = {"due": 5, "calendar": 4, "person": 4, "bank": 4, "web": 5}
+STEPS = {"act": 5, "due": 5, "calendar": 4, "person": 4, "bank": 4, "web": 5}
 PERSON_SYSTEM = playbook.prompt("person", "person_system")
 PERSON_PROMPT = playbook.prompt("person", "person_prompt")
 PERSON_HINT = playbook.prompt("person", "person_hint")
