@@ -29,7 +29,7 @@ round covers what landed since. Start from `main` (8113e7a or later).
   with dates in tables, a grouped bank sidebar (mail, coursework, about you,
   people), Yes/Cancel shown inline, and a talk control with three states.
 - **Mac app** (`app/`): a menu-bar app with a Spotlight-style panel.
-  **Control-Space** tap shows it; hold to talk. It asks once for your own
+  **Fn-Space** tap shows it; hold to talk (it asks for Accessibility once). It asks once for your own
   Argmax key (kept in the Keychain) and checks the setup at launch. See
   "Mac app" in `docs/window.md`.
 
@@ -102,7 +102,7 @@ offline.
 - Mac app: `app/build.sh`, then open `app/build/Muse.app`. On first launch,
   enter your own Argmax key and allow the mic and Calendar prompts. "Check
   setup" in the menu should list no problems. Then, from another app: tap
-  Control-Space, type a question, press Escape; hold Control-Space, say
+  Fn-Space, type a question, press Escape; hold Fn-Space, say
   "what's due this week", and let go. Quit Muse should leave no stray
   servers (`lsof -iTCP:8765 -sTCP:LISTEN`). The app runs the servers from the
   checkout named in `MUSE_REPO` (default `~/code/ai-hackathon-26`), so point it
