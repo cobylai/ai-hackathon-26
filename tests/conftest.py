@@ -33,6 +33,18 @@ class Site:
         return f"{self.base_url}/{name.lstrip('/')}"
 
 
+@pytest.fixture(scope="session", autouse=True)
+def stop_shared_browser():
+    """Stop the shared browser session (browser.tools' get_session) at the end
+    of the run, so a pytest exit never leaves a Chromium behind."""
+    yield
+    from harness.browser import session as session_mod
+
+    if session_mod._session is not None:
+        session_mod._session.stop()
+        session_mod._session = None
+
+
 @pytest.fixture(scope="session")
 def site():
     handler = partial(_QuietHandler, directory=str(PAGES_DIR))
