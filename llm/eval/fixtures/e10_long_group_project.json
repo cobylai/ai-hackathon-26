@@ -1,0 +1,27 @@
+{
+  "id": "e10_long_group_project",
+  "task": "extraction",
+  "note": "long, several deadlines",
+  "email": "From: Aisha Rahman <ar512@univ.example.edu>\nDate: Fri, 13 Nov 2026 19:33:02 -0500\nSubject: INFO 1200 group project: status, plan, and asks\n\nHi team,\n\nQuick recap of where we are. Interviews: we have six done, Lena did two, I did three, Theo did one. The affinity diagram is about half done in the board. Slides: nothing yet. Report: outline exists.\n\nFor the next steps I think we should split by section. I'll do the intro and methods. Theo, findings. Lena, the recommendations. And could you (yes you!) take the slides? Ideally a first draft by Sunday night so we can rehearse.\n\nThe presentation itself is Wednesday at 2:30 in class, and the written report is due the Friday after. Also, the professor mentioned office hours are moved this week but I don't remember to when.\n\nLet me know if this split works.\nAisha",
+  "expected": {
+    "sender": "ar512@univ.example.edu",
+    "sender_name": "Aisha Rahman",
+    "date": "2026-11-13",
+    "ask_keywords": [
+      [
+        "slides"
+      ]
+    ],
+    "deadline_keywords": [
+      [
+        "sunday"
+      ],
+      [
+        "wednesday"
+      ],
+      [
+        "friday"
+      ]
+    ]
+  }
+}

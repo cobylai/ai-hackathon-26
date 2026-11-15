@@ -1,0 +1,9 @@
+{
+  "id": "p03_ads_no",
+  "task": "sufficiency",
+  "note": "ad farm",
+  "question": "What time does the library close on Sunday?",
+  "url": "https://deals.example.com/library-hours",
+  "page": "TOP 10 DEALS ON LAPTOPS THIS WEEK!!! Click here to save up to 60%. Sponsored: Best study lamps of 2026. You won't believe these dorm hacks. Subscribe for exclusive coupons. Advertisement. Advertisement. Related: Library chairs ranked.",
+  "expected": "not enough"
+}

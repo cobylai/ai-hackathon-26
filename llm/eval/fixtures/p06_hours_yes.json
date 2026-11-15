@@ -1,0 +1,9 @@
+{
+  "id": "p06_hours_yes",
+  "task": "sufficiency",
+  "note": "",
+  "question": "Is the gym open on Thanksgiving Day?",
+  "url": "https://rec.example.edu/hours",
+  "page": "Recreation Center Hours - Thanksgiving Break\nWed Nov 25: 6am-6pm\nThu Nov 26 (Thanksgiving): CLOSED\nFri Nov 27: 10am-4pm\nSat Nov 28 - Sun Nov 29: 10am-6pm\nRegular hours resume Monday Nov 30.",
+  "expected": "enough"
+}

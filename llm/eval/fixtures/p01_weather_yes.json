@@ -1,0 +1,9 @@
+{
+  "id": "p01_weather_yes",
+  "task": "sufficiency",
+  "note": "today is Friday; Saturday afternoon is covered",
+  "question": "Will it rain in Ithaca tomorrow afternoon?",
+  "url": "https://weather.example.com/ithaca",
+  "page": "Ithaca, NY - 10 Day Forecast\nToday: Cloudy, high 44F, low 33F.\nSaturday: Rain likely after 1pm, 80% chance of precipitation, high 47F.\nSaturday night: Showers ending by midnight, low 36F.\nSunday: Partly sunny, high 41F.\nUpdated 6:10 AM.",
+  "expected": "enough"
+}

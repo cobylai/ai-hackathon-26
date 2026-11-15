@@ -1,0 +1,9 @@
+{
+  "id": "p04_unrelated_no",
+  "task": "sufficiency",
+  "note": "unrelated article with a misleading dollar figure",
+  "question": "How much does the campus bus pass cost?",
+  "url": "https://news.example.com/article/4471",
+  "page": "City council approves new bike lanes downtown\nThe council voted 5-2 on Tuesday to add protected bike lanes on State Street. Construction begins in spring. Supporters said the lanes improve safety; opponents worried about parking. The project costs $1.2 million, funded by a state grant.",
+  "expected": "not enough"
+}
