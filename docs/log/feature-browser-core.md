@@ -15,3 +15,11 @@
 - B10 note: whole Playwright cache is 1.3 GB because WebKit and the headless shell are installed too; ~/.harness is 56 MB, 47 MB of it the opt-in uBOL copy. Numbers in docs/plan/notes-bench.md.
 - B9: `scripts/live_check.py` visited 15 sites with Playwright and patchright: 5/15 unusable on Playwright (2 BLOCKED, 3 ERR), 4/15 on patchright (3 BLOCKED, 1 ERR); medians 0.37 s vs 0.32 s. Only weather.com changed from BLOCKED to OK.
 - B9 recommendation: stay on plain Playwright. patchright costs a second 570 MB browser build and removed no real wall. Notes in docs/plan/notes-botwalls.md; "Just a moment" is missing from the B6 phrase list (left open).
+- B6 test: challenge-iframe fixture now waits for the frame before classifying; removes a flake seen once in four full-file runs.
+- B8 test-only: sign-in command is checked for no remote-debugging/headless/automation flags, mock keychain parity, and refusal on a locked profile. The human sign-in run is still pending.
+- B6 fix: "captcha" and "access denied" now only count on wall-sized pages (body <= 1500 chars). Wikipedia's CAPTCHA article (29k chars) was BLOCKED, now OK; Reddit and StackOverflow still BLOCKED live.
+- B4 fix: when trafilatura keeps <20% of the visible body (BBC homepage: 285 of 8,427 chars), fall back to body text and drop sub-20-char menu labels. BBC goto now returns 1,293 chars of headlines; article extraction unchanged.
+- B5 fix: click/type now refuse numbers taken before a navigation (or with no list) and return ERR "call elements again" instead of clicking a stale data-hn that may belong to a different control.
+- B7 fix: a locked profile (e.g. an open sign-in window) now returns "ERR local | profile in use; close the other Chromium window and retry" instead of a traceback; any other start failure returns ERR too. Blocking is now keyed on the page object, not its id.
+- B5 fix: `elements` now reports "40 of 62 elements" when the list is capped, instead of counting only the lines it printed (`list_elements_counts` returns shown/matched).
+- CI: added `.github/workflows/tests.yml` (uv + Playwright Chromium on ubuntu, runs pytest on feature/* pushes and PRs). Made the CLI test find the browser cache portably; 14 tool tests green locally.
