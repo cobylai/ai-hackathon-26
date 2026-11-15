@@ -118,6 +118,20 @@ it needs no babysitting once the profile is signed in.
   opens can leave a signature-only "(no subject)" draft in Drafts. The
   self-check's compose step is opt-in for the same reason.
 
+## From the shell
+
+Any registered tool can be run without writing Python:
+
+```bash
+uv run python scripts/run_tool.py --list
+uv run python scripts/run_tool.py email_search sender=me days=7
+uv run python scripts/run_tool.py email_read n=1
+```
+
+Arguments are `name=value` pairs, coerced to the types `Tool.args` declares, so
+this is also a quick check that the registry contract the reasoning layer uses
+is intact. Exit code is 0 only when the tool answers `OK`.
+
 ## Tests
 
 ```bash
