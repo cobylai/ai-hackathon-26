@@ -13,3 +13,4 @@ app/dist/
 
 # coverage artifacts
 .coverage
+htmlcov/
