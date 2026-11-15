@@ -192,8 +192,8 @@ class SearchRoute(Bank):
                              opened=["https://example.org/peru"], message="")
         ingested = {}
 
-        def fake_ingest(text, source, kind, root=None):
-            ingested.update(text=text, source=source, kind=kind)
+        def fake_ingest(text, source, kind, subject=None, root=None):
+            ingested.update(text=text, source=source, kind=kind, subject=subject)
             return {"status": "added"}
 
         with mock.patch("sufficiency.gather", return_value=gr):
@@ -204,7 +204,11 @@ class SearchRoute(Bank):
         self.assertEqual(a.route, "web")
         self.assertEqual(a.sources, ["https://example.org/peru"])
         self.assertIn("Source: https://example.org/peru", a.text)
-        self.assertEqual(ingested, {"text": page, "source": "https://example.org/peru", "kind": "page"})
+        self.assertEqual((ingested["source"], ingested["kind"]), ("https://example.org/peru", "page"))
+        self.assertIn("Answer: Lima", ingested["text"])
+        self.assertIn('"Lima is the capital of Peru."', ingested["text"])
+        self.assertEqual(ingested["subject"], "what is the capital of Peru Lima")
+        self.assertEqual(a.text.count('"Lima is the capital of Peru."'), 1)
 
     def test_web_not_found(self):
         gr = SimpleNamespace(found=False, answer=None, evidence=None, source=None,

@@ -25,7 +25,8 @@ Last updated: 2026-11-14, after the partner code review. Each item below is mark
 | Bonsai client | Coby | `llm/` |
 | Sufficiency check (the search loop) | Coby | `sufficiency/` |
 | Context store, plus the email sync loop | Coby | `bank/` |
-| Reasoning layer (decision tree), UI, voice input | Coby | not started |
+| Reasoning layer (decision tree) | Coby | `reason/` |
+| UI, voice input | Coby | not started |
 
 ## 2. Browser contract — **agreed shape, adapters not built yet** (thinker ruling 2026-11-14; Coby to confirm with partner)
 
@@ -159,15 +160,33 @@ rebuild_index()                  # -> path of data/bank/index.md (every ingest a
 - **Data location:** `data/bank/` by default, or `$MUSE_BANK_DIR` if that is set. It is gitignored (`data/`) because it will hold real email.
 - **Preload:** `python -m bank.load <folder> --kind email|page`.
 
-## 6. Voice input — **planned** (Argmax, branch `argmax-runtime-test`)
+## 6. Reasoning layer — **built** (`reason/`, branch `reasoning-layer`)
+
+One entry point for typed (and later spoken) questions. Code picks the route, never the model. Full details are in `docs/reasoning-layer.md`.
+
+```python
+from reason import answer
+answer(question, today=None) -> Answer
+    # Answer: text (ends with "Source: sender, Nov 12" or the url), route, sources, seconds
+    # route: "due" | "person" | "bank" | "web" | "offline" | "not_found"
+```
+
+- **Due:** the question says due/deadline. Code picks the date range, calls `bank.due` and writes the list. No model call.
+- **Person:** a question word is a sender's name. `bank.by_person` runs, then Bonsai answers from those entries only.
+- **Else:** `bank.search` then `sufficiency.judge`.
+  - If that isn't enough and the Mac is online, `gather` runs with `harness.search.engine.search` and `tools.open_page`, and the answer is filed with `bank.ingest(kind="page", source=url)`.
+  - If offline, the answer says plainly that it isn't saved and the Mac is offline.
+- Chat loop: `python -m reason [--today YYYY-MM-DD]`. Voice should call `answer()` directly.
+
+## 7. Voice input — **planned** (Argmax, branch `argmax-runtime-test`)
 
 Argmax runs only from Swift, so voice is a small separate Swift program. It turns speech into text, and the text goes into the same entry point as a typed question. How the Swift program hands text to Python is **undecided**; it will be in `docs/argmax.md` once the runtime test reports.
 
-## 7. Not decided yet
+## 8. Not decided yet
 
 - **Integration, planned for tonight:** once sufficiency-check and context-store land, one worker merges main and the partner's branches into an integration branch. The partner flags a `registry.py` conflict. Done means:
   - a typed question runs `gather()` against his real browser on Bonsai 4B
   - one real email goes through `read_messages` into the bank
 - The app's name: "Muse" vs "Hearth" (Coby's call; no code depends on it).
-- The UI (built last), and the main entry point that typed and spoken questions go into.
+- The UI (built last). Typed and spoken questions go into `reason.answer` (§6).
 - Canvas sync, later, on the same pattern as email.

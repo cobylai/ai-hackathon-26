@@ -84,7 +84,8 @@ def note_block(i: int, e: dict) -> str:
     if e.get("sender_address"):
         who = f"{who} <{e['sender_address']}>".strip()
     lines = [f"[{i}] From: {who or e.get('source') or 'unknown'}",
-             f"Date: {e.get('sent_date') or 'unknown'}",
+             (f"Saved on: {e.get('sent_date') or 'unknown'}" if e.get("kind") == "page"
+              else f"Date: {e.get('sent_date') or 'unknown'}"),
              f"Subject: {e.get('subject') or ''}"]
     if e.get("ask"):
         lines.append(f"Ask: {e['ask']}")
@@ -183,22 +184,28 @@ def _web(question: str, today: date, root, search_fn=None, open_fn=None, ingest_
         return Answer(r.message or "I couldn't find that on the web.", "not_found",
                       list(r.opened))
     url = r.source.url
-    text = f"{(r.answer or '').strip()}"
-    if r.evidence and r.evidence.strip().lower() not in text.lower():
-        text += f'\n"{r.evidence.strip()}"'
-    note = ""
+    ans = (r.answer or "").strip()
+    quote = (r.evidence or "").strip().strip('"“” ')
+    text = ans + (f'\n"{quote}"' if quote and quote.lower() not in ans.lower() else "")
     try:
-        raw = open_fn(url)
-        page = raw[1] if isinstance(raw, tuple) and raw[0] == "OK" else (
-            raw.get("text") if isinstance(raw, dict) else raw if isinstance(raw, str) else "")
-        if page and page.strip():
-            got = ingest_fn(page, source=url, kind="page", root=root)
-            note = "Saved to your notes." if got.get("status") == "added" else "Already in your notes."
-        else:
-            note = "(Could not save the page: it did not reopen.)"
+        got = ingest_fn(saved_page(question, ans, quote, url), source=url, kind="page",
+                        subject=f"{question} {ans}"[:200], root=root)
+        note = "Saved to your notes." if got.get("status") == "added" else "Already in your notes."
     except Exception as ex:  # the answer still stands
         note = f"(Could not save the page: {type(ex).__name__}.)"
     return Answer(f"{text}\nSource: {url}\n{note}", "web", [url])
+
+
+def saved_page(question: str, ans: str, quote: str, url: str) -> str:
+    """What the web route files in the bank for this url.
+
+    The bank keeps a one or two sentence summary, not the page. A whole page's summary
+    is about the page (cornell.edu's was a news item), so the answer was lost offline.
+    Filing the question, answer and quoted line, with "question answer" as the subject
+    (ingest's subject= wins over the model), keeps the answer findable and readable offline.
+    """
+    return (f"Title: {question}\nURL: {url}\n\nQuestion: {question}\nAnswer: {ans}\n"
+            f'The page says: "{quote}"\n')
 
 
 # ---- entry point ------------------------------------------------------------
