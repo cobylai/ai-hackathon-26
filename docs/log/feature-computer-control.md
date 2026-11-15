@@ -47,3 +47,8 @@
 - Implemented the C3 seam: CONFIRM now returns "call again with token=xxxxxx"; a one-time token (confirms.json) authorizes one exact replay, logged as CONFIRMED.
 - DENY is never overruled by a token; STOP still beats everything. token arg added to app_open/file_open/ui_click/ui_type (<=3 args each).
 - README stub replaced with a short tool-group + safety section.
+
+## Port to main (2026-11-15)
+- Main merged this branch at C7, then evolved (Flux). The last two commits (ui tools in registry, confirm tokens) were missing there.
+- Cherry-picked both onto bionic/computer-confirm-tokens (off main); conflicts: kept main's generalized registry test and Flux README.
+- 91 computer/registry tests + 11 search/no-send tests pass on main's tree; pushed for the team to merge.
