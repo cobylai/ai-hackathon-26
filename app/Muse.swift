@@ -448,6 +448,11 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
             p.append("\(hotKeyName): needs Accessibility. System Settings → Privacy & Security → Accessibility → turn on Muse.")
         }
         if let c = calProblem { p.append(c) }
+        // Is the checkout the servers run from behind main? Compares to the last fetch only.
+        let (rc, n) = run("/usr/bin/git", ["-C", repo, "rev-list", "--count", "HEAD..origin/main"], timeout: 5)
+        if rc == 0, let behind = Int(n), behind > 0 {
+            p.append("Code: \(repo) is \(behind) commit(s) behind origin/main (as of its last fetch). Run  git pull  there, then reopen Muse.")
+        }
         return p
     }
 
