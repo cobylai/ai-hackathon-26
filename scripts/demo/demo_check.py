@@ -31,7 +31,8 @@ sys.path.insert(0, str(ROOT))
 # (line, said, route, must contain). Keep in step with docs/demo-runsheet.md.
 LINES = [
     ("1", "What is Flux?", "about", ["I'm Flux, a personal assistant that lives on your Mac.",
-                                     "Nothing goes to the cloud, and I work with Wi-Fi off."]),
+                                     "Nothing goes to the cloud, and I work with Wi-Fi off.",
+                                     "What did Felix ask me?", "Set me up for the lab report"]),
     ("2", "Do you need the internet?", None,
      ["No. I read your mail and coursework", "You're offline right now, and I still work."]),
     ("3", "Catch me up.", "catchup", ["Today on your calendar", "Due today through", "Asks in mail"]),

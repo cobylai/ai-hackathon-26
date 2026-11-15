@@ -93,7 +93,7 @@ The app is signed with a Developer ID (hardened runtime); notarization is pendin
 ```bash
 for d in reason bank sufficiency applecal canvas discover; do uv run python -m unittest discover $d/tests; done
 uv run pytest -q                                              # harness
-FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check   # every playbook example, network blocked
+FLUX_BANK_DIR=~/flux-demo-check-bank uv run python -m reason.playbook_check   # every playbook example, network blocked
 ```
 
 ## Results on record

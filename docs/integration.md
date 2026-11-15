@@ -53,10 +53,14 @@ video says it is sample mail.
 - Pages, truth.json and the saved template: `~/flux-demo-threads/`.
   `template.html` is a saved Gmail page with a real sender in it; keep it out of git.
 
-Regenerate for the recording day (one command; set DAY to that day; Bonsai up):
+Regenerate for the recording day (set DAY to that day; Bonsai up). There are two banks
+(see "Two banks" in `docs/demo-runsheet.md`): the video bank the app shows, and the checker
+bank with the full set that brief M and playbook_check score:
 
 ```bash
-DAY=2026-11-15; rm -rf ~/flux-demo-bank && uv run python scripts/demo/make_test_threads.py 99 --extra --today $DAY --template ~/flux-demo-threads/template.html --out ~/flux-demo-threads && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/demo/sync_test_threads.py ~/flux-demo-threads && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/demo/make_test_mail.py check ~/flux-demo-threads --today $DAY --offline
+DAY=2026-11-15; uv run python scripts/demo/demo_reset.py --today $DAY --full      # the video bank ~/flux-demo-bank (short staged set)
+DAY=2026-11-15; uv run python scripts/demo/demo_reset.py --today $DAY --checker   # the checker bank ~/flux-demo-check-bank (full set)
+FLUX_BANK_DIR=~/flux-demo-check-bank uv run python scripts/demo/make_test_mail.py check ~/flux-demo-threads --today $DAY --offline
 ```
 
 The chat window uses the real clock, so build the bank for the day you record.

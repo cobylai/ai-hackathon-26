@@ -29,13 +29,31 @@ uv run python scripts/demo/demo_check.py --today 2026-11-15
 ```
 
 What's in the demo state (built for Sun Nov 15):
-- **Mail:** 30 emails. That's brief M's 23, plus Felix "Free Thursday at 3?", Nina's Tuesday 2:30 seminar practice, Jonah (TA) on Lab Report 3, Ivy's photos, a $48.20 phone bill, the Campus Rec newsletter and Sam's calculator.
-- **Coursework:** 25 assignments in 4 courses. Lab Report 3 (CHEM 1583) is due Thu 11:59pm.
+- **Mail (8):**
+  - Lena "Lab report format"
+  - Omar "Bike for sale?" (no deadline)
+  - Tess "Choir rehearsal moved" (Tue)
+  - Hugo "Hackathon team name" (vote by Mon 5pm)
+  - Felix "Free Thursday at 3?"
+  - Jonah (TA) "Lab Report 3 template"
+  - Northway Mobile $48.20 bill (Fri)
+  - Campus Rec newsletter (no ask)
+- **Coursework (12):** past items and next week's, plus this week only Lab Report 3 (CHEM 1583, Thu 11:59pm) and Reading Quiz: Color and Scale (Mon 9am).
+- **Nothing about any exam.**
 - **Calendar:** 21 events from Sun 15 to Sat 21 (`scripts/demo/demo_calendar.py show`). It includes:
   - Tue 2–4pm "CHEM 1583 Lab"
   - Wed 1:30–3:30pm "Lab"
   - nothing at Thu 3pm or Thu 7pm
 - **Notes about you:** none.
+
+## Two banks
+
+| Bank | What | Built by | Used by |
+|---|---|---|---|
+| `~/flux-demo-bank` | The **video** bank: the short staged set above, so lists fit on screen | `scripts/demo/demo_reset.py --today DAY --full` (the first reset of a day does it by itself) | Flux in demo mode, the take, `scripts/demo/demo_check.py` |
+| `~/flux-demo-check-bank` | The **checker** bank: the full set (brief M's 23 emails + 7 optional demo emails, all 25 assignments) | `scripts/demo/demo_reset.py --today DAY --checker` | `reason.playbook_check` and brief M (`scripts/demo/make_test_mail.py check ~/flux-demo-threads`), both with `FLUX_BANK_DIR=~/flux-demo-check-bank` |
+
+Many playbook examples name senders that only the full set has (Milo, Greta, Rafe, Felix's $35 share), so the playbooks are checked against the checker bank, not the video bank.
 
 ## The 12 lines
 
@@ -48,8 +66,8 @@ text or code output. Lines 1, 2, 7, 9 and 12 are fixed wording from `playbooks/a
 | — | | *Wi-Fi off in the menu bar, on camera* | Status line: "Demo data · Offline · 55 items in the bank" |
 | 2 | C | "Do you need the internet?" | "No. I read your mail and coursework/deadlines while you're online, then answer from what I saved. You're offline right now, and I still work." |
 | 3 | A | "Catch me up." | Today on your calendar (Sun Nov 15), "Due today through Tue Nov 17", "Asks in mail from the last 7 days" |
-| 4 | A | "What's due this week?" | "Due this week (Nov 15 to Nov 22)", each row with its source |
-| 5 | A | "And tomorrow?" | "Due Mon Nov 16": reading quiz 9am, chart critique 1:30pm, Hugo's vote 5pm |
+| 4 | A | "What's due this week?" | "Due this week (Nov 15 to Nov 22)", 6 rows with sources: reading quiz Mon 9am, Hugo Mon 5pm, Tess Tue 5pm, Lab Report 3 Thu 11:59pm, Felix Thu, phone bill Fri |
+| 5 | A | "And tomorrow?" | "Due Mon Nov 16": reading quiz 9am, Hugo's vote 5pm |
 | 6 | C | "What did Felix ask me?" | Felix's asks, plus **Suggested: You're free Thursday, Nov 19 at 3pm. Draft a yes to Felix?** Click **Draft yes**. The draft box shows To fambrose@example.edu, "Re: Free Thursday at 3?" and "Hi Felix, Yes, Thursday, Nov 19 at 3pm works for me. See you then." Edit one word. |
 | 7 | C | "Will you send that?" | "No. I write the draft and you send it. I never send anything myself." Then click **Open in Mail**: a Mail compose window, filled in, unsent |
 | 8 | A | "Set me up for the lab report." | The page "Lab Report 3", the email from Lena Marsh "Lab report format", and the email from Jonah Pike "Lab Report 3 template". Click **Yes, do it**: the page opens in Chrome (local file, works offline) |

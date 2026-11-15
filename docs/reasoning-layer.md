@@ -54,7 +54,7 @@ FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
 - Code reads the Triggers patterns, the Wording and Not found lines, and the Prompt blocks (`reason/playbook.py`). Edit a file and restart Flux to change how a route answers. Code keeps no second copy of the wording.
 - The steps' order is code. `STEPS` in `reason/answer.py` must match each file's numbered steps (`reason/tests/test_playbooks.py`).
 - The bank/web judge and rephrase prompts live in `sufficiency/prompts.py`; `bank.md` and `web.md` hold copies, and a test fails if they drift.
-- Checker: `FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check` runs every Examples table on a temporary copy of the bank with the network blocked. 27/27 on 2026-11-15 (14 when the playbooks landed, 13 more with remember and people). Brief M's check gave the same output line for line before and after the move (37/38). 69/69 after follow-ups (`followup.md` adds 19, run in order as one conversation; 50 before).
+- Checker: `FLUX_BANK_DIR=~/flux-demo-check-bank uv run python -m reason.playbook_check` runs every Examples table on a temporary copy of the bank with the network blocked. 27/27 on 2026-11-15 (14 when the playbooks landed, 13 more with remember and people). Brief M's check gave the same output line for line before and after the move (37/38). 69/69 after follow-ups (`followup.md` adds 19, run in order as one conversation; 50 before).
 
 ## Routes, checked in this order
 

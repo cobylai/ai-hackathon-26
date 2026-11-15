@@ -68,7 +68,7 @@ tests only.
 for d in reason bank sufficiency applecal canvas; do uv run python -m unittest discover $d/tests; done
                       # expect about 93 / 65 / 48 / 9 / 10 OK (or more, if main moved)
 uv run pytest -q      # your harness: 271 passed, 3 skipped (on 3.12)
-FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check
+FLUX_BANK_DIR=~/flux-demo-check-bank uv run python -m reason.playbook_check
                       # every example right; calendar examples need your "Flux demo" calendar
 ```
 
