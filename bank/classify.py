@@ -13,9 +13,17 @@ _NEVER = {"ROOM", "PIN", "CODE", "ZOOM", "REF", "ID", "RM", "BOX", "UNIT", "APT"
           "EXT", "PHONE", "CLASS", "YEAR", "TERM"}
 STOP = _MONTHS | _SEASONS | _NEVER
 
-AUTOMATED_ADDR = re.compile(
-    r"noreply|no-reply|donotreply|news|notify|notification|info|admin|office|bursar|"
-    r"registrar|dining|club|team|support|alerts?|library|mailer|bounce")
+AUTOMATED_WORDS = {"noreply", "donotreply", "news", "newsletter", "notify", "notification",
+                   "notifications", "notices", "info", "admin", "office", "bursar", "registrar",
+                   "dining", "club", "clubs", "team", "support", "alert", "alerts", "library",
+                   "mailer", "bounce", "postmaster", "help", "helpdesk", "updates"}
+
+
+def automated_local(local: str) -> bool:
+    """Whole-word match on the part before @, split on . - _ ('newsome' stays a person)."""
+    words = [w for w in re.split(r"[._\-+]", local.lower()) if w]
+    joined = {"".join(words[i:i + n]) for n in (2, 3) for i in range(len(words) - n + 1)}
+    return bool(AUTOMATED_WORDS & (set(words) | joined))
 AUTOMATED_NAME = re.compile(
     r"\b(office|club|dining|team|department|dept|services?|library|university|"
     r"registrar|bursar|newsletter|notifications?|support|admissions)\b", re.I)
@@ -47,7 +55,7 @@ def is_person(name: str | None, address: str | None, model_says: bool | None) ->
         return False
     local = (address or "").split("@")[0].lower()
     domain = (address or "").split("@")[-1].lower() if address else ""
-    if local and AUTOMATED_ADDR.search(local):
+    if local and automated_local(local):
         return False
     if domain.startswith(("clubs.", "lists.", "news.")):
         return False

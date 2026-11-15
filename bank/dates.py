@@ -108,10 +108,10 @@ def resolve_date(phrase: str, sent: date, prev: date | None = None) -> date | No
     if m:
         next_monday = sent - timedelta(days=sent.weekday()) + timedelta(days=7)
         return next_monday + timedelta(days=_WD[m.group(1)])
-    # bare / this / by / before weekday
+    # bare / this / by / before weekday: on or after S (same weekday = S itself)
     m = re.search(r"\b" + WD_RE + r"\b", p)
     if m:
-        return _next_weekday(_WD[m.group(1)], sent)
+        return sent + timedelta(days=(_WD[m.group(1)] - sent.weekday()) % 7)
     if re.search(r"\b(day after tomorrow)\b", p):
         return sent + timedelta(days=2)
     if re.search(r"\btomorrow\b|\btmrw\b|\btmr\b", p):
@@ -153,3 +153,32 @@ _FIND = re.compile(
 def find_phrases(text: str) -> list[str]:
     """Deadline-like phrases inside free text, e.g. an ask sentence."""
     return [m.group(0).strip() for m in _FIND.finditer(text or "")]
+
+
+_SENT_PATTERNS = [
+    (re.compile(MON_RE + r"\.? (\d{1,2}),? (\d{4})\b", re.I), ("mon", 2, 3)),
+    (re.compile(r"\b(\d{1,2}) " + MON_RE + r"\.?,? (\d{4})\b", re.I), (1, "mon", 3)),
+    (re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b"), (2, 3, 1)),
+    (re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b"), (1, 2, 3)),
+]
+
+
+def find_sent_date(text: str, max_lines: int = 15) -> date | None:
+    """A full date (with a year) in the first lines, e.g. scraped webmail's
+    "Nov 12, 2026, 3:14 PM (2 days ago)". Year required so deadlines aren't taken."""
+    for line in (text or "").splitlines()[:max_lines]:
+        for rx, (a, b, c) in _SENT_PATTERNS:
+            m = rx.search(line)
+            if not m:
+                continue
+            if a == "mon":
+                mo, dy, y = MONTHS[m.group(1).lower()], int(m.group(b)), int(m.group(c))
+            elif b == "mon":
+                mo, dy, y = MONTHS[m.group(2).lower()], int(m.group(a)), int(m.group(c))
+            else:
+                mo, dy, y = int(m.group(a)), int(m.group(b)), int(m.group(c))
+            try:
+                return date(y, mo, dy)
+            except ValueError:
+                continue
+    return None

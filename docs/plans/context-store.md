@@ -6,7 +6,14 @@ Branch `context-store`, cut from `d118285`. Code goes in `bank/`, the doc in `do
 
 - **Bonsai 4B fills in the text fields only.** It gives me the sender, subject, summary, ask, deadline phrases copied word for word, course and topic. That is one `llm.complete_json` call per chunk, with thinking off.
 - **Code does everything that has to be exact:**
-  - It reads the `From:`, `Date:` and `Subject:` header lines, and these win over the model. This fixes the e07 miss, where the model gave a name instead of an address.
+  - **Sender, date and subject come from the first of these that has them:**
+    1. Values the caller passes to `ingest` (`sender_name`, `sender_address`, `sent_date`, `subject`). These win over everything.
+    2. `From:`, `Date:` and `Subject:` header lines, when the text has them.
+    3. Otherwise:
+       - the model's sender and subject;
+       - an address in angle brackets in the first lines if the model's address is not in the text;
+       - code's own search for a dated line in the first 15 lines, such as "Nov 12, 2026, 3:14 PM (2 days ago)".
+  - **No sent date found:** I use the ingest date and mark the entry `sent_date_guessed: true`, because every deadline in it depends on that date.
   - It turns each deadline phrase into a date.
   - It finds the course code.
   - It picks the folder.
@@ -55,7 +62,7 @@ data/bank/
   - Some prefixes are never a course: months, seasons, ROOM, PIN, CODE, ZOOM, REF and ID. This rejects "FALL 2026", "NOV 2026", "ROOM 1234" and "PIN 4821".
   - A number from 2020 to 2030 after a month or season prefix is a year, and is rejected that way too. Other prefixes keep those numbers, because a course like "CS 2024" is real. Two tests cover this rule.
 - **`person/`** otherwise, when the sender is a person. That means the model says `sender_is_person: true`, and neither the address nor the name looks automated.
-  - Automated addresses contain `noreply`, `news`, `notifications`, `info`, `office`, `bursar`, `registrar`, `dining`, `club`, `team`, `support` or `alerts`.
+  - An address looks automated when the part before the @, split on dots, dashes and underscores, has one of these as a **whole word**: `noreply`, `news`, `notifications`, `info`, `office`, `bursar`, `registrar`, `dining`, `club`, `team`, `support` or `alerts`. Whole words only, so "newsome" and "steam" stay people.
   - Automated names contain Office, Club, Dining, Team, Department, Services, Library or University.
 - **`other/`** for everything else. Pages are never filed under `person/`.
 
@@ -77,6 +84,7 @@ ask: "Submit the final notebook and a one page reflection on the course site."
 deadlines: [{"phrase": "Monday 11:59pm", "date": "2026-11-16", "time": "23:59"}]
 course: "ENGRD 2700"
 topic: "project 2 deadline extension"
+sent_date_guessed: false
 ingested_at: "2026-11-14T15:02:11"
 ---
 Project 2 is now due Monday 11:59pm because of the server outage. No more extensions will be given.
@@ -95,7 +103,7 @@ Project 2 is now due Monday 11:59pm because of the server outage. No more extens
 ## Interface
 
 ```
-ingest(text, source, kind)
+ingest(text, source, kind, *, sender_name=None, sender_address=None, sent_date=None, subject=None)
   -> {"status": "added" | "duplicate", "path": str, "entry": dict}
   kind is "email" or "page".
   The entry dict holds the front matter fields, plus body and path.
@@ -150,7 +158,7 @@ I will not give the model today's date, so it has nothing to do date arithmetic 
 |---|---|
 | today, tonight, this morning / afternoon / evening, end of day, EOD | S |
 | tomorrow, tomorrow morning / night | S + 1 |
-| Monday … Sunday, this Friday, by Friday, before Tuesday | first such day after S (same weekday as S means a week later) |
+| Monday … Sunday, this Friday, by Friday, before Tuesday | first such day on or after S (the same weekday as S means S itself) |
 | next Friday | Friday of the week after S's week (weeks run Mon–Sun) |
 | the Friday after | first Friday after the previous deadline in the same item, else after S |
 | end of the week, end of week | Friday on or after S |
@@ -160,7 +168,7 @@ I will not give the model today's date, so it has nothing to do date arithmetic 
 | in 3 days, in 2 weeks | S + 3 days, S + 14 days |
 
 - **Times** come out separately and can appear anywhere in the phrase, so "by 5pm Friday" gives Friday and 17:00. The forms are `5pm`, `5:00 pm`, `11:59pm`, `noon` (12:00) and `midnight` (23:59). Morning and night give no time.
-- **Known ambiguity:** a bare weekday that falls on the same weekday as S resolves to a week later. For example, "by Friday" in an email sent on a Friday becomes the next Friday, not the same day.
+- **Known ambiguity:** a bare weekday that falls on the same weekday as S resolves to S itself. For example, "by Friday" in an email sent on a Friday means that same Friday.
 - **"Before Tuesday"** is stored as Tuesday. The phrase keeps the word "before".
 - **A phrase no rule matches** is kept with `date: null` and `time: null`. It shows up in search and in the index, but never in `due`.
 
@@ -179,6 +187,8 @@ I will not give the model today's date, so it has nothing to do date arithmetic 
 | `n04_prof_next_monday` | course code only in the body, "next Monday" quiz, folder course |
 | `n05_course_page` | kind page, no sender, "PS5 due Nov 24" and "Final project due Dec 4", folder course |
 | `n06_club_rsvp` | club email, "RSVP by end of day Wednesday", ask is to RSVP, folder other |
+| `n07_scraped_friend` | scraped webmail with no header lines: "Name <addr>" line, "Nov 12, 2026, 3:14 PM (2 days ago)", "by Monday", folder person |
+| `n08_scraped_mailroom` | scraped webmail, automated `mailservices-noreply` sender, "Tue, Nov 10, 2026, 9:02 AM", "by Nov 17", folder other |
 
 An entry counts as right when all of these hold:
 
@@ -191,10 +201,10 @@ The tests need no model server. They cover every row of the phrasing table, the 
 
 ## Done-when
 
-- Ingesting all 16 fixtures into a temp bank puts the right entries in the right folders, and the index is current.
+- Ingesting all 18 fixtures into a temp bank puts the right entries in the right folders, and the index is current.
 - `due("2026-11-16", "2026-11-20")` returns the right rows with the server stopped.
 - `python -m unittest discover bank/tests` passes.
-- On 4B, each of 3 runs gets at least 9 of 10 originals and at least 5 of 6 new ones right. I will report failures as they are and not loosen the scoring.
+- On 4B, each of 3 runs gets at least 9 of 10 originals and at least 5 of 6 of n01–n06 right, and n07–n08 scored the same way and reported. I will report failures as they are and not loosen the scoring.
 - `docs/context-store.md` has the numbers per run, the final prompt and the entry format.
 - Everything is committed and pushed as `context-store`. I will check that the `:8080` server is up and reuse it, start one only if none is running, and tell worker 4 when I do.
 

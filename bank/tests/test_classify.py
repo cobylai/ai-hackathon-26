@@ -39,6 +39,14 @@ class TestPerson(unittest.TestCase):
         self.assertFalse(classify.is_person("Olin Library", "library-notices@univ.example.edu", True))
         self.assertFalse(classify.is_person("Pat Lee", "pat@univ.example.edu", False))
 
+    def test_automated_words_are_whole_words(self):
+        self.assertTrue(classify.is_person("Ann Newsome", "newsome@univ.example.edu", True))
+        self.assertTrue(classify.is_person("Sam Teaman", "steam42@univ.example.edu", True))
+        self.assertTrue(classify.is_person("Ina Fowler", "infowler@univ.example.edu", True))
+        self.assertFalse(classify.is_person("Mail Room", "mailroom.no-reply@univ.example.edu", True))
+        self.assertFalse(classify.is_person("X", "it_support@univ.example.edu", True))
+        self.assertFalse(classify.is_person("Y", "cs.news@univ.example.edu", True))
+
     def test_folder_rule(self):
         self.assertEqual(classify.folder_for("email", "CS 3110", True), "course")
         self.assertEqual(classify.folder_for("email", None, True), "person")
