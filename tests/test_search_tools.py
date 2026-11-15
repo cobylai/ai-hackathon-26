@@ -103,10 +103,14 @@ def test_empty_search_says_so(stool, monkeypatch):
     stub_results(monkeypatch, [])
     out = check(stool.search("no such thing"))
     assert out.startswith('OK search | no results for "no such thing"')
+    assert "try fewer words" in out
 
     engine.last_status = "BLOCKED"
     out = check(stool.search("no such thing"))
     assert out.startswith("BLOCKED search | no results")
+    # A wall is not a wording problem; the model should stop, not rephrase.
+    assert "do not retry now" in out
+    assert "try fewer words" not in out
 
 
 class _FakePage:

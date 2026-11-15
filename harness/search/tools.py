@@ -57,8 +57,13 @@ def search(query: str) -> str:
         word = engine.last_status
         if word not in ("BLOCKED", "LOGIN", "ERR"):
             word = "OK"
+        advice = {
+            "BLOCKED": "the engine is showing a bot check; do not retry now",
+            "LOGIN": "the engine wants a sign-in",
+            "ERR": "the search failed",
+        }.get(word, "try fewer words")
         shown = " ".join((query or "").split())[:60]
-        return _cap(f'{word} search | no results for "{shown}" | try fewer words', "[end]")
+        return _cap(f'{word} search | no results for "{shown}" | {advice}', "[end]")
 
     head = f"OK search | {len(results)} results"
     lines: list[str] = []
