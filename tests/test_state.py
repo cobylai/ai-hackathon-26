@@ -90,3 +90,18 @@ def test_short_page_mentioning_captcha_is_blocked(session, site):
         "Please complete the captcha to continue.</body></html>"
     )
     assert classify(session.page) == "BLOCKED"
+
+
+def test_server_error_is_err(session, site):
+    session.page.goto(site.url("hello.html"))
+    assert classify(session.page, status=503) == "ERR"
+
+
+def test_blank_page_is_err(session):
+    assert classify(session.page) == "ERR"
+
+
+def test_closed_page_is_err(session):
+    page = session.page
+    session.stop()
+    assert classify(page) == "ERR"
