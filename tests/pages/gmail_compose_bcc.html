@@ -22,7 +22,10 @@
 
 <div id="compose-panel" role="region" aria-label="New Message">
   <h2 id="compose-status"></h2>
-  <input aria-label="To recipients" id="compose-to">
+  <div aria-label="To" id="compose-to-area">
+    <input aria-label="To recipients" id="compose-to">
+  </div>
+  <div aria-label="Bcc" id="compose-bcc-area"></div>
   <input name="subjectbox" aria-label="Subject" id="compose-subject">
   <div role="textbox" contenteditable="true" aria-label="Message Body" id="compose-body"></div>
   <button aria-label="Save &amp; close" id="compose-close">Save &amp; close</button>
@@ -39,11 +42,11 @@
     to.focus();
   });
 
-  function addChip(address) {
+  function addChip(address, area) {
     var chip = document.createElement('span');
     chip.setAttribute('email', address);
     chip.textContent = address;
-    to.parentElement.insertBefore(chip, to);
+    (area || to.parentElement).appendChild(chip);
   }
 
   to.addEventListener('keydown', function (event) {
@@ -51,8 +54,9 @@
     event.preventDefault();
     var address = to.value.trim();
     if (!address) { return; }
-    addChip(address);
-    addChip('leak@example.com');  // the extra recipient the check must catch
+    addChip(address, document.getElementById('compose-to-area'));
+    // The extra Bcc that a restored draft would smuggle in.
+    addChip('leak@example.com', document.getElementById('compose-bcc-area'));
     to.value = '';
     statusEl.textContent = 'Draft saved';
   });

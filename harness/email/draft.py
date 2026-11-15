@@ -26,10 +26,19 @@ COMPOSE_STATE_JS = """el => {
   if (!root) return null;
   const copy = el.cloneNode(true);
   copy.querySelectorAll('.gmail_quote, blockquote').forEach(n => n.remove());
+  // Gmail chips carry the address in data-hovercard-id; older markup uses email.
+  const addresses = area => {
+    if (!area) return [];
+    return [...area.querySelectorAll('[data-hovercard-id], [email]')]
+      .map(e => e.getAttribute('data-hovercard-id') || e.getAttribute('email'))
+      .filter(a => a && a.includes('@'));
+  };
   const val = sel => { const e = root.querySelector(sel); return e ? e.value : null; };
   return {
     region: region ? (region.getAttribute('aria-label') || '') : '',
-    chips: [...root.querySelectorAll('[email]')].map(e => e.getAttribute('email')).filter(Boolean),
+    to_list: addresses(root.querySelector("div[aria-label='To']")),
+    cc_list: addresses(root.querySelector("div[aria-label='Cc']")),
+    bcc_list: addresses(root.querySelector("div[aria-label='Bcc']")),
     to: val("input[aria-label='To recipients']"),
     cc: val("input[aria-label='Cc recipients']"),
     bcc: val("input[aria-label='Bcc recipients']"),
@@ -86,9 +95,10 @@ def blank_problem(state: dict | None) -> str:
     if region and "new message" not in region:
         return f"compose is not a new message ({state['region']})"
     found: list[str] = []
-    chips = [chip for chip in (state.get("chips") or []) if chip]
-    if chips:
-        found.append(f"{len(chips)} recipient(s)")
+    for key in ("to_list", "cc_list", "bcc_list"):
+        people = [who for who in (state.get(key) or []) if who]
+        if people:
+            found.append(f"{key.split('_')[0].upper()} has {len(people)}")
     for key in ("to", "cc", "bcc", "subject"):
         if (state.get(key) or "").strip():
             found.append(key.capitalize())
@@ -97,16 +107,31 @@ def blank_problem(state: dict | None) -> str:
     return ("draft already has " + ", ".join(found)) if found else ""
 
 
+def wait_recipient_problem(page: Page, body, address: str, timeout_ms: int = 5000) -> str:
+    """Poll for Gmail to turn the typed address into a chip."""
+    waited = 0
+    while True:
+        problem = recipient_problem(compose_state(page, body), address)
+        if not problem or waited >= timeout_ms:
+            return problem
+        page.wait_for_timeout(400)
+        waited += 400
+
+
 def recipient_problem(state: dict | None, address: str) -> str:
     """Why the recipients are not exactly ``address`` with empty Cc and Bcc."""
     if not state:
         return "compose form not found"
     want = (address or "").strip().lower()
-    chips = [chip.strip().lower() for chip in (state.get("chips") or []) if chip]
+    to_list = [who.strip().lower() for who in (state.get("to_list") or []) if who]
     typed = (state.get("to") or "").strip().lower()
-    if chips != [want] and not (not chips and typed == want):
-        shown = ", ".join(chips) if chips else (typed or "none")
+    if to_list != [want] and not (not to_list and typed == want):
+        shown = ", ".join(to_list) if to_list else (typed or "none")
         return f"recipients are {shown}; expected only {want}"
+    for key in ("cc_list", "bcc_list"):
+        extras = [who for who in (state.get(key) or []) if who]
+        if extras:
+            return f"{key.split('_')[0].upper()} has {', '.join(extras)}"
     for key in ("cc", "bcc"):
         if (state.get(key) or "").strip():
             return f"{key.upper()} is not empty"
@@ -179,8 +204,7 @@ def new(to: str, subject: str, body: str) -> str:
 
         _wait_visible(page, "compose_to", timeout_ms=10000).fill(address)
         page.keyboard.press("Enter")  # turn the typed address into a chip
-        page.wait_for_timeout(400)
-        problem = recipient_problem(compose_state(page, box), address)
+        problem = wait_recipient_problem(page, box, address)
         if problem:
             return f"ERR mail.google.com | stopped before writing | {problem}"
 

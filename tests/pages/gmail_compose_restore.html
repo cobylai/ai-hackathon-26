@@ -36,8 +36,10 @@
 <!-- A draft Gmail restores: recipients, subject and body are already there. -->
 <div id="compose-panel" role="region" aria-label="New Message">
   <h2 id="compose-status"></h2>
-  <span email="night.owl@example.edu">night.owl@example.edu</span>
-  <input aria-label="To recipients" id="compose-to">
+  <div aria-label="To" id="compose-to-area">
+    <span email="night.owl@example.edu">night.owl@example.edu</span>
+    <input aria-label="To recipients" id="compose-to">
+  </div>
   <input name="subjectbox" aria-label="Subject" id="compose-subject" value="Old draft from last night">
   <div role="textbox" contenteditable="true" aria-label="Message Body"
        id="compose-body">Half-written note from last night, do not lose this.</div>

@@ -64,7 +64,7 @@ def test_restored_draft_is_refused(restore, session):
 def test_extra_bcc_aborts_before_writing(bcc, session):
     out = bcc.new("friend@example.edu", "Hello there", "A short note.")
     assert out.startswith("ERR")
-    assert "recipients" in out
+    assert "BCC" in out and "leak@example.com" in out
 
     page = session.page
     assert page.input_value("input[name='subjectbox']") == ""
@@ -83,14 +83,26 @@ def test_signed_out_returns_login(wired, monkeypatch):
 
 
 def test_blank_problem_accepts_a_fresh_message():
-    state = {"region": "New Message", "chips": [], "to": "", "cc": "", "bcc": "", "subject": "", "body": ""}
+    state = {
+        "region": "New Message",
+        "to_list": [],
+        "cc_list": [],
+        "bcc_list": [],
+        "to": "",
+        "cc": "",
+        "bcc": "",
+        "subject": "",
+        "body": "",
+    }
     assert draft.blank_problem(state) == ""
 
 
 def test_blank_problem_flags_a_restored_draft():
     state = {
         "region": "New Message",
-        "chips": ["old@example.edu"],
+        "to_list": ["old@example.edu"],
+        "cc_list": [],
+        "bcc_list": [],
         "to": "",
         "cc": "",
         "bcc": "",
@@ -98,13 +110,15 @@ def test_blank_problem_flags_a_restored_draft():
         "body": "",
     }
     problem = draft.blank_problem(state)
-    assert "recipient" in problem and "Subject" in problem
+    assert "TO has" in problem and "Subject" in problem
 
 
 def test_blank_problem_allows_a_signature_only():
     state = {
         "region": "New Message",
-        "chips": [],
+        "to_list": [],
+        "cc_list": [],
+        "bcc_list": [],
         "to": "",
         "cc": "",
         "bcc": "",
@@ -115,15 +129,40 @@ def test_blank_problem_allows_a_signature_only():
 
 
 def test_blank_problem_flags_a_reply_compose():
-    state = {"region": "Reply", "chips": [], "to": "", "cc": "", "bcc": "", "subject": "", "body": ""}
+    state = {
+        "region": "Reply",
+        "to_list": [],
+        "cc_list": [],
+        "bcc_list": [],
+        "to": "",
+        "cc": "",
+        "bcc": "",
+        "subject": "",
+        "body": "",
+    }
     assert "new message" in draft.blank_problem(state)
 
 
 def test_recipient_problem_needs_exactly_one_address():
-    assert draft.recipient_problem({"chips": ["Friend@Example.edu"], "to": "", "cc": "", "bcc": ""}, "friend@example.edu") == ""
-    extra = {"chips": ["friend@example.edu", "leak@example.com"], "to": "", "cc": "", "bcc": ""}
+    good = {"to_list": ["Friend@Example.edu"], "cc_list": [], "bcc_list": [], "to": "", "cc": "", "bcc": ""}
+    assert draft.recipient_problem(good, "friend@example.edu") == ""
+    extra = {
+        "to_list": ["friend@example.edu", "leak@example.com"],
+        "cc_list": [],
+        "bcc_list": [],
+        "to": "",
+        "cc": "",
+        "bcc": "",
+    }
     assert "expected only" in draft.recipient_problem(extra, "friend@example.edu")
-    with_bcc = {"chips": ["friend@example.edu"], "to": "", "cc": "", "bcc": "leak@example.com"}
-    assert "BCC" in draft.recipient_problem(with_bcc, "friend@example.edu")
-    typed_only = {"chips": [], "to": "friend@example.edu", "cc": None, "bcc": None}
+    with_bcc = {
+        "to_list": ["friend@example.edu"],
+        "cc_list": [],
+        "bcc_list": ["leak@example.com"],
+        "to": "",
+        "cc": "",
+        "bcc": "",
+    }
+    assert "BCC has leak@example.com" in draft.recipient_problem(with_bcc, "friend@example.edu")
+    typed_only = {"to_list": [], "cc_list": [], "bcc_list": [], "to": "friend@example.edu", "cc": None, "bcc": None}
     assert draft.recipient_problem(typed_only, "friend@example.edu") == ""
