@@ -12,9 +12,9 @@ import Security
 import WebKit
 
 // ---- Settings (change here) ----
-let hotKeyCode = UInt32(kVK_Space)          // the one hotkey: Control-Space
-let hotKeyModifiers = UInt32(controlKey)
-let hotKeyName = "Control-Space"
+let hotKeyCode = Int64(kVK_Space)           // the one hotkey: Fn-Space (Fn = the Globe key)
+let hotKeyFlags: CGEventFlags = .maskSecondaryFn
+let hotKeyName = "Fn-Space"
 let holdSeconds = 0.35                       // held longer than this = push to talk
 let windowURL = URL(string: "http://localhost:8765/")!
 let bonsaiURL = URL(string: "http://localhost:8080/v1/models")!
@@ -268,19 +268,47 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         js("window.museTalk ? museTalk.stop() : (b => b && b.dispatchEvent(new PointerEvent('pointerup', {bubbles: true})))(document.getElementById('talk'))")
     }
 
-    // ---- Hotkey (Carbon RegisterEventHotKey: no Accessibility permission) ----
+    // ---- Hotkey: a keyboard event tap, since the system hotkey call ignores Fn.
+    // Needs Accessibility for Muse (asked once at launch). It swallows Fn-Space so
+    // no space is typed into the app in front.
+    var tap: CFMachPort?
+
     func registerHotKey() {
-        var types = [EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed)),
-                     EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyReleased))]
-        InstallEventHandler(GetApplicationEventTarget(), { _, ev, ctx in
+        if tap != nil { return }
+        let mask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
+        tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap,
+                                eventsOfInterest: CGEventMask(mask), callback: { _, type, ev, ctx in
             let app = Unmanaged<App>.fromOpaque(ctx!).takeUnretainedValue()
-            if GetEventKind(ev) == UInt32(kEventHotKeyPressed) { app.hotPressed() } else { app.hotReleased() }
-            return noErr
-        }, 2, &types, Unmanaged.passUnretained(self).toOpaque(), nil)
-        var ref: EventHotKeyRef?
-        let id = EventHotKeyID(signature: OSType(0x4D555345), id: 1)  // 'MUSE'
-        let err = RegisterEventHotKey(hotKeyCode, hotKeyModifiers, id, GetApplicationEventTarget(), 0, &ref)
-        if err != noErr { NSLog("Muse: \(hotKeyName) is taken by another app (error \(err))") }
+            return app.onKey(type, ev)
+        }, userInfo: Unmanaged.passUnretained(self).toOpaque())
+        guard let tap else {
+            // Not allowed yet: try again until Accessibility is on.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { self.registerHotKey() }
+            return
+        }
+        CFRunLoopAddSource(CFRunLoopGetMain(), CFMachPortCreateRunLoopSource(nil, tap, 0), .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
+    }
+
+    func onKey(_ type: CGEventType, _ ev: CGEvent) -> Unmanaged<CGEvent>? {
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            return Unmanaged.passUnretained(ev)
+        }
+        guard ev.getIntegerValueField(.keyboardEventKeycode) == hotKeyCode else { return Unmanaged.passUnretained(ev) }
+        let others: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
+        if type == .keyDown {
+            guard ev.flags.contains(hotKeyFlags), ev.flags.intersection(others).isEmpty else {
+                return Unmanaged.passUnretained(ev)
+            }
+            if ev.getIntegerValueField(.keyboardEventAutorepeat) == 0 { hotPressed() }
+            return nil
+        }
+        if type == .keyUp && hotDown {   // Fn may already be up: end it anyway
+            hotReleased()
+            return nil
+        }
+        return Unmanaged.passUnretained(ev)
     }
 
     func hotPressed() {
@@ -358,6 +386,8 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
     func bringUp() {
         say("Starting…\nAsking for microphone and Calendar access if needed.")
         askMicrophone()
+        // Accessibility, for the Fn-Space tap: macOS shows its own prompt once.
+        _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
         let calProblem = calendarProblem()
 
         let started = Date()
@@ -414,6 +444,9 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized: break
         default: p.append("Microphone: not allowed. System Settings → Privacy & Security → Microphone → Muse.")
+        }
+        if !AXIsProcessTrusted() {
+            p.append("\(hotKeyName): needs Accessibility. System Settings → Privacy & Security → Accessibility → turn on Muse.")
         }
         if let c = calProblem { p.append(c) }
         return p

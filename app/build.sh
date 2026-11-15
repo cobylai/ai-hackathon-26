@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build app/Muse.app (menu-bar panel + Control-Space). No Xcode project, no signing identity.
+# Build app/Muse.app (menu-bar panel + Fn-Space). No Xcode project, no signing identity.
 #   app/build.sh            # -> app/build/Muse.app
 # The app runs the servers from the main checkout (models live only there);
 # MUSE_REPO at build or run time points it elsewhere.
