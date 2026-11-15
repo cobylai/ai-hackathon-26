@@ -60,9 +60,9 @@ first thread and a blank compose and prints a count per name:
 uv run python -m harness.email.selfcheck
 ```
 
-It opens a blank compose and closes it again. If the account inserts a signature
-into new messages, Gmail saves that signature as a draft — so an occasional
-"(no subject)" draft in Drafts is expected, not a bug in the tool.
+By default it only reads the inbox and the first thread, so it writes nothing.
+`--compose` also opens a blank compose to check the compose selectors; if your
+account inserts a signature, Gmail saves it as a draft, so that step is opt-in.
 
 ## Timings
 
@@ -114,8 +114,9 @@ it needs no babysitting once the profile is signed in.
 - A reply is addressed to whoever the thread says (usually the other
   participant). The result names that address, but the tool will not stop a
   reply to a stranger.
-- Gmail autosaves an opened compose, so a refused draft or the self-check can
-  leave a signature-only "(no subject)" draft in Drafts.
+- Gmail autosaves an opened compose, so a draft attempt refused after Compose
+  opens can leave a signature-only "(no subject)" draft in Drafts. The
+  self-check's compose step is opt-in for the same reason.
 
 ## Tests
 
