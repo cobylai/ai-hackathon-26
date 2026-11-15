@@ -141,12 +141,45 @@ def main(argv: list[str] | None = None) -> int:
         wanted = {part.strip() for part in args.ids.split(",") if part.strip()}
         items = [item for item in items if item["id"] in wanted]
     rows: list[dict] = []
+
+    def dump() -> None:
+        # Written after every question: a crashed browser must not lose the run.
+        if args.json:
+            args.json.write_text(json.dumps(rows, indent=1), encoding="utf-8")
+
     try:
         for index, item in enumerate(items):
             if index and args.pause_seconds:
                 time.sleep(args.pause_seconds)
-            row = run_one(item)
+            try:
+                row = run_one(item)
+            except Exception as exc:  # dead browser, dead model, or a wall we cannot pass
+                rows.append(
+                    {
+                        "id": item["id"],
+                        "kind": item["kind"],
+                        "question": item["question"],
+                        "expect": item["expect"],
+                        "pass": False,
+                        "rounds": 0,
+                        "pages": 0,
+                        "engines": [],
+                        "blocked": 0,
+                        "errors": 1,
+                        "notes": 0,
+                        "model_calls": 0,
+                        "chars": 0,
+                        "prompt_tokens": 0,
+                        "seconds": 0.0,
+                        "answer": f"ERROR {type(exc).__name__}",
+                        "error": True,
+                    }
+                )
+                dump()
+                print(f"{item['id']} ERROR {type(exc).__name__}", file=sys.stderr, flush=True)
+                break
             rows.append(row)
+            dump()
             print(
                 f"{row['id']} {'pass' if row['pass'] else 'FAIL'} "
                 f"rounds={row['rounds']} pages={row['pages']} blocked={row['blocked']} "
@@ -162,9 +195,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     passes = sum(1 for row in rows if row["pass"])
-    seconds = statistics.median(row["seconds"] for row in rows)
-    chars = statistics.median(row["chars"] for row in rows)
-    tokens = statistics.median(row["prompt_tokens"] for row in rows)
+    scored = [row for row in rows if not row.get("error")]
+    seconds = statistics.median(row["seconds"] for row in scored) if scored else 0.0
+    chars = statistics.median(row["chars"] for row in scored) if scored else 0.0
+    tokens = statistics.median(row["prompt_tokens"] for row in scored) if scored else 0.0
     blocked = sum(row["blocked"] for row in rows)
     print(markdown(rows))
     print()
@@ -173,8 +207,6 @@ def main(argv: list[str] | None = None) -> int:
     print(f"target 9/12, <20 s, <8000 chars: "
           f"{'met' if passes >= 9 and seconds < 20 and chars < 8000 else 'missed'}")
 
-    if args.json:
-        args.json.write_text(json.dumps(rows, indent=1), encoding="utf-8")
     return 0
 
 
