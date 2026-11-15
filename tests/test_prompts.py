@@ -138,10 +138,15 @@ class FakeResponse:
         self.content = content
         self.status = status
         self.usage = usage
+        self.status_code = status
 
     def raise_for_status(self) -> None:
         if self.status >= 400:
-            raise RuntimeError(f"http {self.status}")
+            raise llm.httpx.HTTPStatusError(
+                f"http {self.status}",
+                request=llm.httpx.Request("POST", "http://model.test/v1/chat/completions"),
+                response=self,
+            )
 
     def json(self):
         body = {"choices": [{"message": {"content": self.content}}]}
@@ -191,6 +196,7 @@ def test_ask_maps_free_text_onto_a_choice(monkeypatch):
 
 
 def test_ask_returns_empty_on_bad_reply_or_dead_server(monkeypatch):
+    monkeypatch.setattr(llm, "RETRY_SECONDS", 0)
     patch_post(monkeypatch, FakeResponse("banana"))
     assert llm.ask("q", choices=["YES", "NO"]) == ""
     patch_post(monkeypatch, llm.httpx.ConnectError("no model"))
@@ -224,6 +230,47 @@ def test_ask_clears_usage_on_failure(monkeypatch):
     patch_post(monkeypatch, llm.httpx.ConnectError("down"))
     assert llm.ask("hi") == ""
     assert llm.last_usage == {}
+
+
+def counting_post(monkeypatch, results: list) -> dict:
+    """Each call returns (or raises) the next item in ``results``."""
+    calls: dict = {"n": 0}
+    monkeypatch.setattr(llm, "RETRY_SECONDS", 0)
+
+    def fake_post(url, json=None, timeout=None):
+        index = min(calls["n"], len(results) - 1)
+        calls["n"] += 1
+        item = results[index]
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+    monkeypatch.setattr(llm.httpx, "post", fake_post)
+    return calls
+
+
+def test_ask_retries_once_after_a_transport_error(monkeypatch):
+    calls = counting_post(monkeypatch, [llm.httpx.ConnectError("loading"), FakeResponse("Ready")])
+    assert llm.ask("hi") == "Ready"
+    assert calls["n"] == 2
+
+
+def test_ask_retries_a_busy_server(monkeypatch):
+    calls = counting_post(monkeypatch, [FakeResponse("", status=503), FakeResponse("Ready")])
+    assert llm.ask("hi") == "Ready"
+    assert calls["n"] == 2
+
+
+def test_ask_does_not_retry_a_bad_request(monkeypatch):
+    calls = counting_post(monkeypatch, [FakeResponse("", status=400), FakeResponse("Ready")])
+    assert llm.ask("hi") == ""
+    assert calls["n"] == 1
+
+
+def test_ask_gives_up_after_two_transport_errors(monkeypatch):
+    calls = counting_post(monkeypatch, [llm.httpx.ConnectError("down")])
+    assert llm.ask("hi") == ""
+    assert calls["n"] == 2
 
 
 def test_ask_without_choices_returns_plain_text(monkeypatch):

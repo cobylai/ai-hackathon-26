@@ -10,12 +10,16 @@ from __future__ import annotations
 
 import json
 import os
+import time
 
 import httpx
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8080/v1"
 DEFAULT_MODEL = "local"
 TIMEOUT_SECONDS = 120.0
+# One retry: a local runtime that is loading a model or restarting drops the first
+# call, and an empty reply costs the research loop a whole round.
+RETRY_SECONDS = 1.0
 
 SYSTEM = "You are a small, careful assistant. Answer only what is asked, briefly."
 
@@ -91,16 +95,27 @@ def ask(prompt: str, choices: list[str] | None = None, max_tokens: int = 64) -> 
                 },
             },
         }
-    try:
-        response = httpx.post(
-            f"{base_url()}/chat/completions", json=payload, timeout=TIMEOUT_SECONDS
-        )
-        response.raise_for_status()
-        data = response.json()
-        content = data["choices"][0]["message"]["content"]
-        usage = data.get("usage") or {}
-    except Exception:
-        # The caller decides what an empty answer means; a dead model must not crash a tool.
+    for attempt in (1, 2):
+        try:
+            response = httpx.post(
+                f"{base_url()}/chat/completions", json=payload, timeout=TIMEOUT_SECONDS
+            )
+            response.raise_for_status()
+            data = response.json()
+            content = data["choices"][0]["message"]["content"]
+            usage = data.get("usage") or {}
+            break
+        except httpx.HTTPStatusError as exc:
+            # A 4xx means the request was wrong; only a busy server is worth retrying.
+            if exc.response.status_code < 500 or attempt == 2:
+                return ""
+            time.sleep(RETRY_SECONDS)
+        except Exception:
+            # The caller decides what an empty answer means; a dead model must not crash a tool.
+            if attempt == 2:
+                return ""
+            time.sleep(RETRY_SECONDS)
+    else:  # pragma: no cover - the loop always breaks or returns
         return ""
     if usage:
         last_usage = {
