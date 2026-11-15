@@ -8,6 +8,12 @@ Every name, address and course here is made up (example.edu / example.com). Writ
 OUT_DIR and FRESH outside the repo. Today is fixed at Sat 2026-11-14, and the seed is
 fixed, so runs repeat. check asks person, due and bank questions through
 reason.answer and scores each against truth.json (keyword and source checks).
+
+Reuse: build() -> list of dicts, one per email, with key, sender (id), name, first,
+address, sent (YYYY-MM-DD), sent_at (YYYY-MM-DDTHH:MM, -0500), subject, body (no header
+lines), text (header lines + body), due (YYYY-MM-DD or None), phrase, ask_kw, facts.
+The questions and expected answers live in check(); it scores whatever bank
+$MUSE_BANK_DIR points at against truth.json in OUT_DIR.
 """
 from __future__ import annotations
 
@@ -121,12 +127,14 @@ def build() -> list[dict]:
         sent_dt = datetime(sent.year, sent.month, sent.day, rng.randint(8, 21), rng.randint(0, 59))
         due = TODAY + timedelta(days=off) if off is not None else None
         dl = phrase_for(due, sent, rng) if due else ""
+        plain = body.format(dl=dl).replace(" .", ".")
         text = (f"From: {first} {last} <{addr}>\nDate: {sent_dt:%a, %d %b %Y %H:%M:%S} -0500\n"
-                f"Subject: {subject}\n\n" + body.format(dl=dl).replace(" .", "."))
+                f"Subject: {subject}\n\n" + plain)
         out.append({"key": key, "sender": s, "name": f"{first} {last}", "first": first,
                     "address": addr, "sent": sent.isoformat(), "subject": subject,
                     "due": due.isoformat() if due else None, "phrase": dl or None,
-                    "ask_kw": ask_kw, "facts": facts, "text": text})
+                    "ask_kw": ask_kw, "facts": facts, "sent_at": sent_dt.isoformat(timespec="minutes"),
+                    "body": plain, "text": text})
     return out
 
 
@@ -135,7 +143,7 @@ def write(out_dir: Path) -> None:
     mails = build()
     for m in mails:
         (out_dir / f"{m['key']}.txt").write_text(m["text"])
-    truth = [{k: v for k, v in m.items() if k != "text"} for m in mails]
+    truth = [{k: v for k, v in m.items() if k not in ("text", "body")} for m in mails]
     (out_dir / "truth.json").write_text(json.dumps({"today": TODAY.isoformat(), "mail": truth}, indent=1))
     print(f"wrote {len(mails)} emails from {len({m['sender'] for m in mails})} senders to {out_dir}")
 
