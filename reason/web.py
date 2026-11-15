@@ -53,7 +53,7 @@ from bank import store
 
 from harness.email import send as sendgate
 
-from . import act, compose, suggest
+from . import act, agent, compose, suggest
 from . import send as sendroute
 from .answer import answer as _answer, online as _online
 from . import chats
@@ -177,6 +177,9 @@ PAGE = """<!doctype html>
   table.rows td.when { white-space: nowrap; color: var(--text2); font-variant-numeric: tabular-nums; width: 1%; }
   .foot { display: flex; gap: 4px 12px; margin-top: 6px; font-size: 12px; color: var(--text3); flex-wrap: wrap; }
   .foot a { color: var(--text3); text-decoration: none; cursor: pointer; }
+  .trace { margin-top: 4px; font-size: 12px; color: var(--text3); }
+  .trace summary { cursor: pointer; }
+  .trace ol { margin: 4px 0 0; padding-left: 20px; }
   .foot a:hover { color: var(--accent); text-decoration: underline; }
   .working { display: flex; align-items: center; gap: 8px; color: var(--text3); font-size: 14px; }
   .err { color: var(--red); font-size: 14px; }
@@ -427,6 +430,9 @@ function showAnswer(t, r) {
   if (r.choices) {
     render(a, kept.join(NL));
     choiceRow(t, r.choices);
+  } else if (r.pending && r.route === 'agent') {  // the plan's answer, then its one proposed step
+    render(a, kept.join(NL));
+    confirmRow(t, 'Do the step above?');
   } else if (r.pending) {
     const what = (kept.shift() || 'Flux is waiting for a yes.').trim();
     render(a, kept.join(NL)); if (!a.childNodes.length) a.remove();
@@ -435,11 +441,20 @@ function showAnswer(t, r) {
     render(a, kept.join(NL));
     sendBox(t, r.send, null);
   } else if (r.draft) {
-    render(a, (kept[0] || '').trim());  // the head; the box holds To, Subject and body
+    render(a, (r.route === 'agent' ? kept.join(NL) : (kept[0] || '')).trim());  // the head; the box holds To, Subject and body
     draftBox(t, r.draft, null);
   } else render(a, kept.join(NL));
   foot(t, r, sourceLine);
+  if (r.trace && r.trace.length) traceBox(t, r.trace);
   if (r.suggestions && r.suggestions.length) suggestRows(t, r.suggestions);
+}
+
+// The agent loop's steps (FLUX_AGENT=1): closed by default, one line per step.
+function traceBox(t, lines) {
+  const d = el('details', 'trace'); d.appendChild(el('summary', '', 'How I got this'));
+  const ol = el('ol', '');
+  lines.forEach((line) => ol.appendChild(el('li', '', line.replace(/^\d+\.\s*/, ''))));
+  d.appendChild(ol); t.appendChild(d);
 }
 
 // Suggested: at most two rows, one line + one button + a dismiss ×. Nothing runs until a click.
@@ -1013,7 +1028,9 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                     speaker.speak(a.text)
                 held = a.route == "discover" and discover.waiting()
                 self._json({"text": a.text, "route": a.route, "sources": a.sources,
-                            "seconds": a.seconds, "pending": held or (a.route == "act" and act.waiting()),
+                            "seconds": a.seconds,
+                            "pending": held or (a.route in ("act", "agent") and act.waiting()),
+                            "trace": agent.trace_lines(getattr(a, "trace", None) or []),
                             "choices": DISCOVER_CHOICES if held else None,
                             "suggestions": suggest.public(a.suggestions), "draft": a.draft,
                             "send": getattr(a, "send", None)})

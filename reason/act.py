@@ -350,6 +350,12 @@ def _plan_calendar(target: str, today: date, root, session, deps: dict):
     e = (row or {}).get("entry") if row else _find_entry(target, root, today, dated=True)
     if not e:
         return Answer(say("schedule", "nothing_found", target=target), "act")
+    return _hold_event(e, target, today, deps)
+
+
+def _hold_event(e: dict, target: str, today: date, deps: dict):
+    from .answer import Answer
+    from . import computer
     ev = computer.event_for(e, today)
     if ev is None:
         return Answer(say("schedule", "no_time", subject=e.get("subject") or target), "act")
@@ -372,6 +378,12 @@ def _plan_reminder(target: str, when: str, today: date, root, session, deps: dic
     e = _entry_from_row(row) if row else _find_entry(target, root, today, dated=True)
     if not e:
         return Answer(say("schedule", "nothing_due", target=target), "act")
+    return _hold_reminder(e, target, when, today, deps)
+
+
+def _hold_reminder(e: dict, target: str, when: str, today: date, deps: dict):
+    from .answer import Answer
+    from . import computer
     r = computer.reminder_for(e, when, today)
     if r is None:
         return Answer(say("schedule", "no_date", subject=e.get("subject") or target), "act")
@@ -465,14 +477,34 @@ def _default_online() -> bool:
     return online()
 
 
+def _deps(deps: dict | None) -> dict:
+    return {"online": _default_online, "open_app": open_app, "open_page": open_page,
+            "save_draft": save_draft, "write_reply": write_reply, "open_email": open_email,
+            "add_event": do_add_event, "add_reminder": do_add_reminder, **(deps or {})}
+
+
+def plan_item(kind: str, item_kind: str, obj: dict, today: date, root=None, deps: dict | None = None,
+              when: str = ""):
+    """The agent loop's proposal (reason/agent.py) as the usual preview, held for a yes.
+    kind: "calendar" | "remind" | "open"; obj: a bank entry, or an event for "open".
+    Nothing runs until handle() gets the yes; the writes keep their block list and log."""
+    d = _deps(deps)
+    if kind == "calendar":
+        return _hold_event(obj, obj.get("subject") or "it", today, d)
+    if kind == "remind":
+        return _hold_reminder(obj, obj.get("subject") or "it", when, today, d)
+    if kind == "open":
+        return plan_row({"kind": "event" if item_kind == "event" else "entry",
+                         ("event" if item_kind == "event" else "entry"): obj}, d)
+    return None
+
+
 def handle(question: str, today: date | None = None, root: Path | None = None, *,
            deps: dict | None = None, session=None):
     """Answer for an action request or a yes/no to a held one; None for anything else."""
     from .answer import Answer
     global _held
-    d = {"online": _default_online, "open_app": open_app, "open_page": open_page,
-         "save_draft": save_draft, "write_reply": write_reply, "open_email": open_email,
-         "add_event": do_add_event, "add_reminder": do_add_reminder, **(deps or {})}
+    d = _deps(deps)
     held, _held = (_held if waiting() else None), None  # any new input ends the wait
     if is_yes(question) or is_no(question):
         if held is None:

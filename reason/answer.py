@@ -56,6 +56,10 @@ class Answer:
     # A send preview (reason/send.py, playbooks/send.md): {"token", "to", "subject", "body", ...}.
     # The window shows it with a Send button; nothing is sent without that click.
     send: dict | None = None
+    # The agent loop's steps (reason/agent.py, FLUX_AGENT=1 only): [{"n", "action", "arg",
+    # "note", "tokens", "seconds", "valid"}], shown as "How I got this" in the window.
+    trace: list[dict] = field(default_factory=list)
+    agent: dict | None = None
 
 
 # ---- formatting -------------------------------------------------------------
@@ -406,6 +410,11 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
         a = got
     else:
         a = _bank(q, today, root)
+        if a is None:
+            from . import agent  # FLUX_AGENT=1 only: a bounded plan for what no route covers
+            if agent.wants(q):
+                a = agent.answer(q, today, root, session=session, events_fn=_events,
+                                 online_fn=_online or online, web_fns=_web_fns)
         if a is None and not route.web_ok(q):  # web only for clear factual questions (RULES 9)
             a = Answer(say("web", "personal" if playbook.trigger("web", "personal").search(q)
                            else "unclear"), "not_found")
