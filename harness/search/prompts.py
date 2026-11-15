@@ -17,6 +17,8 @@ Ask = Callable[..., str]
 MAX_PICKS = 3
 MAX_NOTE_CHARS = 300
 MAX_QUERY_CHARS = 120
+# The result listing is re-sent every round; a short snippet is enough to pick from.
+SNIPPET_CHARS = 70
 
 
 def _ask(ask: Ask | None) -> Ask:
@@ -31,6 +33,8 @@ def _result_line(n: int, item) -> str:
     title = _clean(getattr(item, "title", str(item)))
     domain = _clean(getattr(item, "domain", ""))
     snippet = _clean(getattr(item, "snippet", ""))
+    if len(snippet) > SNIPPET_CHARS:
+        snippet = snippet[: SNIPPET_CHARS - 3].rstrip(" ,.;:-") + "..."
     return f"{n}. {title} ({domain}) {snippet}".strip()
 
 
@@ -63,9 +67,8 @@ def pick(question: str, results: Sequence, ask: Ask | None = None) -> list[int]:
     prompt = (
         f"Question: {question}\n\n"
         f"Search results:\n{listing}\n\n"
-        "Choose up to 3 results worth opening to answer the question, best first. "
-        "Reply with their numbers, separated by commas. Use only numbers from the list. "
-        "Reply NONE if none of them look useful."
+        "Which results are worth opening? Reply with up to 3 numbers, best first, "
+        "comma separated. Only numbers from the list. NONE if none help."
     )
     return _numbers(ask(prompt, max_tokens=24), len(results))
 
@@ -76,8 +79,8 @@ def note(question: str, chunk: str, ask: Ask | None = None) -> str | None:
     prompt = (
         f"Question: {question}\n\n"
         f"Page chunk:\n{chunk}\n\n"
-        "Write one or two short sentences from the chunk that help answer the question. "
-        "Do not add anything the chunk does not say. Reply NONE if the chunk does not help."
+        "Quote or paraphrase one or two sentences from the chunk that help answer the "
+        "question. NONE if the chunk does not help."
     )
     text = _clean(ask(prompt, max_tokens=90))
     if not text or text.upper().startswith("NONE"):
@@ -91,8 +94,7 @@ def enough(question: str, notes, ask: Ask | None = None) -> bool:
     prompt = (
         f"Question: {question}\n\n"
         f"Notes from pages already read:\n{_notes_text(notes)}\n\n"
-        "Do these notes contain everything needed to answer the question? "
-        "Reply YES or NO."
+        "Do the notes fully answer the question? YES or NO."
     )
     return ask(prompt, choices=["YES", "NO"], max_tokens=4) == "YES"
 
@@ -104,8 +106,7 @@ def rewrite(question: str, query: str, notes, ask: Ask | None = None) -> str:
         f"Question: {question}\n\n"
         f"Search query already tried: {query}\n"
         f"What the notes say so far:\n{_notes_text(notes)}\n\n"
-        "Write one better search query, at most 8 words, that is likely to fill the gap. "
-        "No quotes, no explanation. Reply with the query only."
+        "Write one better search query, at most 8 words, that fills the gap. Query only."
     )
     reply = ask(prompt, max_tokens=32)
     for line in (reply or "").splitlines():

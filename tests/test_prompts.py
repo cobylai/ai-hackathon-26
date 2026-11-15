@@ -77,6 +77,15 @@ def test_note_rejects_none_and_empty():
     assert prompts.note("q", "chunk", ask=llm.FakeLLM([""]).ask) is None
 
 
+def test_pick_listing_shortens_long_snippets():
+    long_item = Item("A title", "d.example", "word " * 40)
+    fake = llm.FakeLLM(["1"])
+    prompts.pick("q", [long_item], ask=fake.ask)
+    line = next(l for l in fake.prompts[0].splitlines() if l.startswith("1. "))
+    assert len(line) <= 110
+    assert line.endswith("...")
+
+
 def test_note_is_capped():
     text = prompts.note("q", "chunk", ask=llm.FakeLLM(["word " * 200]).ask)
     assert text is not None and len(text) <= prompts.MAX_NOTE_CHARS

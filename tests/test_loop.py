@@ -99,6 +99,38 @@ def test_rewrites_when_the_notes_are_not_enough():
     assert len(site.opened) == 2
 
 
+def test_last_round_does_not_ask_enough():
+    fake = llm.FakeLLM(
+        [
+            "1", "note one", "NO", "q2",
+            "1", "note two", "NO", "q3",
+            "1", "note three",
+        ]
+    )
+    site = Script()
+    loop.research("q", ask=fake.ask, search=site.search, open_page=site.open_page)
+    enough_calls = sum(1 for prompt in fake.prompts if "fully answer" in prompt)
+    assert enough_calls == loop.MAX_ROUNDS - 1
+
+
+def test_rewrite_sees_only_the_latest_notes():
+    fake = llm.FakeLLM(
+        [
+            "1", "FIRST-ROUND-NOTE", "NO", "q2",
+            "1", "SECOND-ROUND-NOTE", "NO", "q3",
+        ]
+    )
+    site = Script()
+    loop.research("q", ask=fake.ask, search=site.search, open_page=site.open_page)
+    first_rewrite = next(p for p in fake.prompts if "better search query" in p)
+    later_rewrites = [p for p in fake.prompts if "better search query" in p][1:]
+    assert "FIRST-ROUND-NOTE" in first_rewrite
+    assert later_rewrites
+    for prompt in later_rewrites:
+        assert "SECOND-ROUND-NOTE" in prompt
+        assert "FIRST-ROUND-NOTE" not in prompt
+
+
 class GreedyModel:
     """Always picks five results, never finds anything useful, always asks again."""
 

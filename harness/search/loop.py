@@ -56,9 +56,8 @@ def _answer(question: str, notes: Sequence[Note], ask: Callable[..., str]) -> st
     prompt = (
         f"Question: {question}\n\n"
         f"Notes:\n{listing}\n\n"
-        f"Write the answer from these notes in at most {MAX_ANSWER_WORDS} words. "
-        "Cite the notes you use as [1], [2] and so on. "
-        "If the notes do not answer the question, say what is missing."
+        f"Answer in at most {MAX_ANSWER_WORDS} words using only these notes, citing [1], "
+        "[2]. If they do not cover it, say what is missing."
     )
     text = " ".join((ask(prompt, max_tokens=260) or "").split())
     if not text:
@@ -97,6 +96,7 @@ def research(
         tried.add(query.lower())
         results = list(find(query))[:MAX_RESULTS]
         picks = prompts.pick(question, results, ask)[:MAX_PAGES_PER_ROUND] if results else []
+        first_new_note = len(notes)
 
         for number in picks:
             item = results[number - 1]
@@ -115,12 +115,15 @@ def research(
                     notes.append((len(notes) + 1, item.domain, written))
                     break
 
-        if notes and prompts.enough(question, notes, ask):
-            break
+        # Nothing after the last round can change the answer, so do not spend a
+        # model call asking whether the notes are enough.
         if round_no >= MAX_ROUNDS:
             break
+        if notes and prompts.enough(question, notes, ask):
+            break
 
-        new_query = prompts.rewrite(question, query, notes, ask)
+        # The rewrite only needs to know what this round added.
+        new_query = prompts.rewrite(question, query, notes[first_new_note:], ask)
         if not new_query or new_query.lower() in tried:
             break
         query = new_query
