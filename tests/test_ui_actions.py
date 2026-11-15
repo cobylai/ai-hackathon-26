@@ -91,6 +91,7 @@ def test_type_falls_back_to_keystrokes(home, controls, monkeypatch):
 
 def test_type_fallback_failure(home, controls, monkeypatch):
     monkeypatch.setattr(ui, "_set_value", lambda el, text: False)
+    monkeypatch.setattr(ui, "_focus", lambda el: None)  # no pyobjc on CI (Linux)
     monkeypatch.setattr(ui, "_type_text", lambda pid, text: (False, "no event tap"))
     result = ui.ui_type(3, "abc")
     assert result.startswith("ERR type 3 failed")
