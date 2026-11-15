@@ -1,6 +1,6 @@
 # Testing round 2 for Antranig's agents (2026-11-15)
 
-Round 1 is `docs/PARTNER-TESTING.md`. Do its setup first if you haven't. This
+Round 1 is `docs/PARTNER-TESTING.md` (your round 1 report is `docs/PARTNER-TEST-REPORT.md`; its fixes are in progress). Do its setup first if you haven't. This
 round covers what landed since. Start from `main` (8113e7a or later).
 
 ## What changed since round 1
@@ -15,6 +15,7 @@ round covers what landed since. Start from `main` (8113e7a or later).
 - **Apple Calendar** (`applecal/`): reads one Calendar.app calendar, "Muse demo".
 - **Memory**: "remember that ...", "what do you know about me", "forget that".
   **Person pages** have an API for discovery (`bank.people`).
+- **Discovery** (`discover/`): the window's Discover button (or "discover") asks yes/no questions about you and only keeps confirmed facts. Try yes, no, skip, and a second run.
 - **Mock Canvas** (`canvas/`, `scripts/*canvas*`): kind="canvas" bank entries
   with due dates from the page.
 - **Acting** (`reason/act.py`): "open my calendar", "draft a reply to X saying
@@ -33,8 +34,7 @@ round covers what landed since. Start from `main` (8113e7a or later).
   Argmax key (kept in the Keychain) and checks the setup at launch. See
   "Mac app" in `docs/window.md`.
 
-Still being built, so don't test these yet: discovery mode (landing soon; a
-round 3 note will follow), follow-up questions, and suggested replies.
+Still being built, so don't test these yet: follow-up questions, and suggested replies.
 
 ## Setup additions
 

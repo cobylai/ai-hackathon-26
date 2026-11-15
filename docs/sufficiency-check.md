@@ -138,6 +138,23 @@ Live, `python -m reason`, online, Bonsai 2 4B, fresh bank:
 Before the fix, Kenya and speed of light came back not found (42.9 s and
 37.5 s), and the World Cup question took 59.7 s.
 
+## Bot-check and error pages (2026-11-15, partner test report problem 7)
+
+A misheard question ("Elena asked me") went to the web. Reddit's "Prove your
+humanity" page came back as OK, so it was given as the answer and filed in the
+bank. `sufficiency/junk.py` now adds a second check on our side:
+
+- gather skips any page whose status isn't OK, as before (`_page` gives empty
+  text). It also skips any page of 3000 characters or less that contains a
+  bot-check or error-page phrase. Both count as unreadable.
+- An answer or quote containing one of those phrases is refused
+  (`reason: blocked_page`). The web route in `reason/answer.py` checks again
+  before filing, so such a page is never saved.
+
+Tests: `sufficiency/tests/test_junk.py` and `test_web_bot_check_answer_not_filed`
+in reason. Live on a copy of the demo bank: "Elena asked me" and "What did
+everyone ask me?" came back not found, and nothing was filed.
+
 ## Known limits
 
 - **Pointer pages.** A page that only says where the answer is ("Meeting times are posted on our Instagram") can be accepted as the answer. Its quote is real, so the quote check passes. This is s03 with the shipped prompt. Thinker 0 ruled no further prompt work. The A/B check call (`CHECK_ANSWER = True`) catches these pointers but rejects answers that need date reasoning, so it is off.

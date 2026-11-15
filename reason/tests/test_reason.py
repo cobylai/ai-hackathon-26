@@ -238,6 +238,21 @@ class SearchRoute(Bank):
         self.assertEqual(ingested["subject"], "what is the capital of Peru Lima")
         self.assertEqual(a.text.count('"Lima is the capital of Peru."'), 1)
 
+    def test_web_bot_check_answer_not_filed(self):
+        gr = SimpleNamespace(found=True, answer="Prove your humanity",
+                             evidence="Prove your humanity",
+                             source=SimpleNamespace(url="https://www.reddit.com/r/x"),
+                             opened=["https://www.reddit.com/r/x"], message="")
+        ingest = mock.Mock(side_effect=AssertionError("must not file a bot-check page"))
+        with mock.patch("sufficiency.gather", return_value=gr):
+            a = answer("what did everyone ask me", today=WED, root=self.root,
+                       _online=lambda: True,
+                       _web_fns={"search_fn": lambda q: [], "open_fn": lambda u: ("OK", ""),
+                                 "ingest_fn": ingest})
+        self.assertEqual(a.route, "not_found")
+        self.assertNotIn("humanity", a.text)
+        ingest.assert_not_called()
+
     def test_web_not_found(self):
         gr = SimpleNamespace(found=False, answer=None, evidence=None, source=None,
                              opened=[], message="No page answered it.")

@@ -39,5 +39,35 @@ class TestSyncEmail(unittest.TestCase):
         self.assertEqual(calls[1][1]["kind"], "email")
 
 
+    def test_live_sync_refuses_demo_and_test_banks(self):
+        from pathlib import Path
+        for name in ("muse-demo-bank", "bank-test", "Demo"):
+            with self.assertRaises(SystemExit) as cm:
+                S.check_live_bank(Path("/tmp") / name)
+            self.assertIn("muse-bank", str(cm.exception.code))
+        S.check_live_bank(Path("/tmp/muse-bank"))  # no error
+
+    def test_main_refuses_demo_bank_before_touching_gmail(self):
+        import os
+        from unittest import mock
+        with mock.patch.dict(os.environ, {"MUSE_BANK_DIR": "/tmp/muse-demo-bank"}), \
+             mock.patch.object(S, "sync") as sync:
+            with self.assertRaises(SystemExit):
+                S.main(["7"])
+            sync.assert_not_called()
+
+
+    def test_sync_itself_refuses_demo_bank(self):
+        # discover/session.py calls sync() directly, without main().
+        import os
+        from unittest import mock
+        with mock.patch.dict(os.environ, {"MUSE_BANK_DIR": "/tmp/muse-demo-bank"}):
+            with self.assertRaises(SystemExit):
+                S.sync(7, lambda *a, **k: None)
+        from pathlib import Path
+        with self.assertRaises(SystemExit):
+            S.sync(7, lambda *a, **k: None, root=Path("/tmp/bank-test"))
+
+
 if __name__ == "__main__":
     unittest.main()
