@@ -133,7 +133,14 @@ def my_first_name(root) -> str | None:
 
 def _signed(body: str, root) -> str:
     me = my_first_name(root)
-    body = body.rstrip()
+    lines = body.rstrip().splitlines()
+    # The model sometimes signs off itself ("Thanks, Coby"); code adds the one sign-off.
+    while lines and (not lines[-1].strip() or re.match(
+            r"(?i)^\s*(?:(?:thanks|thank you|best|cheers|regards|sincerely|best regards)[,!.]?\s*)?(?:"
+            + re.escape(me or "\x00") + r")?[,.!]?\s*$", lines[-1]) and (me and me.lower() in lines[-1].lower()
+                                                                     or re.match(r"(?i)^\s*(?:thanks|best|cheers|regards|sincerely)[,!.]?\s*$", lines[-1]))):
+        lines.pop()
+    body = "\n".join(lines).rstrip()
     return body + _say("sign", name=me) if me else body
 
 
@@ -195,7 +202,7 @@ def _topic_entries(topic: str, person: dict | None, root) -> list[dict]:
         str(e.get(k) or "") for k in ("subject", "ask", "body", "topic")).lower()))]
     if person:
         mine = {e.get("path") for e in person.get("entries") or []}
-        hits.sort(key=lambda e: e.get("path") not in mine)
+        hits = [e for e in hits if e.get("path") in mine] or hits  # their own mail about it, if any
     return hits[:TOPIC_LIMIT]
 
 
@@ -230,7 +237,7 @@ def new_draft(person: dict | None, typed_name: str | None, topic: str, entries: 
         raise RuntimeError("the model wrote nothing")
     return _keep({"kind": "new", "to": (person or {}).get("address") or "", "to_name": to_name or "",
                   "subject": got.get("subject") or topic[:60], "body": _signed(got["body"], root),
-                  "used": [_label(e) for e in entries] + (["what you said"] if said else [])}, None)
+                  "used": list(dict.fromkeys(_label(e) for e in entries)) + (["what you said"] if said else [])}, None)
 
 
 def rewrite(draft_id: str, gist: str, root=None, writer=None) -> dict | None:
@@ -310,7 +317,9 @@ def _go(h: Held, root, session, events_fn, writer):
             mails = [e for e in (person or {}).get("entries") or [] if e.get("sender_address")]
             if not mails:
                 return Answer(_say("no_sender", name=(h.name or "them").title()), "compose")
-            e = mails[0]
+            # The newest meeting ask, else the newest email with an ask, else the newest email.
+            e = (next((x for x in mails if suggest.is_meeting(x)), None)
+                 or next((x for x in mails if (x.get("ask") or "").strip()), None) or mails[0])
             d = reply_draft(e, h.gist, root=root, events_fn=events_fn, writer=writer)
             suggest.mark_drafted(session, e)
             return _answer(d)

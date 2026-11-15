@@ -39,6 +39,8 @@ def run(today: date, only: str | None = None) -> tuple[int, int]:
                 try:
                     a = answer(ex["question"], today=today, root=root, session=session)
                     route, text = a.route, a.text
+                    if a.suggestions:  # playbooks/suggest.md: the Suggested lines count too
+                        text += "\nSuggested: " + " | ".join(x["line"] for x in a.suggestions)
                 except Exception as e:
                     route, text = "error", f"{type(e).__name__}: {e}"
                 missing = [c for c in ex["contains"] if c.lower() not in text.lower()]
