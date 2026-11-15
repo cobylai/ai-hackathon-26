@@ -1,0 +1,24 @@
+{
+  "id": "e03_advisor_meeting",
+  "task": "extraction",
+  "note": "",
+  "email": "From: Dr. Helen Okafor <hokafor@univ.example.edu>\nDate: Wed, 11 Nov 2026 08:30:00 -0500\nSubject: Pre-enrollment check-in\n\nDear student,\n\nPre-enrollment opens next week. Please book a 15 minute slot with me before Tuesday so we can confirm your spring schedule. The booking link is on my faculty page.\n\nBest,\nHelen Okafor",
+  "expected": {
+    "sender": "hokafor@univ.example.edu",
+    "sender_name": "Dr. Helen Okafor",
+    "date": "2026-11-11",
+    "ask_keywords": [
+      [
+        "book",
+        "slot",
+        "meeting",
+        "schedule"
+      ]
+    ],
+    "deadline_keywords": [
+      [
+        "tuesday"
+      ]
+    ]
+  }
+}

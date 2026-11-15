@@ -1,0 +1,338 @@
+{
+  "size": "9B",
+  "model": "/Users/cobylai/code/ai-hackathon-26/samples/bonsai-models/mlx/models/bonsai2-9b-mlx",
+  "summary": {
+    "extraction": {
+      "n": 10,
+      "correct": 6,
+      "median_s": 1.94,
+      "json_valid_first_try": 10,
+      "field_sender": 10,
+      "field_date": 10,
+      "field_ask": 9,
+      "field_deadlines": 7
+    },
+    "sufficiency": {
+      "n": 8,
+      "correct": 5,
+      "median_s": 0.57,
+      "valid_label": 8
+    },
+    "peak_server_mem_mb": 3793
+  },
+  "rows": [
+    {
+      "id": "e01_ta_regrade",
+      "task": "extraction",
+      "correct": true,
+      "fields": {
+        "sender": true,
+        "date": true,
+        "ask": true,
+        "deadlines": true
+      },
+      "first_try_valid": true,
+      "calls": 1,
+      "seconds": 2.3234567920444533,
+      "got": {
+        "sender": "pn42@univ.example.edu",
+        "date": "2026-11-09",
+        "ask": "send the commit hash of the version you think we graded by mistake",
+        "deadlines": [
+          "Friday at 5pm"
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "e02_club_social",
+      "task": "extraction",
+      "correct": true,
+      "fields": {
+        "sender": true,
+        "date": true,
+        "ask": true,
+        "deadlines": true
+      },
+      "first_try_valid": true,
+      "calls": 1,
+      "seconds": 1.462335041956976,
+      "got": {
+        "sender": "outing@clubs.univ.example.edu",
+        "date": "2026-11-10",
+        "ask": null,
+        "deadlines": []
+      },
+      "error": null
+    },
+    {
+      "id": "e03_advisor_meeting",
+      "task": "extraction",
+      "correct": true,
+      "fields": {
+        "sender": true,
+        "date": true,
+        "ask": true,
+        "deadlines": true
+      },
+      "first_try_valid": true,
+      "calls": 1,
+      "seconds": 1.833836457983125,
+      "got": {
+        "sender": "hokafor@univ.example.edu",
+        "date": "2026-11-11",
+        "ask": "book a 15 minute slot with the sender before Tuesday to confirm spring schedule",
+        "deadlines": [
+          "before Tuesday"
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "e04_lab_partner",
+      "task": "extraction",
+      "correct": false,
+      "fields": {
+        "sender": true,
+        "date": true,
+        "ask": true,
+        "deadlines": false
+      },
+      "first_try_valid": true,
+      "calls": 1,
+      "seconds": 2.036898458027281,
+      "got": {
+        "sender": "mb771@univ.example.edu",
+        "date": "2026-11-12",
+        "ask": "push your part of the circuit analysis to the shared doc and provide scope screenshots from tuesday",
+        "deadlines": [
+          "2026-11-13"
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "e05_newsletter",
+      "task": "extraction",
+      "correct": true,
+      "fields": {
+        "sender": true,
+        "date": true,
+        "ask": true,
+        "deadlines": true
+      },
+      "first_try_valid": true,
+      "calls": 1,
+      "seconds": 1.4978275829926133,
+      "got": {
+        "sender": "dining-news@univ.example.edu",
+        "date": "2026-11-13",
+        "ask": null,
+        "deadlines": []
+      },
+      "error": null
+    },
+    {
+      "id": "e06_prof_extension",
+      "task": "extraction",
+      "correct": false,
+      "fields": {
+        "sender": true,
+        "date": true,
+        "ask": true,
+        "deadlines": false
+      },
+      "first_try_valid": true,
+      "calls": 1,
+      "seconds": 2.203434083960019,
+      "got": {
+        "sender": "dreyes@univ.example.edu",
+        "date": "2026-11-12",
+        "ask": "submit your final notebook and a one page reflection on the course site",
+        "deadlines": [
+          "2026-11-15 23:59"
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "e07_long_messy",
+      "task": "extraction",
+      "correct": false,
+      "fields": {
+        "sender": true,
+        "date": true,
+        "ask": true,
+        "deadlines": false
+      },
+      "first_try_valid": true,
+      "calls": 1,
+      "seconds": 2.296869207988493,
+      "got": {
+        "sender": "jk2290@univ.example.edu",
+        "date": "2026-11-10",
+        "ask": "Register four people on the hackathon form by Thursday at noon",
+        "deadlines": [
+          "2026-11-14T12:00:00"
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "e08_rec_letter",
+      "task": "extraction",
+      "correct": true,
+      "fields": {
+        "sender": true,
+        "date": true,
+        "ask": true,
+        "deadlines": true
+      },
+      "first_try_valid": true,
+      "calls": 1,
+      "seconds": 1.5164017920033075,
+      "got": {
+        "sender": "sa338@univ.example.edu",
+        "date": "2026-11-09",
+        "ask": "fill out the short form they'll email you",
+        "deadlines": []
+      },
+      "error": null
+    },
+    {
+      "id": "e09_bursar",
+      "task": "extraction",
+      "correct": false,
+      "fields": {
+        "sender": true,
+        "date": true,
+        "ask": false,
+        "deadlines": true
+      },
+      "first_try_valid": true,
+      "calls": 1,
+      "seconds": 1.5748561670188792,
+      "got": {
+        "sender": "bursar@univ.example.edu",
+        "date": "2026-11-11",
+        "ask": null,
+        "deadlines": [
+          "5:00pm on the 25th"
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "e10_long_group_project",
+      "task": "extraction",
+      "correct": true,
+      "fields": {
+        "sender": true,
+        "date": true,
+        "ask": true,
+        "deadlines": true
+      },
+      "first_try_valid": true,
+      "calls": 1,
+      "seconds": 2.3009219170198776,
+      "got": {
+        "sender": "ar512@univ.example.edu",
+        "date": "2026-11-13",
+        "ask": "take the slides",
+        "deadlines": [
+          "Sunday night",
+          "Friday after Wednesday at 2:30"
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "p01_weather_yes",
+      "task": "sufficiency",
+      "correct": false,
+      "expected": "enough",
+      "got": "not enough",
+      "valid": true,
+      "seconds": 0.6277426250162534,
+      "prompt_tokens": 197,
+      "estimated_prompt_tokens": 200
+    },
+    {
+      "id": "p02_course_due_yes",
+      "task": "sufficiency",
+      "correct": false,
+      "expected": "enough",
+      "got": "not enough",
+      "valid": true,
+      "seconds": 0.648656583041884,
+      "prompt_tokens": 225,
+      "estimated_prompt_tokens": 228
+    },
+    {
+      "id": "p03_ads_no",
+      "task": "sufficiency",
+      "correct": true,
+      "expected": "not enough",
+      "got": "not enough",
+      "valid": true,
+      "seconds": 0.553820375003852,
+      "prompt_tokens": 163,
+      "estimated_prompt_tokens": 166
+    },
+    {
+      "id": "p04_unrelated_no",
+      "task": "sufficiency",
+      "correct": true,
+      "expected": "not enough",
+      "got": "not enough",
+      "valid": true,
+      "seconds": 0.566066250030417,
+      "prompt_tokens": 166,
+      "estimated_prompt_tokens": 169
+    },
+    {
+      "id": "p05_login_no",
+      "task": "sufficiency",
+      "correct": true,
+      "expected": "not enough",
+      "got": "not enough",
+      "valid": true,
+      "seconds": 0.49345195898786187,
+      "prompt_tokens": 144,
+      "estimated_prompt_tokens": 147
+    },
+    {
+      "id": "p06_hours_yes",
+      "task": "sufficiency",
+      "correct": false,
+      "expected": "enough",
+      "got": "not enough",
+      "valid": true,
+      "seconds": 0.5643984170164913,
+      "prompt_tokens": 178,
+      "estimated_prompt_tokens": 181
+    },
+    {
+      "id": "p07_partial_no",
+      "task": "sufficiency",
+      "correct": true,
+      "expected": "not enough",
+      "got": "not enough",
+      "valid": true,
+      "seconds": 0.5805355000193231,
+      "prompt_tokens": 173,
+      "estimated_prompt_tokens": 176
+    },
+    {
+      "id": "p08_recipe_yes",
+      "task": "sufficiency",
+      "correct": true,
+      "expected": "enough",
+      "got": "enough",
+      "valid": true,
+      "seconds": 0.7681913750129752,
+      "prompt_tokens": 224,
+      "estimated_prompt_tokens": 227
+    }
+  ]
+}

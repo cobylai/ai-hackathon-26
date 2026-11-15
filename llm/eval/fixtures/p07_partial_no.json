@@ -1,0 +1,9 @@
+{
+  "id": "p07_partial_no",
+  "task": "sufficiency",
+  "note": "right page, but the answer is elsewhere",
+  "question": "What are the office hours for Prof. Reyes this week?",
+  "url": "https://course.example.edu/engrd2700/staff",
+  "page": "ENGRD 2700 Course Staff\nInstructor: Prof. Daniel Reyes (dreyes@univ.example.edu)\nTAs: Mei Lin, Omar Haddad, Grace Park\nOffice hours are posted weekly on the course calendar. Check Ed Discussion for changes.",
+  "expected": "not enough"
+}
