@@ -72,3 +72,8 @@
 
 ## CI fix (2026-11-15)
 - Teammate added .github/workflows/tests.yml (ubuntu). First run caught a real Linux hole: test_type_fallback_failure didn't stub _focus -> ModuleNotFoundError. Fixed; CI now 140 passed / 3 skipped.
+
+## Merge main back + CI green (2026-11-15)
+- Merged origin/main (Flux app tree, CLI, teardown) into this branch; conflicts resolved: README kept Flux's, test_tools kept main's generalized shape test, test_state kept both new tests, log kept ours.
+- CI caught a latent Linux bug in test_cli_prints_status_and_text (hardcoded macOS Playwright cache path); fixed to probe both platform paths. CI: 304 passed / 3 skipped.
+- Branch now fast-forwards cleanly into main (merge-tree: 0 conflicts).
