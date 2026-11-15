@@ -182,6 +182,30 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         showMessage("Starting…")
         show()
         DispatchQueue.global().async { self.bringUp() }
+        startNudges()
+    }
+
+    // ---- Proactive nudges (docs/agent/proactive.md): poll /nudges about once a minute; the server
+    // returns nothing unless it runs with FLUX_NUDGES=1. Notify each nudge id once, text as an argument.
+    var nudgeTimer: Timer?
+    var notifiedNudges = Set<String>()
+    func startNudges() {
+        nudgeTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            DispatchQueue.global().async { self?.pollNudges() }
+        }
+    }
+    func pollNudges() {
+        guard let d = get(URL(string: "http://localhost:8765/nudges")!, timeout: 3),
+              let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
+              (o["enabled"] as? Bool) == true, let list = o["nudges"] as? [[String: Any]] else { return }
+        for n in list {
+            guard let id = n["id"] as? String, let text = n["text"] as? String, !notifiedNudges.contains(id) else { continue }
+            notifiedNudges.insert(id)
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            p.arguments = ["-e", "on run argv\ndisplay notification (item 1 of argv) with title \"Flux\"\nend run", text]
+            try? p.run()
+        }
     }
     var started = false
 
