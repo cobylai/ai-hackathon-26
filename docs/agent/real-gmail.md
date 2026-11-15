@@ -42,3 +42,25 @@ is configured in Mail.app, a JXA read (`Application("Mail")` -> inbox messages w
 the user to grant Automation/Full Disk Access once. Not enabled; Flux's Mail integration only opens drafts.
 
 ## Tests
+Offline suites after the change: bank 84, reason 180, sufficiency 54, applecal 10, canvas 11 (all OK); pytest 279 passed
+(incl. 2 new collect_rows/message_ids tests); `FLUX_BANK_DIR=~/flux-demo-bank python -m reason.playbook_check` 106/106.
+New tests: `bank/tests/test_mailsync.py` (incremental second run, reply adds only the reply, thread de-dup and limit,
+budget resume, model-error retry, state holds no content, 6,000-token chunking, lock, bank-inside-repo refused,
+gitignore, no tracked bank files), `reason/tests/test_web.py` (Sync mail button and /sync), `tests/test_email_collect.py`.
+
+## Live result (one read-only run, search and read only; no compose, drafts or sends)
+`sync_email.py 14 --limit 200 --budget 2400`, bank `~/flux-bank` (outside git), Bonsai on :8080.
+- Threads seen: 50. Read: 44. Failed to open: 6. Messages filed: 44, all added (0 duplicates, 0 model errors).
+- Time: 661.6 s total (about 15 s per thread, dominated by Gmail page loads plus Bonsai extraction).
+- Only 50 threads came back, which is exactly one Gmail results page. So the "Older" paging to reach 200 did NOT
+  demonstrably work live (either the inbox really had 50, or paging failed). I did not rerun (one live run allowed).
+  After the run I added fallback selectors for the Older button; that change is untested live.
+- The 6 unopened threads were left unmarked, so the next run retries them. The incremental second run was verified
+  offline only, not live.
+
+## Not done / risks
+- 200-thread paging unverified live; Older-button selectors may need a tweak.
+- Web "Sync mail" blocks the window up to 120 s per pass (single-threaded server); rerun to continue.
+- Mail.app route not checked (see above). Message ids rely on Gmail's `data-legacy-message-id`; if absent, index-based ids are used.
+- OpenHuman (GPL-3): no code copied, only the idea of a periodic (about 20 min) background refresh, behind `--auto-sync-minutes`.
+  No third_party/ directory or THIRD_PARTY_NOTICES.md was needed.
