@@ -154,6 +154,27 @@ def test_open_page_restarts_a_dead_browser(monkeypatch):
     assert counters["restarts"] == 1
 
 
+def test_search_tools_report_a_browser_that_cannot_start(monkeypatch):
+    """A locked profile must be an ERR line, not a traceback (found via the CLI)."""
+    from harness.browser import tools as browser_tools
+
+    def locked():
+        raise browser_tools.BrowserStartError("profile in use; close the other window")
+
+    monkeypatch.setattr(browser_tools, "_page", locked)
+    monkeypatch.setattr(
+        tools, "_last", [Result("Page", "https://example.test/a", "example.test", "")]
+    )
+    cases = {
+        "search": lambda: tools.search("q"),
+        "open_result": lambda: tools.open_result(1),
+        "research": lambda: tools.research("q"),
+    }
+    for name, call in cases.items():
+        out = check(call())
+        assert out.startswith("ERR local | profile in use"), f"{name}: {out[:60]}"
+
+
 def test_registry_exposes_the_search_group(stool, monkeypatch, site):
     assert registry.GROUPS["search"] == ["search", "open_result", "research"]
     entry = registry.TOOLS["search"]

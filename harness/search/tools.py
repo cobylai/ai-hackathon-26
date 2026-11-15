@@ -47,6 +47,7 @@ def _line(n: int, item: Result) -> str:
     return " ".join(parts)
 
 
+@browser_tools.browser_tool
 def search(query: str) -> str:
     """Search the web; list up to ten results as numbered lines."""
     global _last
@@ -91,8 +92,12 @@ def open_page(url: str) -> tuple[str, str]:
         get_session().restart()
         try:
             return _load(url)
+        except browser_tools.BrowserStartError:
+            raise
         except Exception:
             return "ERR", ""
+    except browser_tools.BrowserStartError:
+        raise  # a locked or missing browser is the caller's to report, not a bad page
     except Exception:
         return "ERR", ""
 
@@ -109,6 +114,7 @@ def _load(url: str) -> tuple[str, str]:
     return "OK", text
 
 
+@browser_tools.browser_tool
 def open_result(n: int) -> str:
     """Open result N from the last search; return its status line and text."""
     n = int(n)
@@ -131,6 +137,7 @@ def open_result(n: int) -> str:
     return _cap(f"{head}\n{chunk}", hint)
 
 
+@browser_tools.browser_tool
 def research(question: str) -> str:
     """Answer a question from the web: search, read, take notes, retry."""
     outcome = loop.research(question)

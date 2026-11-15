@@ -36,3 +36,4 @@
 - README rewritten from a two-line stub: package layout, the CLI commands, the five environment variables, how to run the offline tests and the live evaluation, and the four ground rules the code follows.
 - The loop stops after one search when the engine reports BLOCKED or LOGIN: a wall is not a query problem, and Run 4 burned three searches per question proving it. Injected search functions keep the old retry behaviour.
 - The eval table shows the engine and `walled/total` searches per question, and the summary counts questions with no usable search, so a wall-limited run explains itself instead of looking like a broken tool.
+- The search tools now share the browser tools' guard: a locked profile returns `ERR local | profile in use...` instead of a traceback (the new CLI surfaced it), and `open_page` re-raises start failures rather than reporting them as a bad page. Live check: `research` on a walled query now ends after 1 search round, not 3.
