@@ -27,7 +27,7 @@ class Web(unittest.TestCase):
             today="2026-11-14", answer_fn=fake_answer, online_fn=lambda: False, count_fn=lambda: 17,
             entries_fn=lambda: [
                 {"sent_date": "2026-11-12", "sender_name": "Ann Old", "subject": "old", "body": "older one"},
-                {"sent_date": "2026-11-14", "sender_name": "Bo New", "subject": "Phone bill", "body": "Bill $42.18.",
+                {"sent_date": "2026-11-14", "sender_name": "Bo New", "folder": "person", "id": "abc123def456", "subject": "Phone bill", "body": "Bill $42.18.",
                  "ask": "Pay it", "deadlines": [{"phrase": "Thursday", "date": "2026-11-19", "time": None}]}]))
         cls.base = f"http://127.0.0.1:{cls.srv.server_address[1]}"
         threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
@@ -56,7 +56,14 @@ class Web(unittest.TestCase):
         self.assertEqual([r["subject"] for r in rows], ["Phone bill", "old"])  # newest first
         self.assertEqual(rows[0], {"date": "2026-11-14", "sender": "Bo New", "subject": "Phone bill",
                                    "summary": "Bill $42.18.", "ask": "Pay it",
-                                   "deadlines": "Thursday (2026-11-19)"})
+                                   "deadlines": "Thursday (2026-11-19)", "folder": "person",
+                                   "id": "abc123def456"})
+        self.assertEqual((rows[1]["folder"], rows[1]["id"]), ("", ""))  # older entries without them still list
+
+    def test_page_hooks(self):
+        html = self.get("/")
+        for hook in ('id="send"', 'id="status"', "window.museTalk", "window.museFocus", "r.pending"):
+            self.assertIn(hook, html)
 
     def test_listen_without_voice(self):
         req = urllib.request.Request(self.base + "/listen/start", data=b"", method="POST")
