@@ -349,6 +349,16 @@ def saved_page(question: str, ans: str, quote: str, url: str) -> str:
 
 # ---- entry point ------------------------------------------------------------
 
+def _not_saved(q: str) -> str:
+    """playbooks/web.md: "When is my chemistry exam?" -> "I have nothing saved about a chemistry exam, ..."."""
+    m = playbook.trigger("web", "when_mine").match(route._lead(q))
+    if not m:
+        return say("web", "personal")
+    thing = m.group(1).strip()
+    art = "any" if thing.endswith("s") else ("an" if thing[:1].lower() in "aeiou" else "a")
+    return say("web", "personal_when", topic=f"{art} {thing}")
+
+
 def answer(question: str, today: date | str | None = None, *, root: Path | None = None,
            _online=None, _web_fns: dict | None = None, _events=None,
            _now: datetime | None = None, session=None) -> Answer:
@@ -412,8 +422,8 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
     else:
         a = _bank(q, today, root)
         if a is None and not route.web_ok(q):  # web only for clear factual questions (RULES 9)
-            a = Answer(say("web", "personal" if playbook.trigger("web", "personal").search(q)
-                           else "unclear"), "not_found")
+            a = Answer(_not_saved(q) if playbook.trigger("web", "personal").search(q)
+                       else say("web", "unclear"), "not_found")
         if a is None:
             is_up = _online() if _online else online()
             if is_up:

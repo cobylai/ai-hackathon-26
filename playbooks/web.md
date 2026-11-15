@@ -10,12 +10,13 @@ None to enter: the bank route hands over to this one when it falls short. Two pa
 
 - question: `what|what's|who|who's|whom|whose|when|where|which|why|how|is|are|was|were|do|does|did|can|could|will|would|should|has|have|tell me|define|explain`
 - personal: `my|mine`
+- when_mine: `when(?:'s|’s| is| are) my ([^?.!]+)`
 
 `question` counts only at the start (after "Flux," or "please"); `personal` anywhere.
 
 ## Steps
 
-1. Only a clear factual question goes on (RULES.md rule 9): it starts with a question word or ends with "?", and it isn't about the user's own things ("my"). Otherwise say `personal` (about the user) or `unclear`, and stop. Nothing is sent to a search engine.
+1. Only a clear factual question goes on (RULES.md rule 9): it starts with a question word or ends with "?", and it isn't about the user's own things ("my"). Otherwise say `personal` (about the user; `personal_when` for "when is my …", naming the thing) or `unclear`, and stop. Nothing is sent to a search engine.
 2. Check the network: one connect to www.bing.com:443, 2 seconds.
 3. Offline: say `offline` and stop.
 4. Online: search and read pages (`gather`: the partner's search, then Bing; at most 3 searches and 60 seconds). Each page goes to the same judge as the bank route, with the quote check.
@@ -45,6 +46,7 @@ The answer ends with "Source: <url>" (RULES.md). What gets filed is the question
 - not_found: I couldn't find that on the web.
 - unclear: I'm not sure what you're asking, so I didn't look it up. Try asking it as a question.
 - personal: I don't have that in your notes or mail.
+- personal_when: I have nothing saved about {topic}, and I won't guess.
 
 ## Never
 
@@ -68,4 +70,5 @@ The checker runs with the network blocked, so web questions get the offline repl
 |---|---|---|
 | What is the capital of Peru? | offline | the Mac is offline |
 | What's my favorite color? | not_found | I don't have that in your notes or mail. |
+| When is my chemistry exam? | not_found | I have nothing saved about a chemistry exam, and I won't guess. |
 | Purple elephants dancing | not_found | I'm not sure what you're asking |
