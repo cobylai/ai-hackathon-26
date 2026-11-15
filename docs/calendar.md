@@ -83,8 +83,8 @@ uv run python -m unittest discover reason/tests     # events source mocked (test
 
 ## Known gaps
 
-- **Repeating events:** Calendar's AppleScript returns each repeating event once, at its first date, and doesn't expand the repeats. Use one-off events in the demo calendar.
-- **Only one calendar** is read.
+- **Repeating events** are shown once in the default demo mode (AppleScript limitation). `FLUX_CALENDARS=all` expands them: docs/agent/real-calendar.md.
+- **Only one calendar** is read by default; `FLUX_CALENDARS=all` reads every real one.
 - **Calendar.app opens** in the background on the first question if it isn't running. The first answer takes about 5 s.
 - **`sandbox-exec` breaks it** (-10004). Use the per-process block, or really turn Wi-Fi off.
 - **Wi-Fi was not actually turned off** in the live run.

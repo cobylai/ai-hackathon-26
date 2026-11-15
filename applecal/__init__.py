@@ -4,7 +4,8 @@
     events(date(2026, 11, 15), date(2026, 11, 21))   # start and end days, both included
     -> [{"title", "start": datetime, "end": datetime, "location", "all_day"}], sorted by start
 
-Only one calendar is read: FLUX_CALENDAR, default "Flux demo" (docs/calendar.md).
+Default (FLUX_CALENDARS=demo): only FLUX_CALENDAR, default "Flux demo", via osascript (docs/calendar.md).
+FLUX_CALENDARS=all: every real calendar via EventKit, repeats expanded (applecal/real.py, docs/agent/real-calendar.md).
 Not named `calendar`, which would shadow Python's own `calendar` module.
 """
 from __future__ import annotations
@@ -21,6 +22,21 @@ TIMEOUT = 45  # a cold read is 5-6 s, slower when the Mac is busy
 
 class CalendarError(RuntimeError):
     """Calendar.app could not be read (no access, no such calendar, timeout)."""
+
+
+def read_all() -> bool:
+    """FLUX_CALENDARS=all reads the real calendars through EventKit; default (demo) is the one
+    "Flux demo" calendar through osascript, exactly as before. Writes never follow this flag."""
+    return (os.environ.get("FLUX_CALENDARS") or "demo").strip().lower() == "all"
+
+
+def source_label(evs: list[dict] | None = None) -> str:
+    """Calendar name(s) for a 'Source:' line: the write calendar in demo mode; in all mode the
+    calendars the shown events came from (or 'all calendars' when none were shown)."""
+    if not read_all():
+        return calendar_name()
+    names = sorted({e["calendar"] for e in evs or [] if e.get("calendar")}, key=str.lower)
+    return ", ".join(names) or "all calendars"
 
 
 def calendar_name() -> str:
@@ -103,7 +119,10 @@ def warm(calendar: str | None = None) -> threading.Thread:
     doesn't wait for the cold read. Errors are ignored here; the question reports them."""
     def run():
         try:
-            _fetch(calendar or calendar_name())
+            if read_all():
+                events(date.today(), date.today() + timedelta(days=7))
+            else:
+                _fetch(calendar or calendar_name())
         except CalendarError:
             pass
     t = threading.Thread(target=run, name="applecal-warm", daemon=True)
@@ -147,8 +166,23 @@ def _fetch_locked(name: str) -> list[dict]:
 
 
 def events(start: date, end: date, calendar: str | None = None) -> list[dict]:
-    """Events overlapping the days start..end (both included). Raises CalendarError."""
+    """Events overlapping the days start..end (both included). Raises CalendarError.
+    With FLUX_CALENDARS=all (and no explicit calendar) reads the real calendars, repeats expanded."""
+    if read_all() and not calendar:
+        return _events_real(start, end)
     lo = datetime.combine(start, time.min)
     hi = datetime.combine(end + timedelta(days=1), time.min)
     return [e for e in _fetch(calendar or calendar_name())
             if e["start"] < hi and (e["end"] > lo or (e["end"] == e["start"] and e["start"] >= lo))]
+
+
+def _events_real(start: date, end: date) -> list[dict]:
+    from . import real
+    ttl = float((os.environ.get("FLUX_CALENDAR_CACHE") or os.environ.get("MUSE_CALENDAR_CACHE")) or CACHE_SECONDS)
+    try:
+        return real.read(start, end, ttl)
+    except real.AccessDenied as e:
+        raise CalendarError("no permission to read Calendar (System Settings > Privacy & "
+                            "Security > Calendars > turn on the app that runs Flux)") from e
+    except (OSError, subprocess.TimeoutExpired, ValueError) as e:
+        raise CalendarError(f"EventKit read failed: {e}") from e

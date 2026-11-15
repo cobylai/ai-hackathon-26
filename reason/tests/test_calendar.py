@@ -124,3 +124,25 @@ class Answers(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RealCalendars(unittest.TestCase):
+    """FLUX_CALENDARS=all: answers name the calendar; demo mode wording is unchanged."""
+    EVS = [dict(EVENTS[2], calendar="Work"),
+           {"title": "Dinner", "start": datetime(2026, 11, 16, 18, 0), "end": datetime(2026, 11, 16, 19, 0),
+            "location": "", "all_day": False, "calendar": "Home"}]
+
+    def ask(self, mode):
+        env = {"FLUX_CALENDARS": mode}
+        with mock.patch.dict("os.environ", env):
+            return __import__("reason.answer", fromlist=["x"])._calendar("what do I have Monday", SAT, NOW, FakeCal(self.EVS))
+
+    def test_all_mode_cites_calendars(self):
+        a = self.ask("all")
+        self.assertIn("Team standup [Work]", a.text)
+        self.assertIn("Dinner [Home]", a.text)
+        self.assertIn("Source: Apple Calendar (Home, Work)", a.text)
+
+    def test_demo_mode_source_line_unchanged(self):
+        a = self.ask("demo")
+        self.assertIn("Source: Apple Calendar (Flux demo)", a.text)

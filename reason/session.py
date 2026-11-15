@@ -161,7 +161,7 @@ def _source(row) -> str:
     from .answer import source_label
     if row["kind"] == "event":
         import applecal
-        return say("calendar", "source", calendar=applecal.calendar_name())
+        return say("calendar", "source", calendar=applecal.source_label([row["event"]]))
     return say("RULES", "source", labels=source_label(row["entry"]))
 
 

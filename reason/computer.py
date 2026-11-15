@@ -180,7 +180,7 @@ def show_event(ev: dict) -> bool:
     from applecal import write
     _guard("Calendar", "show_event", f"{ev.get('title')} | {ev.get('start')}")
     start = ev["start"] if isinstance(ev["start"], datetime) else datetime.fromisoformat(str(ev["start"]))
-    return write.show_event(ev.get("title") or "", start)
+    return write.show_event(ev.get("title") or "", start, calendar=ev.get("calendar") or None)
 
 
 def when_text(dt: datetime, all_day: bool = False) -> str:

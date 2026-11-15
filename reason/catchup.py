@@ -34,7 +34,7 @@ def _calendar(today: date, events_fn) -> list[str]:
         return [say("catchup", "cal_error", error=e)]
     lines = [say("catchup", "cal_head", day=route._day(today))]
     lines += [_event_line(e, False) for e in evs] or [say("catchup", "cal_none")]
-    return lines + [say("calendar", "source", calendar=applecal.calendar_name())]
+    return lines + [say("calendar", "source", calendar=applecal.source_label(evs))]
 
 
 def _due(today: date, root) -> tuple[list[str], list[str]]:
