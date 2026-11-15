@@ -253,3 +253,51 @@ class Compose(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WindowEndpoints(Base):
+    def test_ask_suggest_dismiss_draft_open(self):
+        import json
+        import threading
+        import urllib.request
+        from http.server import HTTPServer
+        from reason.web import PAGE, make_handler
+        s, opened, mailed = Session(), [], []
+        srv = HTTPServer(("127.0.0.1", 0), make_handler(
+            answer_fn=lambda q, today=None: answer(q, today=TODAY, root=self.root, session=s, _events=cal),
+            online_fn=lambda: False, count_fn=lambda: 7, entries_fn=lambda: [], session=s,
+            mail_fn=lambda u: mailed.append(u) or SimpleNamespace(returncode=0),
+            open_fn=lambda url: opened.append(url) or f"Opened {url}.",
+            draft_fn=lambda e: compose.reply_draft(e, root=self.root, events_fn=cal)))
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        base = f"http://127.0.0.1:{srv.server_address[1]}"
+
+        def post(path, obj=None):
+            req = urllib.request.Request(base + path, data=json.dumps(obj or {}).encode(),
+                                         headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req) as r:
+                return json.loads(r.read())
+        try:
+            r = post("/ask", {"question": "What's due tomorrow?"})
+            self.assertEqual(len(r["suggestions"]), 2)
+            self.assertEqual(set(r["suggestions"][0]), {"id", "line", "button", "kind"})
+            op = next(x for x in r["suggestions"] if x["kind"] == "open")
+            self.assertEqual(post(f"/suggest/{op['id']}")["text"], "Opened file:///tmp/canvas/hw9.html.")
+            self.assertEqual(opened, ["file:///tmp/canvas/hw9.html"])
+            self.assertIn("isn't available", post(f"/suggest/{op['id']}")["text"])
+            r = post("/ask", {"question": "What did Greta ask me?"})
+            d = post(f"/suggest/{r['suggestions'][0]['id']}")["draft"]
+            self.assertIn("I have Lab then", d["body"])
+            r = post("/ask", {"question": "What did Ivy ask me?"})
+            self.assertTrue(post(f"/suggest/{r['suggestions'][0]['id']}/dismiss")["ok"])
+            self.assertEqual(post("/ask", {"question": "What did Ivy ask me?"})["suggestions"], [])
+            out = post("/draft/open", {"to": d["to"], "subject": d["subject"], "body": d["body"]})
+            self.assertIn("Nothing was sent", out["text"])
+            self.assertTrue(mailed[0].startswith("mailto:glund@example.edu?subject=Re%3A%20Book%20club"))
+            r = post("/ask", {"question": "Draft a reply to Milo"})
+            self.assertEqual(r["route"], "compose")
+            self.assertEqual(r["draft"]["to"], "mfenn@example.edu")
+        finally:
+            srv.shutdown()
+        for hook in ("function draftBox", "function suggestRows", "Open in Mail", "'Suggested'"):
+            self.assertIn(hook, PAGE)

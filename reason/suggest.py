@@ -226,7 +226,7 @@ def _hide(s: dict) -> None:
 
 def take(sid: str) -> dict | None:
     """The suggestion behind a click; it won't be offered again in that chat."""
-    s = _offered.get(sid)
+    s = _offered.pop(sid, None)
     if s:
         _hide(s)
     return s
