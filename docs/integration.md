@@ -131,6 +131,18 @@ compose, draft or send. One search page, so at most 10 threads per sync.
 Fixture run on final context-store: 3 messages -> 3 entries in 9.1 s, senders
 and dates right, `sent_date_guessed: false`; re-run adds 0 (dedup).
 
+Live run (test account ilovelocalai@gmail.com, Bonsai 4B, 2026-11-14):
+5 threads (Coby's demo emails 1, 3, 5, 7 plus Google's welcome mail) -> 5
+entries in 28.2 s; re-run 0 added in 13.0 s. Senders, sent dates and the
+three deadlines (Mon 11/16 23:59, Thu 11/19, Fri 11/20 12:00) came out right.
+Live Gmail shows dates as "14 Nov 2026, 22:24", now parsed (fixture used
+"Thu, Nov 12, 2026, 4:30 PM"). Gmail sign-in: after `harness login`, quit
+Chrome for Testing with Cmd+Q; closing the window leaves it holding the
+profile lock and the hidden browser cannot start.
+
+Known issue, no fix (thinker ruling): Google's welcome mail is filed with
+course "LLC 1600", read from its "Google LLC, 1600 Amphitheatre" footer.
+
 ## Not run yet
 
-- Live Gmail sync (waits for Coby to sign in to the new test account).
+- Re-sync after the partner's demo emails 2, 4, 6, 8 are sent.
