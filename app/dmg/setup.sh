@@ -108,9 +108,9 @@ cat <<EOF
 
 Done. Next:
   - Calendar.app: File > New Calendar, name it "Muse demo", add a few made-up events.
-  - Copy Muse.app to Applications. First open: right-click it > Open (it isn't notarized).
-  - At first launch Muse asks for your ax_ key (kept in your Keychain), then macOS asks for
-    the microphone, Calendar and Accessibility (for Fn-Space). Allow all of them.
+  - Drag Muse.app to Applications and open it.
+  - "Set Up Muse" walks you through your ax_ key (kept in your Keychain), Accessibility
+    (for Fn-Space), the microphone, Calendar, Reminders and Mail, one screen each.
   - The first voice start on a new Mac takes several minutes while macOS compiles the
     speech model (one time only). Leave it running.
 EOF
