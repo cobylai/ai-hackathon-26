@@ -24,7 +24,7 @@ By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 - **Catch me up:** today's calendar, deadlines for the next three days and recent asks, in one answer.
 - **Memory:** "remember that my lab is Tuesdays at 2", "what do you know about me", "forget that".
 - **Discovery:** up to 10 yes/no questions about you built from the bank and calendar; only a yes is kept.
-- **Web:** a factual question the bank can't answer is searched online, answered only with a quoted line from the page, and filed, so the same question answers offline later.
+- **Web:** a factual question the bank can't answer is searched online, answered only with a quoted line from the page, and, after you say yes, filed, so the same question answers offline later.
 - **Suggestions:** under an answer, at most two next steps from that answer's own entries, e.g. "You're free Thursday, Nov 19 at 7pm. Draft a yes to Milo?" (it checks Apple Calendar), "You have Lab then. Draft a reply proposing another time?", "Open the assignment page", "Remind me".
 - **Drafts:** "draft a reply to Milo", "write an email to Felix about the cabin" open an editable draft box (To, Subject, body, the entries used). **Open in Mail** hands it to Mail as a new message; nothing is ever sent, and it works offline. "… in Gmail" saves a Gmail draft on the test account instead.
 - **Computer control:** "open it" / "open the second one" (the email in Apple Mail, the assignment page, or the event in Calendar), "add Milo's band practice to my calendar", "remind me about homework 9 the day before", "set me up for homework 9", "open my calendar". It always shows what it will do and waits for a yes. Text inside an email is never taken as an instruction, and the only writes are one event or one reminder into "Flux demo".
@@ -32,6 +32,8 @@ By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 - **Front ends:** a chat window, a terminal chat loop, and a menu-bar Mac app (Fn-Space to show, hold Fn-Space to talk), with saved chats and optional spoken answers (macOS `say`).
 
 Routes and how each one answers are written as markdown playbooks in `playbooks/`; code reads their wording and triggers.
+
+**Not in this build:** an agent loop, sending mail after a confirmation, proactive nudges, and real Gmail and Calendar sync are built and tested on the branch `feature/agent-integration`. They are off by default and are not part of the demo, and sending is never shown.
 
 ## Who built what
 
@@ -98,7 +100,9 @@ FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check   # every 
 
 - Many-sender check on the demo bank (20 sample emails, 13 made-up senders), offline: **37/38** (person 14/14, unknown person 2/2, due 16/16, bank 5/6).
 - Sample coursework: 24/24 assignments match course, title, due date and link.
-- Playbook examples: 69/69 with the network blocked (run before computer control and drafts landed; those playbooks add more examples).
+- Playbook examples: 111/111 with the network blocked, on a copy of the demo bank.
+- Tests: reason 193, bank 72, sufficiency 54, applecal 10, canvas 11, discover 20, all OK; harness pytest 275 passed in Antranig's full round.
+- Antranig's full test round (`docs/test-results/antranig-full.md`) found and fixed 11 issues, each with a test; the Fn-Space and voice rows and the Wi-Fi-off voice run still need a person at the Mac.
 - Antranig's first test round on another Mac: setup from the guide, all test suites, 11/11 typed demo questions, and a real Wi-Fi-off run where every typed answer matched the online one.
 - Voice with the network denied (`sandbox-exec`): "What's due this week?" heard exactly and answered in 0.0 s.
 
