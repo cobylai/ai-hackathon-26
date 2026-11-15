@@ -322,6 +322,11 @@ def _find_entry(target: str, root, today: date, dated: bool):
         words = " ".join(w for w in re.findall(r"[a-z0-9]+", t.lower()) if w not in GENERIC)
         pool = bank.search(words, limit=20, root=root) if words else []
     pool = [e for e in pool if e.get("kind") != "me"]
+    if re.search(r"\b(meeting|meet|appointment|event)\b", t.lower()):
+        # "Greta's meeting" means her meeting, not whatever she wrote last (playbooks/schedule.md)
+        from . import suggest
+        meetings = [e for e in pool if suggest.is_meeting(e)]
+        pool = meetings or pool
     if dated:
         with_date = [e for e in pool if computer._dated(e)]
         if with_date:

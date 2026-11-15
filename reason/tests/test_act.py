@@ -251,6 +251,23 @@ class Act(unittest.TestCase):
         self.h("Set me up for essay 2")
         self.assertIn("Cancelled", self.h("no").text)
 
+    # ---- add a person's meeting (playbooks/schedule.md): the meeting, not their last email
+    def test_add_a_persons_meeting_prefers_the_meeting_email(self):
+        for e in (
+            E("b00000000006", "person", "Greta Lund", "greta@example.edu", "2026-11-14",
+              "Library book hold", "Your book is on hold at the front desk; pick it up by Sunday.",
+              ask="Pick it up", deadlines=[{"phrase": "by Sunday", "date": "2026-11-22", "time": "17:00"}]),
+            E("b00000000007", "person", "Greta Lund", "greta@example.edu", "2026-11-13",
+              "Book club meeting", "Greta asks you to meet to plan the book club.",
+              ask="Can you meet Wednesday, November 18 at 2pm to plan the book club?",
+              deadlines=[{"phrase": "Wednesday, November 18 at 2pm", "date": "2026-11-18", "time": "14:00"}]),
+        ):
+            store.write_entry(dict(e), self.root)
+        a = self.h("Add Greta's meeting to my calendar")
+        self.assertIn("Book club meeting", a.text)
+        self.assertNotIn("Library book hold", a.text)
+        self.assertIn("Wed Nov 18", a.text)
+
     # ---- wiring and safety
     def test_answer_routes_actions_first(self):
         # A typed "draft a reply to X" now opens the offline draft box (playbooks/compose.md,
