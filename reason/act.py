@@ -504,8 +504,11 @@ def handle(question: str, today: date | None = None, root: Path | None = None, *
     if choice is not None:  # the answer to "Which one do you mean: A; B?" is one of the titles
         said = _words(question).split()
         names = [n for n in choice["names"] if said and all(w in _words(n) for w in said)]
-        if names:
+        if len(names) == 1:
             return _plan_setup(names[0], today, root, d)
+        if len(names) > 1:  # still ambiguous: ask again rather than guess (playbooks/setup.md step 3)
+            _choice = {"target": choice["target"], "names": names}
+            return Answer(say("setup", "which_one", options="; ".join(names)), "act")
     req = parse(question)
     if req is None:
         return None

@@ -241,6 +241,16 @@ class Act(unittest.TestCase):
         self.assertIn('the page "Essay 2 Draft"', a.text)
         self.assertIn("Essay 2 draft due", a.text)
 
+    def test_setup_choice_asks_again_when_the_answer_is_ambiguous(self):
+        self._essay_bank()
+        self.h("Set me up for essay 2")
+        again = self.h("essay")  # in both titles: ask again instead of guessing
+        self.assertIn("Which one do you mean", again.text)
+        self.assertIn("Essay 2 Draft", again.text)
+        self.assertIn("Essay 2 Final", again.text)
+        final = self.h("Draft")
+        self.assertIn('the page "Essay 2 Draft"', final.text)
+
     def test_setup_choice_does_not_swallow_the_next_question(self):
         self._essay_bank()
         self.h("Set me up for essay 2")
