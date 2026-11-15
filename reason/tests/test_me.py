@@ -104,9 +104,11 @@ class Routes(unittest.TestCase):
         self.assertIn("What I know about them:\n- collects the cabin money", a.text)
         self.assertIn("Source: people page for Felix Ambrose; Felix Ambrose, Nov 13", a.text)
 
-    def test_who_is_unknown_falls_through(self):
-        self.assertEqual(self.ask("Who is Zelda?").route, "offline")
-        self.assertEqual(self.ask("who is waiting on me").route, "offline")
+    @mock.patch("reason.think._think", return_value=("I don't know.", False))
+    def test_who_is_unknown_falls_through(self, _think):
+        self.assertEqual(self.ask("Who is Zelda?").route, "general")
+        a = self.ask("who is waiting on me")  # about the user, nothing saved
+        self.assertEqual((a.route, a.text), ("reason", "I have nothing saved about that."))
 
     def test_person_route_unchanged(self):
         self.assertEqual(self.ask("What did Felix ask me?").route, "person")

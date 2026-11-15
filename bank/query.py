@@ -86,6 +86,16 @@ def search(query: str, limit: int = 10, root: Path | None = None) -> list[dict]:
     return [e for *_, e in scored[:limit]]
 
 
+def subject_hits(query: str, root: Path | None = None, min_len: int = 4) -> list[dict]:
+    """Entries whose subject or sender has a whole word of the query (4+ letters, no stopwords).
+    reason/think.py uses it to tell a question about the user's own things from a general one."""
+    terms = [t for t in _terms(query) if len(t) >= min_len]
+    if not terms:
+        return []
+    return [e for e in store.all_entries(root)
+            if any(_hit(t, _words(_text(e, _STRONG))) for t in terms)]
+
+
 def by_person(name: str, root: Path | None = None) -> list[dict]:
     n = name.strip().lower()
     if not n:

@@ -138,7 +138,8 @@ class Suggestions(Base):
         self.assertEqual(a.suggestions[1]["line"], "Remind me: HW 9 (Mon Nov 16 9:59pm)")
         self.assertTrue(all("entry" not in s for s in suggest.public(a.suggestions)))
 
-    def test_none_when_nothing_found_or_other_routes(self):
+    @mock.patch("reason.think._think", return_value=("I don't know.", False))
+    def test_none_when_nothing_found_or_other_routes(self, _think):
         self.assertEqual(self.ask("What's due on Nov 30?").suggestions, [])
         self.assertEqual(self.ask("remember my lab is Tuesdays").suggestions, [])
         self.assertEqual(self.ask("hi").suggestions, [])

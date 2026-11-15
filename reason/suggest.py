@@ -21,7 +21,7 @@ from . import playbook
 from .playbook import say
 
 LIMIT = 2
-ROUTES = ("due", "catchup", "person", "bank", "followup")
+ROUTES = ("due", "catchup", "person", "bank", "followup", "reason")
 SLOT = timedelta(hours=1)        # a proposed time holds an hour
 STEP = timedelta(minutes=30)     # free slots are looked for on the half hour
 DAY_START, DAY_END = time(9, 0), time(18, 0)

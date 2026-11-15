@@ -1,4 +1,5 @@
-"""Chit-chat: greetings, mic checks, thanks. A fixed reply, never the web (playbooks/chat.md)."""
+"""Small talk detection (playbooks/chat.md). "Who are you / what can you do" gets a fixed reply;
+other small talk is answered by the general route (reason/think.py), never the web."""
 from __future__ import annotations
 
 import re
@@ -14,8 +15,9 @@ _ABOUT = re.compile(r"\b(who are you|what are you|what(?:'s| is) flux|what can y
 
 
 def handle(q: str):
-    if not route.is_chat(q):
+    """A question about Flux itself gets the fixed about_flux reply. Other small talk returns
+    None and goes to the general route with a "keep it short" instruction (brief Y)."""
+    if not route.is_chat(q) or not _ABOUT.search(q):
         return None
     from .answer import Answer
-    key = "about_flux" if _ABOUT.search(q) else "hear_you" if _MIC.search(q) else "thanks" if _THANKS.search(q) else "hello"
-    return Answer(say("chat", key), "chat")
+    return Answer(say("chat", "about_flux"), "chat")

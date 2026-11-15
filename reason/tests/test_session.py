@@ -147,16 +147,18 @@ class Followups(unittest.TestCase):
         self.assertIn("It's on Fri Nov 20 2pm", a.text)
 
     @mock.patch("reason.answer._bank", lambda *a: None)  # the bank judge is a model call
-    def test_unrelated_answer_ends_the_rows(self):
+    @mock.patch("reason.think._think", return_value=("I don't know.", False))
+    def test_unrelated_answer_ends_the_rows(self, _think):
         self.ask("what is due Monday")
-        self.assertEqual(self.ask("is the gym open on thanksgiving").route, "offline")
+        self.assertIn(self.ask("is the gym open on thanksgiving").route, ("general", "reason"))
         self.assertIsNone(resolve("the first one", self.s, SAT, self.root))
         self.assertIsNone(resolve("and tomorrow?", self.s, SAT, self.root))
 
     @mock.patch("reason.answer._bank", lambda *a: None)
-    def test_no_session_no_followups(self):
+    @mock.patch("reason.think._think", return_value=("I don't know.", False))
+    def test_no_session_no_followups(self, _think):
         a = answer("and Tuesday?", SAT, root=self.root, _online=lambda: False)
-        self.assertEqual(a.route, "offline")
+        self.assertNotIn(a.route, ("due", "followup"))
 
     def test_nothing_written(self):
         before = sorted(p.name for p in self.root.rglob("*"))

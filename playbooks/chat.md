@@ -18,8 +18,8 @@ It is chat only when, with every chat and filler phrase taken out, at most 2 wor
 ## Steps
 
 1. A chat trigger matches and almost nothing else is said (rule above). Checked after the person routes, before the bank.
-2. A mic check (can you hear me, is this working, testing) says `hear_you`; thanks says `thanks`; a question about Flux itself (who are you, what can you do) says `about_flux`; anything else says `hello`.
-3. Stop. Nothing is searched, nothing is saved.
+2. A question about Flux itself (who are you, what can you do) says `about_flux` and stops.
+3. Any other small talk (hi, can you hear me, thanks) goes to the general route (`general.md`), which answers in a sentence or two from the model, thinking off, with the general-knowledge label. Nothing is searched, nothing is saved.
 
 ## May look
 
@@ -31,9 +31,6 @@ The web, the bank, the model.
 
 ## Wording
 
-- hear_you: I can hear you. Ask me about your mail, what's due, or your calendar.
-- hello: Hi. Ask me about your mail, what's due, or your calendar.
-- thanks: You're welcome.
 - about_flux: I'm Flux, an assistant that runs on this Mac. I answer from your saved mail, notes and calendar, and I look things up online only when you ask something that isn't saved here.
 
 ## Not found
@@ -42,7 +39,7 @@ Not used: chat always has a reply.
 
 ## Never
 
-- Never send chat to the web or the model.
+- Never send chat to the web or the bank.
 
 ## Prompt
 
@@ -52,9 +49,8 @@ No model step.
 
 | question | route | answer contains |
 |---|---|---|
-| Hey, can you hear me okay? Hope you're doing well. | chat | I can hear you |
-| Hi | chat | Hi. |
-| Thanks so much! | chat | You're welcome. |
+| Hi | general | From general knowledge |
+| Thanks so much! | general | From general knowledge |
 | Who are you? | chat | I'm Flux |
 | What can you do? | chat | I'm Flux |
 | Hey, what's due tomorrow? | due | Due Mon Nov 16 |

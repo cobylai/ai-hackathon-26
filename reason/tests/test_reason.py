@@ -202,17 +202,25 @@ class SearchRoute(Bank):
         self.assertIn("Dining halls close at 2pm", j.call_args.args[1])
         self.assertEqual(a.text, "2pm\nSource: Campus Dining Office, Nov 8")
 
-    def test_offline_message(self):
-        with mock.patch("sufficiency.judge", return_value=verdict(False)):
+    def test_bank_short_about_user_reasons_over_facts(self):
+        # brief Y: a question about saved things the judge can't answer goes to reason
+        # (facts + the code check), never the offline message
+        got = ('{"answer": "Dining halls close at 2pm on Thanksgiving.", "used": [1]}', False)
+        with mock.patch("sufficiency.judge", return_value=verdict(False)), \
+                mock.patch("reason.think._think", return_value=got):
             a = answer("when do dining halls close on Thanksgiving", today=WED, root=self.root,
                        _online=lambda: False)
-        self.assertEqual((a.route, a.text), ("offline", OFFLINE_TEXT))
+        self.assertEqual(a.route, "reason")
+        self.assertIn("2pm", a.text)
+        self.assertIn("Source: Campus Dining Office", a.text)
 
-    def test_no_bank_hits_offline_skips_judge(self):
-        with mock.patch("sufficiency.judge", side_effect=AssertionError("no judge")):
+    def test_no_bank_hits_offline_is_general(self):
+        with mock.patch("sufficiency.judge", side_effect=AssertionError("no judge")), \
+                mock.patch("reason.think._think", return_value=("Lima.", False)):
             a = answer("what is the capital of Peru", today=WED, root=self.root,
                        _online=lambda: False)
-        self.assertEqual(a.route, "offline")
+        self.assertEqual(a.route, "general")
+        self.assertEqual(a.text, "Lima.\nFrom general knowledge, not from your mail or the web.")
 
     def test_web_route_ingests_page(self):
         page = "Lima is the capital of Peru."
@@ -270,24 +278,27 @@ class SearchRoute(Bank):
                              source=SimpleNamespace(url="https://www.reddit.com/r/x"),
                              opened=["https://www.reddit.com/r/x"], message="")
         ingest = mock.Mock(side_effect=AssertionError("must not file a bot-check page"))
-        with mock.patch("sufficiency.gather", return_value=gr):
+        with mock.patch("sufficiency.gather", return_value=gr), \
+                mock.patch("reason.think._think", return_value=("Mary Shelley.", False)):
             # "what did everyone ask me" is the person route now, so a factual question here
             a = answer("who wrote the novel Frankenstein?", today=WED, root=self.root,
                        _online=lambda: True,
                        _web_fns={"search_fn": lambda q: [], "open_fn": lambda u: ("OK", ""),
                                  "ingest_fn": ingest})
-        self.assertEqual(a.route, "not_found")
+        self.assertEqual(a.route, "general")  # web found only junk: general knowledge, labelled
         self.assertNotIn("humanity", a.text)
         ingest.assert_not_called()
 
     def test_web_not_found(self):
         gr = SimpleNamespace(found=False, answer=None, evidence=None, source=None,
                              opened=[], message="No page answered it.")
-        with mock.patch("sufficiency.gather", return_value=gr):
+        with mock.patch("sufficiency.gather", return_value=gr), \
+                mock.patch("reason.think._think", return_value=("Lima.", False)):
             a = answer("what is the capital of Peru", today=WED, root=self.root,
                        _online=lambda: True,
                        _web_fns={"search_fn": lambda q: [], "open_fn": lambda u: ("ERR", "")})
-        self.assertEqual((a.route, a.text), ("not_found", "No page answered it."))
+        self.assertEqual(a.route, "general")  # the web found nothing: the model answers, labelled
+        self.assertTrue(a.text.endswith("From general knowledge, not from your mail or the web."))
 
 
 class Offline(unittest.TestCase):

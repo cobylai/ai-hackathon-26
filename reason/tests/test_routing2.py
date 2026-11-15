@@ -47,13 +47,24 @@ class Problem8(unittest.TestCase):
         return answer(q, today=DAY, root=self.root, _online=lambda: True)
 
     def test_chat_never_reaches_the_web(self):
-        for q, want in (("Hey, can you hear me okay? Hope you're doing well.", "I can hear you"),
-                        ("Hi", "Hi."), ("hello flux", "Hi."), ("Is this working?", "I can hear you"),
-                        ("Thanks so much!", "You're welcome."), ("testing testing", "I can hear you"),
-                        ("Who are you?", "I'm Flux"), ("What can you do?", "I'm Flux"), ("who made you", "I'm Flux")):
+        # brief Y: small talk is a short general answer (thinking off), never the web or the bank
+        calls = []
+
+        def fake(msgs, thinking=True, max_tokens=0):
+            calls.append((thinking, max_tokens, msgs[-1]["content"]))
+            return "Hi! I hear you fine.", False
+        with mock.patch("reason.think._think", fake), \
+                mock.patch("reason.answer._bank", side_effect=AssertionError("no bank for small talk")):
+            for q in ("Hey, can you hear me okay? Hope you're doing well.", "Hi", "hello flux",
+                      "Is this working?", "Thanks so much!", "testing testing"):
+                a = self.ask(q)
+                self.assertEqual(a.route, "general", q)
+                self.assertTrue(a.text.endswith("From general knowledge, not from your mail or the web."), q)
+        self.assertTrue(all(not t and "one or two sentences" in c for t, _, c in calls))
+        for q in ("Who are you?", "What can you do?", "who made you"):
             a = self.ask(q)
             self.assertEqual(a.route, "chat", q)
-            self.assertTrue(a.text.startswith(want), q)
+            self.assertTrue(a.text.startswith("I'm Flux"), q)
 
     def test_a_question_about_my_week_is_a_catch_up_not_a_web_search(self):
         for q in ("What does this week look like?", "how does my week look", "What's my week?", "what does tomorrow look like"):
@@ -112,11 +123,11 @@ class Problem8(unittest.TestCase):
         self.assertFalse(route.web_ok("Elena asked me"))
         self.assertFalse(route.web_ok("purple elephants dancing"))
         self.assertFalse(route.web_ok("What's my favorite color?"))
-        a = self.ask("What's my favorite color?")
-        self.assertEqual((a.route, a.text), ("not_found", "I don't have that in your notes or mail."))
-        a = self.ask("purple elephants dancing")
-        self.assertEqual(a.route, "not_found")
-        self.assertTrue(a.text.startswith("I'm not sure what you're asking"))
+        with mock.patch("reason.think._think", return_value=("I'm not sure what you mean.", False)):
+            a = self.ask("What's my favorite color?")  # about the user, nothing saved
+            self.assertEqual((a.route, a.text), ("reason", "I have nothing saved about that."))
+            a = self.ask("purple elephants dancing")  # never the web (_web raises here)
+            self.assertEqual(a.route, "general")
 
 
 if __name__ == "__main__":

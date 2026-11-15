@@ -34,7 +34,7 @@ GATHER_SECONDS = 60
 
 # Wording and prompts come from playbooks/<route>.md. STEPS is how many numbered steps
 # each playbook lists; the code below runs them in that order (a test checks the count).
-STEPS = {"followup": 5, "discover": 6, "act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 6, "bank": 4, "web": 6, "chat": 3, "open": 4, "schedule": 5, "setup": 5, "suggest": 5, "compose": 5}
+STEPS = {"followup": 5, "discover": 6, "act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 6, "bank": 4, "web": 6, "chat": 3, "general": 6, "reason-over-data": 7, "open": 4, "schedule": 5, "setup": 5, "suggest": 5, "compose": 5}
 PERSON_SYSTEM = playbook.prompt("person", "person_system")
 PERSON_PROMPT = playbook.prompt("person", "person_prompt")
 PERSON_HINT = playbook.prompt("person", "person_hint")
@@ -362,7 +362,7 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
         return Answer(say("RULES", "empty_question"), "none", [], 0.0)
 
     import discover  # a held discovery question takes its yes / no / skip first
-    from . import act, catchup, chat, compose, me, suggest  # drafts and actions first: they name senders
+    from . import act, catchup, chat, compose, me, suggest, think  # drafts and actions first: they name senders
     follow, asked = None, q  # asked: as the user said it, for the saved turn
     if session is not None and not discover.waiting() and not act.waiting() and not compose.waiting():
         from .session import resolve  # playbooks/followup.md: code only, no model call
@@ -401,19 +401,16 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
         # Shaped like a person question but nobody by that name is a sender: stop here.
         # A wrong answer about a person is worse than none (thinker ruling).
         a = Answer(say("person", "no_sender", name=name[:1].upper() + name[1:]), "person")
-    elif (got := chat.handle(q)) is not None:  # greetings and mic checks never reach the web
+    elif (got := chat.handle(q)) is not None:  # "who are you": a fixed reply about Flux
         a = got
-    else:
-        a = _bank(q, today, root)
-        if a is None and not route.web_ok(q):  # web only for clear factual questions (RULES 9)
-            a = Answer(say("web", "personal" if playbook.trigger("web", "personal").search(q)
-                           else "unclear"), "not_found")
-        if a is None:
-            is_up = _online() if _online else online()
-            if is_up:
-                a = _web(q, today, root, **(_web_fns or {}))
-            else:
-                a = Answer(OFFLINE_TEXT, "offline")
+    elif (small := route.is_chat(q)) or not think.about_user(q, senders, root):
+        # (c) general: small talk in a sentence or two; else the bank, the web for a lookup
+        # when online, else Bonsai's own knowledge, labelled (playbooks/general.md)
+        a = think.general(q, today, root, small_talk=small, session=session,
+                          online_fn=_online or online,
+                          web_fn=lambda x: _web(x, today, root, **(_web_fns or {})))
+    else:  # (b) his things, no code route: facts + thinking + the code check (reason-over-data.md)
+        a = think.reason(q, today, root, _events)
     try:
         a.suggestions = suggest.for_answer(a, session, today, root, _events)  # playbooks/suggest.md
     except Exception:  # a suggestion never breaks the answer
