@@ -47,7 +47,6 @@ The model. Earlier answers than the last one. Anything written to disk.
 ## Not found
 
 - when_none: It has no due date in your saved mail.
-- no_link: That one is mail from {who}, and it has no link to open.
 
 ## Never
 
