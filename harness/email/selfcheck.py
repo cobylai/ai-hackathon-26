@@ -1,13 +1,16 @@
 """Report which Gmail selectors match nothing on the live mailbox.
 
 Run ``uv run python -m harness.email.selfcheck`` after ``harness login``. It
-opens the inbox, the first thread and a blank compose window (closed again),
-prints a count per selector name, and exits 1 if a selector changed shape.
-Nothing is typed and no draft is created.
+opens the inbox and the first thread, prints a count per selector name, and
+exits 1 if a selector changed shape. Nothing is typed and no draft is created.
+
+``--compose`` also opens a blank compose window to check the compose selectors.
+Gmail then saves your signature as a draft, so that step is opt-in.
 """
 
 from __future__ import annotations
 
+import argparse
 import sys
 
 from playwright.sync_api import Page
@@ -50,7 +53,7 @@ def _close_compose(page: Page) -> None:
         page.wait_for_timeout(400)
 
 
-def collect(page: Page) -> tuple[list[tuple[str, str]], str]:
+def collect(page: Page, compose: bool = False) -> tuple[list[tuple[str, str]], str]:
     """Return ``[(name, count text)]`` and a status line."""
     found: list[tuple[str, str]] = []
     page.goto(INBOX_URL, wait_until="domcontentloaded", timeout=60000)
@@ -86,21 +89,31 @@ def collect(page: Page) -> tuple[list[tuple[str, str]], str]:
         )
         found.append(("reply_button", f"{replies} of {count} messages"))
 
-    compose = selectors.first_visible(page, "compose_button")
-    if compose.count():
-        compose.click()
+    compose_button = selectors.first_visible(page, "compose_button")
+    if compose and compose_button.count():
+        compose_button.click()
         selectors.wait_for(page, "compose_to", timeout_ms=10000)
         for name in COMPOSE_FIELDS:
             found.append((name, str(selectors.matches(page, name))))
         found.append(("draft_saved_label", "n/a (appears after a typed draft)"))
         _close_compose(page)
+    else:
+        for name in (*COMPOSE_FIELDS, "draft_saved_label"):
+            found.append((name, "skipped (--compose)"))
 
     status = f"OK signed in | {page.title()[:60]} | {rows} rows"
     return found, status
 
 
-def main() -> int:
-    found, status = collect(get_session().start().page)
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="harness.email.selfcheck", description=__doc__)
+    parser.add_argument(
+        "--compose",
+        action="store_true",
+        help="also open a blank compose (Gmail may save your signature as a draft)",
+    )
+    args = parser.parse_args(argv)
+    found, status = collect(get_session().start().page, compose=args.compose)
     print(status)
     missing = False
     if found:
