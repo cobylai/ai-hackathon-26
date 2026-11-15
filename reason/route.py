@@ -192,3 +192,78 @@ def who_text(question: str) -> str | None:
         return None
     rest = re.sub(r"'s$|'$", "", rest.strip(" ?.!"))
     return rest or None
+
+
+# ---- misheard names, "everyone", chit-chat, and the web gate (test report problem 8) ----
+
+_PERSON_VERB = re.compile(r"\b(ask|asks|asked|asking|want|wants|wanted|need|needs|needed|say|said|send|sent)\b", re.I)
+
+
+def is_person_shaped(question: str) -> bool:
+    """An ask/say/send/want verb, or "what did <name> ask/say/send/want"."""
+    return bool(_PERSON_VERB.search(question or "")) or asked_name(question) is not None
+
+
+def is_everyone(question: str) -> bool:
+    """'What did everyone ask me?': asks across all senders (playbooks/person.md, everyone)."""
+    q = question or ""
+    return bool(playbook.trigger("person", "everyone").search(q)) and bool(_PERSON_VERB.search(q))
+
+
+def _edit1(a: str, b: str) -> bool:
+    """True if a and b differ by exactly one letter changed, added or dropped."""
+    if a == b or abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) == 1
+    s, t = (a, b) if len(a) < len(b) else (b, a)
+    return any(t[:i] + t[i + 1:] == s for i in range(len(t)))
+
+
+def near_name(word: str, name: str) -> bool:
+    """A misheard name: one is the other with up to 2 letters more at the start or end
+    ("elena" ~ "lena", shorter at least 4 letters), or one letter off when both have 5+."""
+    if word == name:
+        return False
+    s, t = sorted((word, name), key=len)
+    if len(s) >= 4 and len(t) - len(s) <= 2 and (t.startswith(s) or t.endswith(s)):
+        return True
+    return len(s) >= 5 and _edit1(word, name)
+
+
+def near_person(question: str, names: set[str]) -> tuple[str, list[str]] | None:
+    """(heard word, [sender name words it is near]) for the first question word that is no
+    sender but near one, or None. Only words of 4+ letters outside the COMMON list are tried."""
+    for t in _WORD.findall(question or ""):
+        w = re.sub(r"'s$|'$", "", t).lower()
+        if len(w) < 4 or w in COMMON or w in names or w in _PRONOUNS or _PERSON_VERB.fullmatch(w):
+            continue
+        hits = sorted(n for n in names if near_name(w, n))
+        if hits:
+            return t, hits
+    return None
+
+
+_CHAT_WORD = re.compile(r"[a-z']+")
+
+
+def is_chat(question: str) -> bool:
+    """Greetings, mic checks, thanks (playbooks/chat.md): a chat trigger matches and, with every
+    chat and filler phrase taken out, at most 2 other words are left."""
+    q = (question or "").lower()
+    chat = playbook.trigger("chat", "chat")
+    if not chat.search(q):
+        return False
+    rest = playbook.trigger("chat", "filler").sub(" ", chat.sub(" ", q))
+    if re.search(r"\b(what|when|where|who|whose|which|why|how)\b", rest):
+        return False  # "hey, what's due" or "hi, how much is my share" is a real question
+    return len(_CHAT_WORD.findall(rest)) <= 2
+
+
+def web_ok(question: str) -> bool:
+    """The web is only for clear factual questions (playbooks/RULES.md rule 9): starts with a
+    question word or ends with '?', and is not about the user's own things ("my")."""
+    q = (question or "").strip()
+    if playbook.trigger("web", "personal").search(q):
+        return False
+    return q.endswith("?") or bool(playbook.trigger("web", "question").match(_lead(q)))

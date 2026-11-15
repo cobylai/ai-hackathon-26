@@ -26,12 +26,13 @@ from .playbook import say
 
 OFFLINE_TEXT = say("web", "offline")
 PERSON_LIMIT = 8
+EVERYONE_LIMIT = 12
 SEARCH_LIMIT = 5
 GATHER_SECONDS = 60
 
 # Wording and prompts come from playbooks/<route>.md. STEPS is how many numbered steps
 # each playbook lists; the code below runs them in that order (a test checks the count).
-STEPS = {"discover": 6, "act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 4, "bank": 4, "web": 5}
+STEPS = {"discover": 6, "act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 6, "bank": 4, "web": 6, "chat": 3}
 PERSON_SYSTEM = playbook.prompt("person", "person_system")
 PERSON_PROMPT = playbook.prompt("person", "person_prompt")
 PERSON_HINT = playbook.prompt("person", "person_hint")
@@ -224,6 +225,39 @@ def _person(question: str, who: str, today: date, root) -> Answer:
     return Answer(_with_source(text, used), "person", [e["path"] for e in used])
 
 
+def _everyone(today: date, root) -> Answer:
+    """Every sender's asks still open (deadline today or later, or none), newest first. No model call."""
+    rows = []
+    for e in sorted(store.all_entries(root), key=lambda e: e.get("sent_date") or "", reverse=True):
+        if e.get("kind") != "email" or not (e.get("ask") or "").strip():
+            continue
+        dates = [d["date"] for d in e.get("deadlines") or [] if d.get("date")]
+        if dates and max(dates) < today.isoformat():
+            continue
+        rows.append(e)
+    if not rows:
+        return Answer(say("person", "no_open_asks"), "person")
+    shown = rows[:EVERYONE_LIMIT]
+    lines = [say("person", "everyone_head", count=len(rows))]
+    lines += [say("person", "everyone_row", who=e.get("sender_name") or e.get("sender_address"),
+                  date=_short_date(e.get("sent_date")), subject=e.get("subject") or "(no subject)",
+                  ask=e["ask"].strip()) for e in shown]
+    return Answer(_with_source("\n".join(lines), shown), "person", [e["path"] for e in shown])
+
+
+def _near_person(question: str, near: tuple[str, list[str]], today: date, root) -> Answer:
+    """A misheard name close to exactly one sender: that sender's asks, saying what was heard."""
+    heard, names = near
+    people_ = list(dict.fromkeys(e.get("sender_name") or e.get("sender_address")
+                                 for n in names for e in bank.by_person(n, root=root)
+                                 if e.get("kind") == "email"))
+    if len(people_) != 1:
+        return Answer(say("person", "did_you_mean", heard=heard, names=" or ".join(people_ or names)), "person")
+    a = _person_asks(question, names[0], root)
+    a.text = say("person", "heard", heard=heard, name=people_[0]) + "\n" + a.text
+    return a
+
+
 def online(timeout: float = 2.0) -> bool:
     try:
         socket.create_connection(("www.bing.com", 443), timeout=timeout).close()
@@ -298,7 +332,7 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
         return Answer(say("RULES", "empty_question"), "none", [], 0.0)
 
     import discover  # a held discovery question takes its yes / no / skip first
-    from . import act, catchup, me  # actions first: "draft a reply to Felix" names a sender
+    from . import act, catchup, chat, me  # actions first: "draft a reply to Felix" names a sender
     if (got := discover.handle(q, today, root)) is not None:
         a = got
     elif (got := act.handle(q, today, root)) is not None:
@@ -312,14 +346,23 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
     elif route.is_calendar(q):
         now = _now or (datetime.now() if today == date.today() else datetime.combine(today, datetime.min.time()))
         a = _calendar(q, today, now, _events)
-    elif (who := route.person_in(q, _senders(root))):
+    elif (who := route.person_in(q, senders := _senders(root))):
         a = _person(q, who, today, root)
+    elif route.is_everyone(q):  # "what did everyone ask me": asks across senders, code only
+        a = _everyone(today, root)
+    elif route.is_person_shaped(q) and (near := route.near_person(q, senders)):
+        a = _near_person(q, near, today, root)  # "Elena asked me" -> Lena (misheard by voice)
     elif (name := route.asked_name(q)):
         # Shaped like a person question but nobody by that name is a sender: stop here.
         # A wrong answer about a person is worse than none (thinker ruling).
         a = Answer(say("person", "no_sender", name=name[:1].upper() + name[1:]), "person")
+    elif (got := chat.handle(q)) is not None:  # greetings and mic checks never reach the web
+        a = got
     else:
         a = _bank(q, today, root)
+        if a is None and not route.web_ok(q):  # web only for clear factual questions (RULES 9)
+            a = Answer(say("web", "personal" if playbook.trigger("web", "personal").search(q)
+                           else "unclear"), "not_found")
         if a is None:
             is_up = _online() if _online else online()
             if is_up:
