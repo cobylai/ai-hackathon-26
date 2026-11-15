@@ -58,6 +58,15 @@ It saves drafts only when the Gmail tab title shows `ilovelocalai@gmail.com`. Op
 bank link uses `computer.direct.open_path` plus `policy.log_action("Browser", "open_url", ...)`,
 because no browser is on your allow list. See `docs/acting.md`.
 
+## Computer control (worker 14, brief X): `harness/` unchanged
+
+`reason/computer.py` reads your `computer.policy` before every action: `stopped()`, the
+`block_apps` from `load_policy()`, and one `log_action` line per action ("Mail open_message",
+"Calendar add_event", "Calendar show_event", "Reminders add_reminder"). The actions themselves
+are AppleScript (Mail, Calendar, Reminders), because those apps can do them directly, so
+`ui_click` / `ui_type` aren't used. Mail and Reminders aren't on your `allow_apps`; we use only
+your block list, so nothing on it can ever be touched. See `docs/acting.md`.
+
 ## Run it
 
 ```bash

@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 import time
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Callable
 
@@ -73,11 +73,20 @@ def is_no(q: str) -> bool:
 
 
 def parse(q: str) -> dict | None:
-    """{"kind": "draft", "name", "gist"} | {"kind": "open", "target"} | None. Code only."""
+    """{"kind": "draft" | "calendar" | "remind" | "setup" | "open", ...} | None. Code only."""
     q = re.sub(r"\W+$", "", (q or "").strip())
     m = _t("draft").search(q)
     if m:
         return {"kind": "draft", "name": re.sub(r"'s?$", "", m.group(1)), "gist": (m.group(2) or "").strip()}
+    m = playbook.trigger("schedule", "calendar").search(q)
+    if m:
+        return {"kind": "calendar", "target": m.group(1).strip()}
+    m = playbook.trigger("schedule", "remind").search(q)
+    if m:
+        return {"kind": "remind", "target": (m.group(1) or "").strip(), "when": (m.group(2) or "").strip()}
+    m = playbook.trigger("setup", "setup").search(q)
+    if m:
+        return {"kind": "setup", "target": m.group(1).strip()}
     m = _t("open").search(q)
     if m:
         return {"kind": "open", "target": m.group(1).strip()}
@@ -214,20 +223,217 @@ def _plan_open(target: str, today: date, root, deps: dict):
                  say("act", "open_page_preview", title=e.get("subject") or url, url=url))
 
 
+def _saved_copy(e: dict) -> str:
+    """The saved bank entry, shown when the thing itself can't be opened."""
+    from .answer import _short_date
+    who = e.get("sender_name") or e.get("sender_address") or e.get("source") or "unknown"
+    return say("open", "saved_copy", who=who, date=_short_date(e.get("sent_date")),
+               subject=e.get("subject") or "(no subject)", summary=(e.get("body") or "").strip())
+
+
+def open_email(e: dict) -> str:
+    """Apple Mail (test account) first, works offline; then the Gmail page when online;
+    else the saved copy. Run only after a yes."""
+    from . import computer
+    who = e.get("sender_name") or e.get("sender_address") or "unknown sender"
+    if e.get("sender_address") and computer.mail_app_open(e["sender_address"], e.get("subject") or ""):
+        return say("open", "opened_mail", who=who, subject=e.get("subject") or "(no subject)")
+    url = computer.gmail_url(e)
+    if url and _default_online():
+        return "\n".join([say("open", "not_in_mail"), open_page(url)])
+    return "\n".join([say("open", "cannot_open_mail"), _saved_copy(e)])
+
+
+def show_event(ev: dict) -> str:
+    from . import computer
+    if computer.show_event(ev):
+        return say("open", "showed_event", title=ev.get("title") or "(no title)")
+    return "\n".join([say("open", "event_not_found", title=ev.get("title") or "(no title)"),
+                      open_app("Calendar")])
+
+
 def plan_row(row: dict, deps: dict | None = None):
-    """'Open it' after an answer that listed rows (reason/session.py): a row with a link opens
-    that page, a calendar row opens Calendar, mail without a link says so. Held for a yes."""
+    """'Open it' after an answer that listed rows (reason/session.py), held for a yes:
+    a calendar row shows that event in Calendar, a row with a link opens the page, an email
+    opens in Mail (else its Gmail page, else the saved copy), anything else shows the saved copy."""
     from .answer import Answer
-    d = {"open_app": open_app, "open_page": open_page, **(deps or {})}
+    from . import computer
+    d = {"open_app": open_app, "open_page": open_page, "open_email": open_email,
+         "show_event": show_event, **(deps or {})}
     if row.get("kind") == "event":
-        return _hold("open_app", lambda: d["open_app"]("Calendar"), say("act", "open_app_preview", app="Calendar"))
+        ev = row.get("event") or {}
+        start = ev.get("start")
+        when = computer.when_text(start, ev.get("all_day")) if isinstance(start, datetime) else str(start or "")
+        return _hold("show_event", lambda: d["show_event"](ev),
+                     say("open", "show_event_preview", title=ev.get("title") or "(no title)", when=when))
     e = row.get("entry") or {}
     url = str(e.get("source") or "")
     if URL_RE.match(url):
         return _hold("open_page", lambda: d["open_page"](url),
                      say("act", "open_page_preview", title=e.get("subject") or url, url=url))
-    who = e.get("sender_name") or e.get("sender_address") or "an unknown sender"
-    return Answer(say("followup", "no_link", who=who), "act")
+    if e.get("kind") == "email":
+        who = e.get("sender_name") or e.get("sender_address") or "an unknown sender"
+        return _hold("open_email", lambda: d["open_email"](e),
+                     say("open", "open_mail_preview", who=who, subject=e.get("subject") or "(no subject)"))
+    return Answer(_saved_copy(e), "act")
+
+
+# ---- add to calendar, remind me, set me up (playbooks/schedule.md, setup.md) ---------
+
+GENERIC = set("""the a an my this that it one thing meeting event invite invitation email mail message
+about for on to of with from""".split())
+
+
+def _session_row(target: str, session):
+    """(row, None) for "this / that / it / the first one", else (None, None); (None, Answer) when
+    it needs a conversation or a choice."""
+    from .answer import Answer
+    t = target.lower().strip()
+    m = re.fullmatch(r"(?:(?:this|that|it)(?:\s+one)?|the\s+(\w+)(?:\s+one)?)", t)
+    if not m:
+        return None, None
+    from .session import ORDINALS, _row
+    if m.group(1) is not None and m.group(1) not in ORDINALS:
+        return None, None
+    if session is None or not session.rows:
+        return None, Answer(say("schedule", "which_this"), "act")
+    idx = ORDINALS.get(m.group(1)) if m.group(1) else None
+    row, why = _row(session, idx)
+    if why is not None:
+        why.route = "act"
+        return None, why
+    return row, None
+
+
+def _find_entry(target: str, root, today: date, dated: bool):
+    """A bank entry for "Felix's meeting", "the lab report", "band practice". Code only."""
+    from . import computer
+    t = target.strip()
+    pool = []
+    m = re.match(r"^([A-Za-z][A-Za-z\-]+)'s?\s+(.+)$", t)
+    if m:
+        mine = bank.by_person(m.group(1), root=root)
+        words = [w for w in re.findall(r"[a-z0-9]+", m.group(2).lower()) if w not in GENERIC]
+        pool = [e for e in mine if all(w in (str(e.get("subject")) + " " + str(e.get("body")) + " "
+                                             + str(e.get("ask"))).lower() for w in words)] or mine
+    else:
+        words = " ".join(w for w in re.findall(r"[a-z0-9]+", t.lower()) if w not in GENERIC)
+        pool = bank.search(words, limit=20, root=root) if words else []
+    pool = [e for e in pool if e.get("kind") != "me"]
+    if dated:
+        with_date = [e for e in pool if computer._dated(e)]
+        if with_date:
+            pool = with_date
+    return pool[0] if pool else None
+
+
+def _entry_from_row(row: dict) -> dict:
+    if row.get("kind") == "event":
+        ev = row.get("event") or {}
+        start = ev.get("start")
+        d = start.date().isoformat() if hasattr(start, "date") else str(start)[:10]
+        t = f"{start:%H:%M}" if hasattr(start, "hour") and not ev.get("all_day") else None
+        return {"subject": ev.get("title"), "deadlines": [{"phrase": "", "date": d, "time": t}],
+                "kind": "event", "sender_name": "your calendar"}
+    return row.get("entry") or {}
+
+
+def _plan_calendar(target: str, today: date, root, session, deps: dict):
+    from .answer import Answer
+    from . import computer
+    row, why = _session_row(target, session)
+    if why is not None:
+        return why
+    if row is not None and row.get("kind") == "event":
+        return Answer(say("schedule", "already_on_calendar",
+                          title=(row.get("event") or {}).get("title") or "(no title)"), "act")
+    e = (row or {}).get("entry") if row else _find_entry(target, root, today, dated=True)
+    if not e:
+        return Answer(say("schedule", "nothing_found", target=target), "act")
+    ev = computer.event_for(e, today)
+    if ev is None:
+        return Answer(say("schedule", "no_time", subject=e.get("subject") or target), "act")
+    import applecal
+    where = say("schedule", "at_place", place=ev["location"]) if ev["location"] else ""
+    when = computer.when_text(ev["start"], ev["all_day"])
+    if not ev["all_day"]:
+        when += "–" + computer.when_text(ev["end"]).split(" ")[-1]
+    return _hold("add_event", lambda: deps["add_event"](ev),
+                 say("schedule", "event_preview", title=ev["title"], when=when, where=where,
+                     calendar=applecal.calendar_name()))
+
+
+def _plan_reminder(target: str, when: str, today: date, root, session, deps: dict):
+    from .answer import Answer
+    from . import computer
+    row, why = _session_row(target or "this", session)
+    if why is not None:
+        return why
+    e = _entry_from_row(row) if row else _find_entry(target, root, today, dated=True)
+    if not e:
+        return Answer(say("schedule", "nothing_due", target=target), "act")
+    r = computer.reminder_for(e, when, today)
+    if r is None:
+        return Answer(say("schedule", "no_date", subject=e.get("subject") or target), "act")
+    return _hold("add_reminder", lambda: deps["add_reminder"](r),
+                 say("schedule", "reminder_preview", name=r["name"],
+                     when=computer.when_text(r["remind_at"]), due=computer.when_text(r["due"])))
+
+
+def do_add_event(ev: dict) -> str:
+    from . import computer
+    import applecal
+    computer.add_event(ev)
+    return say("schedule", "event_added", title=ev["title"], calendar=applecal.calendar_name())
+
+
+def do_add_reminder(r: dict) -> str:
+    from . import computer
+    from applecal import write
+    computer.add_reminder(r)
+    return say("schedule", "reminder_added", name=r["name"], list=write.REMINDER_LIST)
+
+
+def _plan_setup(target: str, today: date, root, deps: dict):
+    """The coursework or page for <thing>, its related mail and any note, opened together."""
+    from .answer import Answer
+    from bank import me
+    words = [w for w in re.findall(r"[a-z0-9]+", target.lower()) if w not in GENERIC]
+    if not words:
+        return Answer(say("setup", "what_thing", target=target), "act")
+    hits = bank.search(" ".join(words), limit=20, root=root)
+    hay = lambda e: " ".join(str(e.get(k) or "") for k in ("subject", "body", "ask", "course")).lower()
+    full = [e for e in hits if all(w in hay(e) for w in words)]
+    pages = [e for e in (full or hits) if URL_RE.match(str(e.get("source") or ""))]
+    named = [p for p in pages if all(w in str(p.get("subject") or "").lower() for w in words)]
+    choices = named if len(named) > 1 else (pages if not named and len(pages) > 1 else [])
+    if choices:
+        names = list(dict.fromkeys(p.get("subject") or "?" for p in choices))[:3]
+        return Answer(say("setup", "which_one", options="; ".join(names)), "act")
+    page = named[0] if named else (pages[0] if pages else None)
+    mails = [e for e in (full or hits) if e.get("kind") == "email"][:2]
+    notes = [n for n in me.notes(root) if any(w in hay(n) for w in words)][:2]
+    if not page and not mails and not notes:
+        return Answer(say("setup", "nothing_found", target=target), "act")
+    lines = [say("setup", "preview_head", target=target)]
+    if page:
+        lines.append(say("setup", "item_page", title=page.get("subject") or page["source"]))
+    for m in mails:
+        lines.append(say("setup", "item_mail", who=m.get("sender_name") or m.get("sender_address") or "?",
+                         subject=m.get("subject") or "(no subject)"))
+    for n in notes:
+        lines.append(say("setup", "item_note", note=n.get("body") or n.get("subject") or ""))
+
+    def run():
+        out = []
+        if page:
+            out.append(deps["open_page"](str(page["source"])))
+        for m in mails:
+            out.append(deps["open_email"](m))
+        for n in notes:
+            out.append(say("setup", "note_line", note=n.get("body") or n.get("subject") or ""))
+        return "\n".join(out)
+    return _hold("setup", run, "\n".join(lines))
 
 
 def _plan_draft(name: str, gist: str, root, deps: dict):
@@ -260,12 +466,13 @@ def _default_online() -> bool:
 
 
 def handle(question: str, today: date | None = None, root: Path | None = None, *,
-           deps: dict | None = None):
+           deps: dict | None = None, session=None):
     """Answer for an action request or a yes/no to a held one; None for anything else."""
     from .answer import Answer
     global _held
     d = {"online": _default_online, "open_app": open_app, "open_page": open_page,
-         "save_draft": save_draft, "write_reply": write_reply, **(deps or {})}
+         "save_draft": save_draft, "write_reply": write_reply, "open_email": open_email,
+         "add_event": do_add_event, "add_reminder": do_add_reminder, **(deps or {})}
     held, _held = (_held if waiting() else None), None  # any new input ends the wait
     if is_yes(question) or is_no(question):
         if held is None:
@@ -279,6 +486,13 @@ def handle(question: str, today: date | None = None, root: Path | None = None, *
     req = parse(question)
     if req is None:
         return None
+    today = today or date.today()
     if req["kind"] == "open":
-        return _plan_open(req["target"], today or date.today(), root, d)
+        return _plan_open(req["target"], today, root, d)
+    if req["kind"] == "calendar":
+        return _plan_calendar(req["target"], today, root, session, d)
+    if req["kind"] == "remind":
+        return _plan_reminder(req["target"], req["when"], today, root, session, d)
+    if req["kind"] == "setup":
+        return _plan_setup(req["target"], today, root, d)
     return _plan_draft(req["name"], req["gist"], root, d)

@@ -34,7 +34,7 @@ GATHER_SECONDS = 60
 
 # Wording and prompts come from playbooks/<route>.md. STEPS is how many numbered steps
 # each playbook lists; the code below runs them in that order (a test checks the count).
-STEPS = {"followup": 5, "discover": 6, "act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 6, "bank": 4, "web": 6, "chat": 3, "suggest": 5, "compose": 5}
+STEPS = {"followup": 5, "discover": 6, "act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 6, "bank": 4, "web": 6, "chat": 3, "open": 4, "schedule": 5, "setup": 5, "suggest": 5, "compose": 5}
 PERSON_SYSTEM = playbook.prompt("person", "person_system")
 PERSON_PROMPT = playbook.prompt("person", "person_prompt")
 PERSON_HINT = playbook.prompt("person", "person_hint")
@@ -371,7 +371,7 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
         a = got
     elif (got := compose.handle(q, today, root, session=session, events_fn=_events)) is not None:
         a = got  # playbooks/compose.md: a draft box, never sent ("... in Gmail" goes to act)
-    elif (got := act.handle(q, today, root)) is not None:
+    elif (got := act.handle(q, today, root, session=session)) is not None:
         a = got
     elif (got := me.handle(q, today, root)) is not None:  # remember / forget / about_me / people
         a = got

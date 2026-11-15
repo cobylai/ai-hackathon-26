@@ -106,7 +106,28 @@ MAIL = [
      None, None, ["sleeping bag"]),
     ("m20", "kiri", "Thank you",
      "Hi,\n\nThank you for covering my shift last month. It meant a lot.\n\nKiri", None, None, ["covering"]),
+    # Meeting asks (computer control X and suggestions W): {mt} is a day and time from MEETINGS.
+    ("m21", "milo", "Band practice Thursday",
+     "Hey,\n\nAre you free for band practice {mt} in Lincoln Hall 101? Let me know.\n\nMilo",
+     None, "band practice", ["lincoln hall"]),
+    ("m22", "greta", "Book club meeting",
+     "Hi,\n\nCan you meet {mt} to plan the book club? Let me know.\n\nGreta", None, "book club", ["book club"]),
+    ("m23", "ivy", "Garden plot",
+     "Hello,\n\nCan we meet sometime soon about the garden plot?\n\nIvy", None, "garden plot", ["garden plot"]),
 ]
+
+# Meeting emails: (weekday, time). The day is the first such weekday at least two days after
+# TODAY, so for Sun Nov 15 it is Thu Nov 19 7pm (free on the demo calendar) and Wed Nov 18
+# 2pm (clashes with "Lab", 1:30-3:30pm). These have no deadline; checks treat them as optional.
+MEETINGS = {"m21": (3, "7pm"), "m22": (2, "2pm")}
+MEETING_KEYS = {"m21", "m22", "m23"}
+
+
+def meeting_phrase(key: str) -> str:
+    wd, t = MEETINGS[key]
+    d = TODAY + timedelta(days=2)
+    d += timedelta(days=(wd - d.weekday()) % 7)
+    return f"{d:%A}, {d:%B} {d.day} at {t}"
 
 
 def phrase_for(d: date, sent: date, rng: random.Random) -> str:
@@ -128,7 +149,7 @@ def build() -> list[dict]:
         sent_dt = datetime(sent.year, sent.month, sent.day, rng.randint(8, 21), rng.randint(0, 59))
         due = TODAY + timedelta(days=off) if off is not None else None
         dl = phrase_for(due, sent, rng) if due else ""
-        plain = body.format(dl=dl).replace(" .", ".")
+        plain = body.format(dl=dl, mt=meeting_phrase(key) if key in MEETINGS else "").replace(" .", ".")
         text = (f"From: {first} {last} <{addr}>\nDate: {sent_dt:%a, %d %b %Y %H:%M:%S} -0500\n"
                 f"Subject: {subject}\n\n" + plain)
         out.append({"key": key, "sender": s, "name": f"{first} {last}", "first": first,
@@ -208,6 +229,7 @@ def check(out_dir: Path) -> int:
         a = answer(q, today=TODAY)
         want = {m["subject"] for m in truth if m["due"] and lo <= m["due"] <= hi}
         got = _subjects_from(a, by_path, kinds=("email",))  # Canvas rows (kind="canvas") may be extra
+        got -= {m["subject"] for m in truth if m["key"] in MEETING_KEYS}  # a meeting time filed as a deadline is fine
         record("due", q, a.route == "due" and got == want, a, sorted(want) or "nothing due")
 
     for d in sorted({m["due"] for m in truth if m["due"]}):
