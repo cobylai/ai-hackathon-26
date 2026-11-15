@@ -4,7 +4,7 @@ Branch `voice-input`, cut from `argmax-runtime-test` at c0f7935. Nothing gets bu
 
 ## Approach
 
-A single Swift program, `muse-voice`, starts once and stays running. Python talks to it over stdin and stdout. Push to talk:
+A single Swift program, `argmax-voice`, starts once and stays running. Python talks to it over stdin and stdout. Push to talk:
 
 1. **Launch.** It loads the model once, from the on-disk folder, with downloading turned off. That folder comes from `ARGMAX_MODEL_FOLDER` and defaults to `~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-large-v3-v20240930_626MB`. Run F showed this setup works with no network. The key is read from `ARGMAX_API_KEY`, just as in the sample.
 2. **Microphone.** I will record with Apple's `AVAudioEngine`, converted to 16 kHz mono, and keep the audio only between `start` and `stop`. When `stop` arrives, it calls `whisperKitPro.transcribe(audioArray:)` once and prints the text.
@@ -16,7 +16,7 @@ I copy only what I need from `samples/`. `samples/` and `reason/` stay untouched
 ## File layout
 
 - `voice/swift/Package.swift`: tools-version 6.0. It uses the same `argmax-sdk-swift` 3.1.8 from the registry. Swift 5 language mode, so strict concurrency doesn't get in the way.
-- `voice/swift/Sources/MuseVoice/main.swift`: the whole program, about 150 lines.
+- `voice/swift/Sources/ArgmaxVoice/main.swift`: the whole program, about 150 lines.
 - `voice/listen.py`: the Python side, standard library only.
 - `voice/__init__.py`: empty.
 - `docs/voice-input.md`: how to run it, timings, the chat-loop lines, and Coby's steps.
@@ -47,7 +47,7 @@ Errors before ready are followed by exit code 1. All logs go to stderr, so stdou
 
 **Python** (`voice/listen.py`):
 
-- `Voice()` starts `voice/swift/.build/release/muse-voice` and waits for `ready`. The wait times out after 600 s on the first launch (the compile step) and raises `VoiceError` on an error line or exit.
+- `Voice()` starts `voice/swift/.build/release/argmax-voice` and waits for `ready`. The wait times out after 600 s on the first launch (the compile step) and raises `VoiceError` on an error line or exit.
 - `Voice.listen(wait_for_stop=input) -> str` sends `start`, calls `wait_for_stop()`, sends `stop`, and returns the text.
 - `Voice.close()` sends `quit`.
 - Try it with `python -m voice.listen`. Press Enter to start, Enter to stop. It prints the text and the time from stop to text, and loops until Ctrl+C.
@@ -77,14 +77,14 @@ question = voice.listen()                          # instead of input()
 
 **Steps for Coby (also in the doc):**
 
-1. Before any of this: do the first `muse-voice` launch early. A new name means the ~4-minute Neural Engine compile runs again.
-2. Click **Always Allow** on the Keychain prompt for `muse-voice`. It's a new binary, so it asks again.
+1. Before any of this: do the first `argmax-voice` launch early. A new name means the ~4-minute Neural Engine compile runs again.
+2. Click **Always Allow** on the Keychain prompt for `argmax-voice`. It's a new binary, so it asks again.
 3. Allow the microphone for your terminal app on the first `start`, or in System Settings → Privacy & Security → Microphone.
 4. Speak the three test questions, online and then under `sandbox-exec`.
 5. At the demo, load the key while still online with `export ARGMAX_API_KEY="$(bw get password 'Argmax API key - ai-hackathon-26')"`, then turn Wi-Fi off.
 
 ## Open questions
 
-1. Executable name `muse-voice`? It's final, because the compile cache is tied to it. **Default: yes.**
+1. Executable name `argmax-voice`, not tied to the app name (Muse or Hearth), so a rename later costs no recompile. Decided with helper 0b.
 2. Keep the hidden `file <path>` command? It lets tests run without a microphone. **Default: yes.**
 3. Test whether a dummy `ax_` key works offline once the license is cached? It could remove the need for the vault at the demo. **Default: no.** There's a small risk it replaces the cached license, so I'd only do it with your OK.
