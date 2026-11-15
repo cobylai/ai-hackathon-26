@@ -143,6 +143,37 @@ profile lock and the hidden browser cannot start.
 Known issue, no fix (thinker ruling): Google's welcome mail is filed with
 course "LLC 1600", read from its "Google LLC, 1600 Amphitheatre" footer.
 
+## Test threads: many senders without sending mail (brief N)
+
+```bash
+# once: save one single-message thread page from the test account as the template
+#   -> data/templates/thread.html (gitignored; it has the real sender in it)
+uv run python scripts/make_test_threads.py 30            # -> data/test-threads/*.html + truth.json
+MUSE_BANK_DIR=data/bank-test uv run python scripts/sync_test_threads.py
+MUSE_BANK_DIR=data/bank-test uv run python scripts/make_test_mail.py check data/test-threads
+```
+
+`make_test_threads.py` takes brief M's emails (`scripts/make_test_mail.py`
+`build()`, same senders, text and seed) and writes each into a copy of the
+saved Gmail message markup: sender name and address, date (live format
+"14 Nov 2026, 22:33"), subject and body. Gmail's scripts are dropped, and the
+template's real sender is scrubbed from every output (the script stops if any
+remains). `sync_test_threads.py` opens each page as a local file in the
+partner's browser (his `Session`, on a scratch profile `data/test-profile` so
+it never competes with the signed-in Gmail profile; non-file requests are
+aborted), reads it with his `read_messages`, and files it with the live sync's
+`file_thread` -> `bank.ingest`. It refuses to run unless MUSE_BANK_DIR is a
+test bank. Everything it writes is under data/ (gitignored). If this bank
+appears in the demo or video, say it is sample mail.
+
+Result (2026-11-14, Bonsai 4B): brief M's generator has 20 emails, so 20
+threads, not 30. 20 filed in 75 s; **20/20** match sender name, address,
+sent date and subject. Brief M's check on that bank: **32/37 right** (person
+10/14, no-match 2/2, due 15/15, bank 5/6). Wrong: Tess and Jonah "don't say"
+(their asks are "confirm ... by" / "book a study room"); Felix and Ivy given
+an ask from a no-ask email; the hackathon team-name question missed the bank
+and timed out on the web route (the check ran online).
+
 ## Not run yet
 
 - Re-sync after the partner's demo emails 2, 4, 6, 8 are sent.
