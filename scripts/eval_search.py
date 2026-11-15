@@ -4,8 +4,10 @@ Runs every question in ``tests/eval/questions.jsonl`` through
 ``loop.research`` and records pass/fail, rounds, pages opened, blocked pages,
 model input characters and seconds. Prints a markdown table for the notes file.
 
-    LLM_BASE_URL=http://127.0.0.1:1234/v1 LLM_MODEL=qwen/qwen3.5-9b \\
-    LLM_REASONING_EFFORT=none uv run python scripts/eval_search.py
+    uv run python scripts/eval_search.py
+
+(The model is the local Bonsai server via llm.client; start it with
+scripts/serve_bonsai.sh 4B. LLM_BASE_URL/LLM_MODEL are no longer read.)
 
 This is a live test: it uses the real browser profile and the real web. Bot
 walls are recorded as BLOCKED, never worked around.

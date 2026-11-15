@@ -124,99 +124,75 @@ def test_rewrite_falls_back_to_the_old_query():
 # --- llm.ask ---------------------------------------------------------------
 
 
-class FakeResponse:
-    def __init__(self, content: str, status: int = 200, usage: dict | None = None) -> None:
-        self.content = content
-        self.status = status
-        self.usage = usage
+def patch_chat(monkeypatch, result) -> dict:
+    """Stand in for llm.client.chat, the one Bonsai client harness.llm now calls."""
+    from llm import client
 
-    def raise_for_status(self) -> None:
-        if self.status >= 400:
-            raise RuntimeError(f"http {self.status}")
-
-    def json(self):
-        body = {"choices": [{"message": {"content": self.content}}]}
-        if self.usage is not None:
-            body["usage"] = self.usage
-        return body
-
-
-def patch_post(monkeypatch, result) -> dict:
     seen: dict = {}
 
-    def fake_post(url, json=None, timeout=None):
-        seen["url"] = url
-        seen["payload"] = json
-        seen["timeout"] = timeout
+    def fake_chat(messages, max_tokens=None, thinking=False):
+        seen["messages"] = messages
+        seen["max_tokens"] = max_tokens
         if isinstance(result, Exception):
             raise result
         return result
 
-    monkeypatch.setattr(llm.httpx, "post", fake_post)
+    monkeypatch.setattr(llm.client, "chat", fake_chat)
     return seen
 
 
-def test_ask_posts_to_the_configured_endpoint(monkeypatch):
-    monkeypatch.setenv("LLM_BASE_URL", "http://model.local:9000/v1/")
-    monkeypatch.setenv("LLM_MODEL", "tiny")
-    seen = patch_post(monkeypatch, FakeResponse(" hello there "))
+def reply(text: str, prompt_tokens=None, completion_tokens=None):
+    from llm.client import Reply
+
+    return Reply(text=text, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens)
+
+
+def test_ask_goes_through_the_bonsai_client(monkeypatch):
+    seen = patch_chat(monkeypatch, reply("hello there"))
     assert llm.ask("hi") == "hello there"
-    assert seen["url"] == "http://model.local:9000/v1/chat/completions"
-    assert seen["payload"]["model"] == "tiny"
-    assert seen["payload"]["max_tokens"] == 64
-    assert seen["payload"]["messages"][-1] == {"role": "user", "content": "hi"}
-    assert "response_format" not in seen["payload"]
+    assert seen["max_tokens"] == 64
+    assert seen["messages"][-1] == {"role": "user", "content": "hi"}
 
 
-def test_ask_constrains_to_choices(monkeypatch):
-    seen = patch_post(monkeypatch, FakeResponse('{"choice": "NO"}'))
+def test_ask_lists_choices_in_the_prompt(monkeypatch):
+    seen = patch_chat(monkeypatch, reply('{"choice": "NO"}'))
     assert llm.ask("is it enough?", choices=["YES", "NO"], max_tokens=4) == "NO"
-    schema = seen["payload"]["response_format"]["json_schema"]["schema"]
-    assert schema["properties"]["choice"]["enum"] == ["YES", "NO"]
-    assert seen["payload"]["max_tokens"] == 4
+    assert "YES, NO" in seen["messages"][-1]["content"]
+    assert seen["max_tokens"] == 4
 
 
 def test_ask_maps_free_text_onto_a_choice(monkeypatch):
-    patch_post(monkeypatch, FakeResponse("no, the notes are missing a date"))
+    patch_chat(monkeypatch, reply("no, the notes are missing a date"))
     assert llm.ask("q", choices=["YES", "NO"]) == "NO"
 
 
 def test_ask_returns_empty_on_bad_reply_or_dead_server(monkeypatch):
-    patch_post(monkeypatch, FakeResponse("banana"))
+    from llm.client import BonsaiError, ServerDown
+
+    patch_chat(monkeypatch, reply("banana"))
     assert llm.ask("q", choices=["YES", "NO"]) == ""
-    patch_post(monkeypatch, llm.httpx.ConnectError("no model"))
+    patch_chat(monkeypatch, ServerDown("no model"))
     assert llm.ask("q") == ""
-    patch_post(monkeypatch, FakeResponse("", status=500))
+    patch_chat(monkeypatch, BonsaiError("500"))
     assert llm.ask("q") == ""
-
-
-def test_ask_can_turn_off_reasoning(monkeypatch):
-    monkeypatch.setenv("LLM_REASONING_EFFORT", "none")
-    seen = patch_post(monkeypatch, FakeResponse("Ready"))
-    assert llm.ask("hi") == "Ready"
-    assert seen["payload"]["reasoning_effort"] == "none"
 
 
 def test_ask_records_real_token_usage(monkeypatch):
-    patch_post(
-        monkeypatch,
-        FakeResponse("Ready", usage={"prompt_tokens": 41, "completion_tokens": 5}),
-    )
+    patch_chat(monkeypatch, reply("Ready", 41, 5))
     assert llm.ask("hi", max_tokens=16) == "Ready"
     assert llm.last_usage == {"prompt_tokens": 41, "completion_tokens": 5}
 
 
 def test_ask_clears_usage_on_failure(monkeypatch):
-    patch_post(
-        monkeypatch,
-        FakeResponse("Ready", usage={"prompt_tokens": 41, "completion_tokens": 5}),
-    )
+    from llm.client import ServerDown
+
+    patch_chat(monkeypatch, reply("Ready", 41, 5))
     llm.ask("hi")
-    patch_post(monkeypatch, llm.httpx.ConnectError("down"))
+    patch_chat(monkeypatch, ServerDown("down"))
     assert llm.ask("hi") == ""
     assert llm.last_usage == {}
 
 
 def test_ask_without_choices_returns_plain_text(monkeypatch):
-    patch_post(monkeypatch, FakeResponse("  just words  "))
+    patch_chat(monkeypatch, reply("  just words  "))
     assert llm.ask("q") == "just words"

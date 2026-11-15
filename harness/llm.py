@@ -1,34 +1,24 @@
-"""One way to ask a model: an OpenAI-compatible chat completions endpoint.
+"""One way to ask a model: the project's single Bonsai client, ``llm.client``.
 
-`ask` is the only function the rest of the harness uses, so swapping the local
-model for another runtime is a config change (`LLM_BASE_URL`, `LLM_MODEL`),
-not a code change. Replies are plain strings; when `choices` is given the
-request asks for a JSON enum and the reply is mapped back to one of them.
+`ask` is the only function the rest of the harness uses. Since integration it
+routes every call through ``llm.client.chat`` (localhost Bonsai 2 only, 32k
+budget check), so the server address and model size are set in one place:
+``BONSAI_BASE_URL`` / ``BONSAI_SIZE`` (see llm/config.py). Replies are plain
+strings; when ``choices`` is given the prompt lists them and the reply is
+mapped back to one of them.
 """
 
 from __future__ import annotations
 
 import json
-import os
+import sys
 
-import httpx
-
-DEFAULT_BASE_URL = "http://127.0.0.1:8080/v1"
-DEFAULT_MODEL = "local"
-TIMEOUT_SECONDS = 120.0
+from llm import client
 
 SYSTEM = "You are a small, careful assistant. Answer only what is asked, briefly."
 
 # Token counts reported by the server for the most recent successful call.
 last_usage: dict[str, int] = {}
-
-
-def base_url() -> str:
-    return os.environ.get("LLM_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
-
-
-def model() -> str:
-    return os.environ.get("LLM_MODEL", DEFAULT_MODEL)
 
 
 def _coerce(reply: str, choices: list[str] | None) -> str:
@@ -57,57 +47,31 @@ def _coerce(reply: str, choices: list[str] | None) -> str:
 
 
 def ask(prompt: str, choices: list[str] | None = None, max_tokens: int = 64) -> str:
-    """Send one user turn; return the reply, mapped onto ``choices`` if given.
+    """Ask one user turn; return the reply, mapped onto ``choices`` if given.
 
     Exact token counts for the call are left in ``last_usage`` (empty on failure).
     """
     global last_usage
     last_usage = {}
-    payload: dict = {
-        "model": model(),
-        "messages": [
-            {"role": "system", "content": SYSTEM},
-            {"role": "user", "content": prompt},
-        ],
-        "max_tokens": max_tokens,
-        "temperature": 0,
-    }
-    # Reasoning models (qwen3 and friends) spend ``max_tokens`` on hidden thinking
-    # and return empty content. ``LLM_REASONING_EFFORT=none`` turns that off.
-    effort = os.environ.get("LLM_REASONING_EFFORT")
-    if effort:
-        payload["reasoning_effort"] = effort
     if choices:
-        payload["response_format"] = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "choice",
-                "strict": True,
-                "schema": {
-                    "type": "object",
-                    "properties": {"choice": {"type": "string", "enum": list(choices)}},
-                    "required": ["choice"],
-                    "additionalProperties": False,
-                },
-            },
-        }
+        prompt = f"{prompt}\n\nReply with exactly one of: {', '.join(choices)}."
+    messages = [
+        {"role": "system", "content": SYSTEM},
+        {"role": "user", "content": prompt},
+    ]
     try:
-        response = httpx.post(
-            f"{base_url()}/chat/completions", json=payload, timeout=TIMEOUT_SECONDS
-        )
-        response.raise_for_status()
-        data = response.json()
-        content = data["choices"][0]["message"]["content"]
-        usage = data.get("usage") or {}
-    except Exception:
-        # The caller decides what an empty answer means; a dead model must not crash a tool.
+        reply = client.chat(messages, max_tokens=max_tokens)
+    except Exception as e:
+        # The caller decides what an empty answer means; a dead model must not crash
+        # a tool. Say why on stderr so a down server is not silent.
+        print(f"harness.llm: {type(e).__name__}: {e}", file=sys.stderr)
         return ""
-    if usage:
+    if reply.prompt_tokens is not None:
         last_usage = {
-            "prompt_tokens": int(usage.get("prompt_tokens") or 0),
-            "completion_tokens": int(usage.get("completion_tokens") or 0),
+            "prompt_tokens": int(reply.prompt_tokens or 0),
+            "completion_tokens": int(reply.completion_tokens or 0),
         }
-    return _coerce(str(content or ""), choices)
+    return _coerce(reply.text, choices)
 
 
 class FakeLLM:
