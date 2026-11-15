@@ -124,6 +124,27 @@ class Followups(unittest.TestCase):
             self.assertIsNone(resolve(q, self.s, SAT, self.root), q)
         self.assertEqual(self.ask("open the calendar").route, "act")  # the act route's own preview
 
+    def test_saved_and_loaded(self):
+        self.ask("what's on my calendar next week")
+        self.ask("what is due Monday")
+        self.ask("the first one")
+        d = json.loads(json.dumps(self.s.to_dict()))  # plain JSON
+        self.assertEqual(d["title"], "what's on my calendar next week")
+        self.assertEqual([t["route"] for t in d["turns"]], ["calendar", "due", "followup"])
+        self.assertIn("Submit", d["turns"][2]["text"])
+        self.assertTrue(d["id"] and d["started"])
+        s2 = Session.from_dict(d)
+        a = answer("who sent that?", SAT, root=self.root, session=s2)
+        self.assertIn("Canvas", a.text)  # follow-ups go on from where it left off
+        s3 = Session.from_dict(json.loads(json.dumps(Session.from_dict(d).to_dict())))
+        self.assertEqual(s3.turns, d["turns"])
+
+    def test_calendar_rows_survive_json(self):
+        self.ask("what's on my calendar next week")
+        s2 = Session.from_dict(json.loads(json.dumps(self.s.to_dict())))
+        a = answer("when is it on?", SAT, root=self.root, session=s2)
+        self.assertIn("It's on Fri Nov 20 2pm", a.text)
+
     @mock.patch("reason.answer._bank", lambda *a: None)  # the bank judge is a model call
     def test_unrelated_answer_ends_the_rows(self):
         self.ask("what is due Monday")

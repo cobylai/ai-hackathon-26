@@ -10,14 +10,18 @@ resolve(question, session, today) is code only, no model call. It returns:
   ("question", text)         answer this question instead ("and Hugo?" -> "What did Hugo ask me?")
   ("due" | "calendar", text) run that route again with this date phrase
   ("answer", Answer)         answered from the last rows (route "followup", or "act" for "open it")
-The session lives in memory only (one per chat loop, one in the window server) and is
-gone on restart. Nothing is written to the bank.
+The session lives in memory (one per chat loop, one in the window server); nothing is
+written to the bank. It is built to be saved and loaded (brief T2, saved chats): an id, a
+title (the first question), a start time and the turns, each with the question, route,
+answer text, sources and rows. to_dict() is plain JSON; from_dict() rebuilds the
+follow-up state, so a reopened chat continues where it left off.
 """
 from __future__ import annotations
 
 import re
+import uuid
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 
 from . import playbook, route
 from .playbook import say
@@ -35,19 +39,71 @@ also too then so is are was do did does""".split())
 _DEFAULT_LABEL = "in the next 7 days"
 
 
+def _jsonable(x):
+    """Rows hold calendar events with datetimes; keep everything plain JSON."""
+    if isinstance(x, dict):
+        return {k: _jsonable(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [_jsonable(v) for v in x]
+    if isinstance(x, (datetime, date)):
+        return x.isoformat()
+    return x
+
+
+def _event_back(row: dict) -> dict:
+    if row.get("kind") == "event":
+        ev = dict(row.get("event") or {})
+        for k in ("start", "end"):
+            if isinstance(ev.get(k), str):
+                try:
+                    ev[k] = datetime.fromisoformat(ev[k])
+                except ValueError:
+                    pass
+        row = {**row, "event": ev}
+    return row
+
+
 @dataclass
 class Session:
+    id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
+    started: str = field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
+    turns: list[dict] = field(default_factory=list)  # {question, route, text, sources, rows, seconds, at}
+    # Follow-up state: what the next "and Friday?" or "the first one" leans on.
     question: str | None = None
     route: str | None = None
     rows: list[dict] = field(default_factory=list)
     who: str | None = None      # the name in the last person question, as it was written
     pick: int | None = None     # the row a follow-up picked last
 
+    @property
+    def title(self) -> str:
+        """The first question, as asked. No model call."""
+        return self.turns[0]["question"] if self.turns else ""
+
     def clear(self) -> None:
         self.question, self.route, self.rows, self.who, self.pick = None, None, [], None, None
 
+    def to_dict(self) -> dict:
+        return _jsonable({"id": self.id, "title": self.title, "started": self.started,
+                          "turns": self.turns, "state": {"question": self.question, "route": self.route,
+                                                         "rows": self.rows, "who": self.who,
+                                                         "pick": self.pick}})
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Session":
+        s = cls(id=str(d.get("id") or uuid.uuid4().hex[:12]), started=str(d.get("started") or ""),
+                turns=list(d.get("turns") or []))
+        st = d.get("state") or {}
+        s.question, s.route, s.who, s.pick = st.get("question"), st.get("route"), st.get("who"), st.get("pick")
+        s.rows = [_event_back(r) for r in st.get("rows") or []]
+        return s
+
     def record(self, question: str, a, root=None) -> None:
-        """Keep what a follow-up may lean on. Follow-up and act answers keep the rows they used."""
+        """Add the turn, and keep what a follow-up may lean on. Follow-up and act answers
+        keep the rows they used."""
+        self.turns.append({"question": question, "route": a.route, "text": a.text,
+                           "sources": list(a.sources or []), "rows": _jsonable(list(a.rows or [])),
+                           "at": datetime.now().isoformat(timespec="seconds")})
         if a.route in ("followup", "act"):
             return
         self.question, self.route, self.rows, self.pick = question, a.route, list(a.rows or []), None
