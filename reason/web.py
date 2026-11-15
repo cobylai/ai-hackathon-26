@@ -2,6 +2,7 @@
 
 One local page served by the standard library; nothing is loaded from the internet,
 so it opens with Wi-Fi off. It calls the same answer() as the typed chat loop.
+Hold to talk: POST /listen/start, then POST /listen/stop -> {"text"} (or {"error"}).
 Single-threaded on purpose: the web route drives one Playwright browser, which must
 stay on one thread.
 
@@ -19,6 +20,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from bank import store
 
 from .answer import answer as _answer, online as _online
+from .speech import HoldToTalk, start_voice
 
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -49,7 +51,7 @@ PAGE = """<!doctype html>
 <form id="f">
   <input id="q" autocomplete="off" placeholder="Ask a question" autofocus>
   <button type="submit" id="send">Send</button>
-  <button type="button" id="talk" disabled title="Voice is not available yet">Hold to talk</button>
+  <button type="button" id="talk" disabled title="Voice is unavailable">Hold to talk</button>
 </form>
 <script>
 const log = document.getElementById('log'), q = document.getElementById('q'),
@@ -72,13 +74,13 @@ async function refresh() {
   try {
     const r = await (await fetch('/status')).json();
     statusEl.textContent = (r.online ? 'online' : 'offline') + ' · ' + r.items + ' items in bank';
+    const t = document.getElementById('talk');
+    if (!recording) { t.disabled = !r.voice; t.title = r.voice ? 'Hold to talk' : 'Voice is unavailable: ' + (r.voice_why || ''); }
   } catch (e) { statusEl.textContent = 'status unavailable'; }
 }
 
-document.getElementById('f').addEventListener('submit', async (ev) => {
-  ev.preventDefault();
-  const question = q.value.trim(); if (!question) return;
-  add('you', question); q.value = ''; send.disabled = true;
+async function ask(question, spoken) {
+  add('you', (spoken ? '🎤 ' : '') + question); send.disabled = true;
   const wait = add('muse', 'Thinking…');
   try {
     const r = await (await fetch('/ask', {method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -89,14 +91,39 @@ document.getElementById('f').addEventListener('submit', async (ev) => {
     m.textContent = r.route + ', ' + r.seconds.toFixed(1) + 's'; d.appendChild(m);
   } catch (e) { wait.textContent = 'Error: ' + e; }
   send.disabled = false; q.focus(); refresh();
+}
+
+document.getElementById('f').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const question = q.value.trim(); if (!question) return;
+  q.value = ''; ask(question, false);
 });
+
+const talk = document.getElementById('talk'); let recording = false;
+async function post(path) { return (await fetch(path, {method: 'POST'})).json(); }
+talk.addEventListener('pointerdown', async (ev) => {
+  if (talk.disabled || recording) return;
+  ev.preventDefault(); recording = true; talk.textContent = 'Listening… release to stop';
+  const r = await post('/listen/start');
+  if (r.error) { recording = false; talk.textContent = 'Hold to talk'; add('muse', 'Voice error: ' + r.error); }
+});
+async function release() {
+  if (!recording) return;
+  recording = false; talk.textContent = 'Hold to talk'; talk.disabled = true;
+  const r = await post('/listen/stop');
+  talk.disabled = false;
+  if (r.error) { add('muse', 'Voice error: ' + r.error); return; }
+  if (r.text && r.text.trim()) ask(r.text.trim(), true);
+}
+talk.addEventListener('pointerup', release);
+talk.addEventListener('pointerleave', release);
 refresh();
 </script>
 </body></html>
 """
 
 
-def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None):
+def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None):
     answer_fn = answer_fn or _answer
     online_fn = online_fn or _online
     count_fn = count_fn or (lambda: len(store.all_entries()))
@@ -118,11 +145,19 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None):
             if self.path == "/":
                 self._send(200, PAGE, "text/html; charset=utf-8")
             elif self.path == "/status":
-                self._json({"online": online_fn(), "items": count_fn()})
+                self._json({"online": online_fn(), "items": count_fn(), "voice": talk is not None,
+                            "voice_why": voice_why})
             else:
                 self._send(404, "not found", "text/plain")
 
         def do_POST(self):
+            if self.path in ("/listen/start", "/listen/stop"):
+                if talk is None:
+                    return self._json({"error": f"voice is unavailable ({voice_why})"})
+                if self.path.endswith("start"):
+                    talk.start()
+                    return self._json({"ok": True})
+                return self._json(talk.stop())
             if self.path != "/ask":
                 return self._send(404, "not found", "text/plain")
             try:
@@ -146,8 +181,12 @@ def main(argv=None) -> int:
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--today", help="pretend today is this date (YYYY-MM-DD)")
     ap.add_argument("--no-open", action="store_true", help="don't open a browser tab")
+    ap.add_argument("--no-voice", action="store_true", help="typing only")
     args = ap.parse_args(argv)
-    srv = HTTPServer(("127.0.0.1", args.port), make_handler(today=args.today))
+    voice, why = (None, "turned off") if args.no_voice else start_voice()
+    print("Voice: ready" if voice else f"Voice is unavailable ({why}); typing only.", flush=True)
+    srv = HTTPServer(("127.0.0.1", args.port), make_handler(
+        today=args.today, talk=HoldToTalk(voice) if voice else None, voice_why=why))
     url = f"http://localhost:{args.port}/"
     print(f"Muse window at {url}  (Ctrl-C to stop)", flush=True)
     if not args.no_open:
@@ -156,6 +195,9 @@ def main(argv=None) -> int:
         srv.serve_forever()
     except KeyboardInterrupt:
         pass
+    finally:
+        if voice:
+            voice.close()
     return 0
 
 
