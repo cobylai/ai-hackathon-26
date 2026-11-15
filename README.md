@@ -14,7 +14,7 @@ By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 | Argmax is required | Push-to-talk speech-to-text runs through the Argmax Pro SDK (`voice/swift`, Whisper large-v3 turbo loaded from a local folder, downloads off). |
 | Runs with Wi-Fi off | Mail, coursework, notes and web answers are filed into a local bank (markdown files) while online; with Wi-Fi off, NAME answers from the bank and Apple Calendar's local copy. Web and draft requests say they're offline instead of failing. |
 | 32k context | Before every send the client counts tokens with Bonsai's own tokenizer and raises `BudgetError` if prompt plus reply would pass 32,768. It never truncates silently. Long mail is split at 6,000 tokens, and web pages are judged in 6,000-token chunks ([docs/bonsai-client.md](docs/bonsai-client.md)). |
-| Right-sizing | 4B was picked over 9B after a side-by-side check: same accuracy on our fixtures, faster, 2.2 GB vs 3.8 GB peak memory. Most questions use **no model at all**: due dates, "what did X ask me", calendar, catch me up, remember / what do you know about me, follow-ups, and greetings are answered by code in 0.0 s. The model is used only to summarise mail when it's filed, to judge whether saved notes or a web page answer a question, for free-form person questions, for discovery's relation guess, and to write a reply draft. |
+| Right-sizing | 4B was picked over 9B after a side-by-side check: same accuracy on our fixtures, faster, 2.2 GB vs 3.8 GB peak memory. Most questions use **no model at all**: due dates, "what did X ask me", calendar, catch me up, remember / what do you know about me, follow-ups, and greetings are answered by code in 0.0 s. Suggestions, free/busy checks, opening things, adding events and reminders are code too. The model is used only to summarise mail when it's filed, to judge whether saved notes or a web page answer a question, for free-form person questions, for discovery's relation guess, and to write a draft body when no code template fits. |
 
 ## What it does
 
@@ -25,8 +25,10 @@ By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 - **Memory:** "remember that my lab is Tuesdays at 2", "what do you know about me", "forget that".
 - **Discovery:** up to 10 yes/no questions about you built from the bank and calendar; only a yes is kept.
 - **Web:** a factual question the bank can't answer is searched online, answered only with a quoted line from the page, and filed, so the same question answers offline later.
-- **Acting:** "open my calendar", "open the assignment page", "draft a reply to Felix saying yes". It always shows what it will do and waits for a yes. Drafts are saved, never sent (there is no send code).
-- **Follow-ups:** "and tomorrow?", "and Hugo?", "the first one", "who sent that?".
+- **Suggestions:** under an answer, at most two next steps from that answer's own entries, e.g. "You're free Thursday, Nov 19 at 7pm. Draft a yes to Milo?" (it checks Apple Calendar), "You have Lab then. Draft a reply proposing another time?", "Open the assignment page", "Remind me".
+- **Drafts:** "draft a reply to Milo", "write an email to Felix about the cabin" open an editable draft box (To, Subject, body, the entries used). **Open in Mail** hands it to Mail as a new message; nothing is ever sent, and it works offline. "… in Gmail" saves a Gmail draft on the test account instead.
+- **Computer control:** "open it" / "open the second one" (the email in Apple Mail, the assignment page, or the event in Calendar), "add Milo's band practice to my calendar", "remind me about homework 9 the day before", "set me up for homework 9", "open my calendar". It always shows what it will do and waits for a yes. Text inside an email is never taken as an instruction, and the only writes are one event or one reminder into "Muse demo".
+- **Follow-ups:** "and tomorrow?", "and Hugo?", "the first one", "who sent that?", "open it".
 - **Front ends:** a chat window, a terminal chat loop, and a menu-bar Mac app (Fn-Space to show, hold Fn-Space to talk), with saved chats and optional spoken answers (macOS `say`).
 
 Routes and how each one answers are written as markdown playbooks in `playbooks/`; code reads their wording and triggers.
@@ -62,7 +64,7 @@ hf download argmaxinc/whisperkit-coreml --include "openai_whisper-large-v3-v2024
 cd voice/swift && swift build -c release && cd ../..
 ```
 
-- **Calendar:** in Calendar.app, File > New Calendar under "On My Mac", named **Muse demo**, with a few made-up one-off events.
+- **Calendar:** in Calendar.app, File > New Calendar under "On My Mac", named **Muse demo**, with a few made-up one-off events (the demo adds a "Lab" event Wed 1:30–3:30pm for the busy case).
 - **Demo bank** (sample mail, then sample coursework; set DAY to the day you record, Bonsai running): see "Demo bank" in [docs/integration.md](docs/integration.md) and [docs/canvas.md](docs/canvas.md).
 
 ## Run
@@ -79,10 +81,10 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason       # terminal chat loo
 
 ```bash
 app/build.sh && open app/build/Muse.app     # menu bar; Fn-Space shows it, hold Fn-Space to talk
-app/make_dmg.sh                             # app/dist/Muse.dmg with INSTALL.html and setup.sh for another Mac
+app/make_dmg.sh                             # app/dist/Muse.dmg: drag-to-Applications, with INSTALL.html and setup.sh
 ```
 
-On first launch it asks for your Argmax key (kept in the Keychain) and for microphone, Calendar and Accessibility. It starts Bonsai and the window server itself if they aren't running. The first voice start on a new Mac takes several minutes (one-time Neural Engine compile). Details: "Mac app" in [docs/window.md](docs/window.md).
+The app is signed with a Developer ID (hardened runtime); notarization is pending. On first launch an 8-screen setup window walks through the Argmax key (kept in the Keychain), Accessibility (for Fn-Space), the microphone, and Calendar, Reminders and Mail. It starts Bonsai and the window server itself if they aren't running. The first voice start on a new Mac takes several minutes (one-time Neural Engine compile). Details: "Mac app" in [docs/window.md](docs/window.md).
 
 **Tests** (no model server, no network):
 
@@ -96,8 +98,8 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check   # every 
 
 - Many-sender check on the demo bank (20 sample emails, 13 made-up senders), offline: **37/38** (person 14/14, unknown person 2/2, due 16/16, bank 5/6).
 - Sample coursework: 24/24 assignments match course, title, due date and link.
-- Playbook examples: 69/69 with the network blocked.
-- Antranig's test round on another Mac: setup from the guide, all test suites, 11/11 typed demo questions, and a real Wi-Fi-off run where every typed answer matched the online one.
+- Playbook examples: 69/69 with the network blocked (run before computer control and drafts landed; those playbooks add more examples).
+- Antranig's first test round on another Mac: setup from the guide, all test suites, 11/11 typed demo questions, and a real Wi-Fi-off run where every typed answer matched the online one.
 - Voice with the network denied (`sandbox-exec`): "What's due this week?" heard exactly and answered in 0.0 s.
 
 ## Known limits
@@ -108,8 +110,10 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check   # every 
 - **Bank summaries lose details:** "What are the team name options for the hackathon?" misses, because the summary dropped the options.
 - **Web search** depends on Bing and Wikipedia's public search answering the hidden browser (Google and DuckDuckGo bot-wall it; no bot check is bypassed). Only web questions run and checked beforehand are used in the demo. One known wrong web answer is on record (Cornell's founding year).
 - **Calendar:** one calendar; repeating events show only once.
-- **Mac app** is ad-hoc signed, not notarized (right-click → Open). Each Mac needs its own Argmax key.
-- **Pending:** bigger computer control (worker 14) and suggested replies / drafts (worker 19) are still being finished; see [docs/submission.md](docs/submission.md).
+- **Free/busy and drafts** need the meeting email's day and time to be readable; otherwise the suggestion is a plain "Draft a reply". Apple Mail opens only messages in the test account.
+- **Mac app:** Developer ID signed, notarization pending (until then, right-click → Open the first time). Each Mac needs its own Argmax key.
+- **Final partner test round** ([docs/PARTNER-TESTING-FINAL.md](docs/PARTNER-TESTING-FINAL.md)), including Wi-Fi off by voice, has no results in the repo yet.
+- **Release page:** built on a cobydev branch, not deployed; link to come.
 
 ## Hackathon rules (from the 2026-11-14 kickoff)
 
