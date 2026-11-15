@@ -16,6 +16,7 @@ What the reset does:
 - Empties your notes and the saved chats.
 - Wipes and rewrites the **Flux demo** calendar, and empties the **Flux demo** reminders list.
 - Turns demo mode on. Relaunch Flux after it.
+- It takes about 6 minutes, mostly writing the calendar.
 - The first run for a new day also rebuilds `~/flux-demo-bank`, about 6 minutes. A backup is kept as `~/flux-demo-bank.bak-<time>`.
 
 It refuses the real bank `~/flux-bank` and any calendar or list not named "Flux demo".
@@ -39,8 +40,8 @@ What's in the demo state (built for Sun Nov 15):
 
 | Time | Do / say | Must appear | If it doesn't |
 |---|---|---|---|
-| 0:00 | Hook, app idle: "Most assistants need the cloud to know anything about you. This runs entirely on my Mac." | The app, idle | — |
-| 0:08 | Online. Click **Sync**: "This is sample mail and coursework." | The bank count goes up (mail and Canvas) | Skip the click and say "it already synced this sample mail and coursework." |
+| 0:00 | **"What's Flux?"** (replaces the spoken hook) | "Flux is a private assistant that runs entirely on this Mac…", then "What it can do" with example questions | Type it. |
+| 0:08 | Online. Open the bank slide-over: "This is sample mail and coursework, already synced." | "55 items in the bank": 30 emails and 25 Canvas items | Don't click **Sync mail** in demo mode: it syncs the real Gmail account into ~/flux-bank, so the demo bank doesn't change. |
 | 0:20 | Turn Wi-Fi off in the menu bar, on camera | The label reads offline | — |
 | 0:27 | Hold Fn-Space and say **"catch me up"**. "Voice is Argmax, running locally." | Today on your calendar, "Due today through Tue Nov 17", open asks, and under it **Suggested: You're free Thursday, Nov 19 at 3pm. Draft a yes to Felix?** | If the words come out wrong, type "catch me up". If Felix's line isn't there, say "and it suggests replies to meeting asks" and move on. |
 | 0:45 | Click **Draft yes**, change one word, click **Open in Mail** | A draft box, then a Mail compose window filled in to Felix | Show the draft box only: "it opens this in Mail for me to send". |
