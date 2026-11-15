@@ -77,3 +77,9 @@
 - Merged origin/main (Flux app tree, CLI, teardown) into this branch; conflicts resolved: README kept Flux's, test_tools kept main's generalized shape test, test_state kept both new tests, log kept ours.
 - CI caught a latent Linux bug in test_cli_prints_status_and_text (hardcoded macOS Playwright cache path); fixed to probe both platform paths. CI: 304 passed / 3 skipped.
 - Branch now fast-forwards cleanly into main (merge-tree: 0 conflicts).
+
+## Fleet status watch (2026-11-15)
+- origin/integration is fully contained in main (stale); no teammate branch has merged since ddd18cb.
+- merge-tree vs main: email-gmail, browser-core, web-search conflict only in README/tests/test_state.py (resolutions already logged); agent-* branches merge clean.
+- Not wiring ui tools into reason/act.py: four agent-* branches are live in reason/, edits there would collide.
+- Computer tests on main: 91 passed. Full suite not re-runnable locally: fleet load avg >600 hangs browser tests; CI remains the clean signal (304 passed / 3 skipped).
