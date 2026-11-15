@@ -73,8 +73,8 @@ on run argv
   tell application "Calendar"
     if not (exists calendar calName) then error "no calendar named " & calName number 4040
     delete every event of calendar calName
+    return (count of events of calendar calName) as text
   end tell
-  return "OK"
 end run
 '''
 
@@ -95,13 +95,27 @@ def _refuse(name: str) -> None:
         raise SystemExit(f'refusing: only the "{DEMO}" calendar and list are reset, not "{name}"')
 
 
+def _osa(script: str, args: list[str], timeout: int = 300) -> str:
+    """osascript with a long timeout: deleting a few dozen events can take over a minute."""
+    import subprocess
+    p = subprocess.run(["osascript", "-", *args], input=script, capture_output=True, text=True,
+                       timeout=timeout)
+    if p.returncode != 0:
+        raise SystemExit(f"osascript failed: {p.stderr.strip()}")
+    return p.stdout.strip()
+
+
 def reset(today: date | None = None, calendar: str = DEMO, reminders: str = DEMO) -> int:
     from applecal import _CACHE
-    from applecal.write import _run, add_event
+    from applecal.write import add_event
     _refuse(calendar)
     _refuse(reminders)
-    _run(_WIPE_CAL, [calendar], "Calendar")
-    _run(_WIPE_REM, [reminders], "Reminders")
+    for _ in range(3):  # until the calendar is really empty
+        if _osa(_WIPE_CAL, [calendar]) == "0":
+            break
+    else:
+        raise SystemExit(f'"{calendar}" still has events after three wipes')
+    _osa(_WIPE_REM, [reminders])
     evs = week(today)
     for ev in evs:
         add_event(ev["title"], ev["start"], ev["end"], ev["location"], ev["all_day"], calendar=calendar)
