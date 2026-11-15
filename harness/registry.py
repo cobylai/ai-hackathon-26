@@ -13,6 +13,7 @@ from harness.browser import tools as browser_tools
 from harness.search import tools as search_tools
 from harness.email import tools as email_tools
 from harness.computer import tools as computer_tools
+from harness.computer import ui as computer_ui
 
 
 @dataclass(frozen=True)
@@ -128,6 +129,24 @@ COMPUTER_TOOLS: dict[str, Tool] = {
         "Open file N from the last file_find list.",
         {"n": int},
         computer_tools.file_open,
+    ),
+    "ui": Tool(
+        "ui",
+        "List the front window's controls as numbers; optional filter word.",
+        {"filter": str},
+        computer_ui.list_controls,
+    ),
+    "ui_click": Tool(
+        "ui_click",
+        "Click control N from the last ui list.",
+        {"n": int},
+        computer_ui.ui_click,
+    ),
+    "ui_type": Tool(
+        "ui_type",
+        "Type text into control N from the last ui list.",
+        {"n": int, "text": str},
+        computer_ui.ui_type,
     ),
 }
 

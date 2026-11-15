@@ -301,14 +301,10 @@ dependencies = [
     { name = "adblock" },
     { name = "httpx" },
     { name = "playwright" },
+    { name = "pyobjc-framework-applicationservices", marker = "sys_platform == 'darwin'" },
     { name = "pytest" },
     { name = "rank-bm25" },
     { name = "trafilatura" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pyobjc-framework-applicationservices" },
 ]
 
 [package.metadata]
@@ -316,13 +312,11 @@ requires-dist = [
     { name = "adblock" },
     { name = "httpx" },
     { name = "playwright" },
+    { name = "pyobjc-framework-applicationservices", marker = "sys_platform == 'darwin'", specifier = ">=13.0" },
     { name = "pytest" },
     { name = "rank-bm25" },
     { name = "trafilatura" },
 ]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pyobjc-framework-applicationservices", specifier = ">=13.0" }]
 
 [[package]]
 name = "htmldate"

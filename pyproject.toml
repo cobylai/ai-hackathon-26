@@ -11,13 +11,9 @@ dependencies = [
     "rank-bm25",
     "httpx",
     "pytest",
+    "pyobjc-framework-applicationservices>=13.0; sys_platform == 'darwin'",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-
-[dependency-groups]
-dev = [
-    "pyobjc-framework-applicationservices>=13.0",
-]
