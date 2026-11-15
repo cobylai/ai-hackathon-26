@@ -80,3 +80,12 @@ def test_google_sign_in_url_is_login(session, site):
         body="<html><head><title>Gmail</title></head><body>Sign in</body></html>"))
     session.page.goto("https://accounts.google.com/signin")
     assert classify(session.page) == "LOGIN"
+
+
+def test_prove_your_humanity_page_is_blocked(session, site):
+    session.page.goto(site.url("hello.html"))
+    session.page.set_content(
+        "<html><head><title>Reddit - Prove your humanity</title></head>"
+        "<body>Prove your humanity</body></html>"
+    )
+    assert classify(session.page) == "BLOCKED"

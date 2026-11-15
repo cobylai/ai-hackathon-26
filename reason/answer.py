@@ -261,6 +261,7 @@ def _bank(question: str, today: date, root):
 
 def _web(question: str, today: date, root, search_fn=None, open_fn=None, ingest_fn=None) -> Answer:
     from sufficiency import gather
+    from sufficiency.junk import looks_blocked
     if search_fn is None or open_fn is None:
         from harness.search import tools  # loads Playwright; web route only
         from sufficiency import websearch  # partner's engine.search, then Bing
@@ -274,6 +275,8 @@ def _web(question: str, today: date, root, search_fn=None, open_fn=None, ingest_
     url = r.source.url
     ans = (r.answer or "").strip()
     quote = (r.evidence or "").strip().strip('"“” ')
+    if looks_blocked(f"{ans}\n{quote}"):  # bot-check or error page: no answer, nothing filed
+        return Answer("I couldn't find that on the web.", "not_found", list(r.opened))
     text = ans + (f'\n"{quote}"' if quote and quote.lower() not in ans.lower() else "")
     try:
         got = ingest_fn(saved_page(question, ans, quote, url), source=url, kind="page",

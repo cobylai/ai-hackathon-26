@@ -27,7 +27,7 @@ class Verdict:
     enough: bool
     answer: str | None
     evidence: str | None    # the quote, only when it passed the check
-    reason: str             # answered | no_answer | quote_not_in_page | not_this_question | bad_json
+    reason: str             # answered | no_answer | quote_not_in_page | not_this_question | bad_json | blocked_page
     url: str | None = None
     chunk: int = 0          # index of the chunk that answered (or the last one judged)
     chunks: int = 1

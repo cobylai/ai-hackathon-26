@@ -65,10 +65,18 @@ PAGE = """<!doctype html>
   svg { display: block; flex: none; }
   [hidden] { display: none !important; }
 
-  /* sidebar: the bank, grouped */
-  #side { width: 240px; flex: none; background: var(--side); border-right: 1px solid var(--line);
-          display: flex; flex-direction: column; min-height: 0; }
-  #side .head { padding: 13px 16px 6px; font-size: 11px; font-weight: 600; color: var(--text3); }
+  /* left slot: kept empty for a chats list (past conversations, worker 18); show it by removing [hidden] */
+  #chats { width: 240px; flex: none; background: var(--side); border-right: 1px solid var(--line); overflow-y: auto; }
+  /* the bank: a slide-over from the right */
+  #side { position: fixed; z-index: 3; top: 0; right: 0; bottom: 0; width: 320px; max-width: 100%; background: var(--side);
+          border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(0,0,0,.10); display: flex; flex-direction: column;
+          transform: translateX(100%); visibility: hidden; transition: transform .2s ease, visibility 0s linear .2s; }
+  body.bankopen #side { transform: none; visibility: visible; transition: transform .2s ease; }
+  @media (prefers-reduced-motion: reduce) { #side, body.bankopen #side { transition: none; } }
+  #side .head { display: flex; align-items: center; justify-content: space-between; min-height: 38px; flex: none;
+                padding: 0 12px 0 16px; font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+  #sideclose { height: 22px; padding: 0 10px; font-size: 12px; font-weight: 400; color: var(--text); }
+  #sidebtn[aria-pressed="true"] { background: var(--hover); color: var(--text); }
   #groups { flex: 1; overflow-y: auto; padding: 0 8px 12px; }
   .group > button { width: 100%; display: flex; align-items: center; gap: 4px; padding: 6px 8px 4px;
                     font-size: 11px; font-weight: 600; color: var(--text2); text-align: left; }
@@ -157,29 +165,34 @@ PAGE = """<!doctype html>
   @keyframes r { to { transform: rotate(360deg) } }
   @media (prefers-reduced-motion: reduce) { .bars i, .spin { animation-duration: 3s; } }
 
-  /* wide: sidebar beside the conversation, hidden on request */
-  @media (min-width: 761px) { body.noside #side { display: none; } }
-  /* compact (the ~640 pt panel): sidebar slides over, page lets the panel's material show through */
+  /* roomy windows: the open bank pushes the conversation left instead of covering it */
+  @media (min-width: 1000px) { body.bankopen main { margin-right: 320px; } }
+  /* compact (the ~640 pt panel): the bank starts hidden and, open, covers the whole panel (Done or Escape closes it).
+     The page lets the panel's material show through. */
   @media (max-width: 760px) {
     body { background: transparent; }
-    #side { position: fixed; z-index: 2; top: 38px; bottom: 0; left: 0; box-shadow: 0 0 0 1px var(--line), 0 8px 24px rgba(0,0,0,.12); }
-    body:not(.sideopen) #side { display: none; }
+    #side { width: 100%; border-left: 0; box-shadow: none; }
+    body.bankopen main { visibility: hidden; }
+    #chats { display: none; }
     .turn, .empty { padding-left: 18px; padding-right: 18px; }
     .hint { display: none; }
   }
+  /* very narrow: a table row puts the date above the item instead of squeezing both */
+  @media (max-width: 480px) {
+    table.rows td { display: block; border: 0; padding: 0; width: auto; }
+    table.rows td.when { padding-top: 6px; font-size: 12px; }
+    table.rows tr { display: block; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  }
 </style></head>
 <body>
-<aside id="side" aria-label="In the bank">
-  <div class="head">In the bank</div>
-  <div id="groups"></div>
-</aside>
+<nav id="chats" aria-label="Chats" hidden></nav>
 <main>
   <div class="bar">
-    <button class="iconbtn" type="button" id="sidebtn" title="Show or hide the bank"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
     <h1>Muse</h1>
     <button type="button" class="btn" id="speak" aria-pressed="false" title="Read answers aloud">Speak</button>
     <button type="button" class="btn" id="discover" title="Let Muse ask you a few questions about yourself">Discover</button>
     <button type="button" id="status" title="Show what's in the bank"><span class="dot"></span>Checking…</button>
+    <button class="iconbtn" type="button" id="sidebtn" title="Show the bank (⌘B)" aria-pressed="false"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
   </div>
   <div id="log" aria-live="polite"></div>
   <form id="f">
@@ -191,6 +204,10 @@ PAGE = """<!doctype html>
     </div>
   </form>
 </main>
+<aside id="side" aria-label="In the bank">
+  <div class="head"><span>In the bank</span><button type="button" class="btn" id="sideclose" title="Close (Escape)">Done</button></div>
+  <div id="groups"></div>
+</aside>
 <script>
 /* Hooks other code relies on (keep them):
    ids #q #send #talk #status; POST /ask -> r.pending shows Yes / Cancel;
@@ -247,6 +264,10 @@ function render(box, text) {
     if ((m = /^\\s*[-•] (\\S.*?) {2,}(\\S.*)$/.exec(line))) {
       if (!table) { table = el('table', 'rows'); box.appendChild(table); list = null; }
       const tr = el('tr'); tr.appendChild(el('td', 'when', m[1])); last = el('td', '', m[2]); tr.appendChild(last); table.appendChild(tr);
+      continue;
+    }
+    if (table && (m = /^\\s*[-•] (.+)$/.exec(line))) {  // an undated row in a dated list stays in the table
+      const tr = el('tr'); tr.appendChild(el('td', 'when', '')); last = el('td', '', m[1]); tr.appendChild(last); table.appendChild(tr);
       continue;
     }
     if ((m = /^\\s*[-•] (.+)$/.exec(line))) {
@@ -330,6 +351,7 @@ async function ask(question, spoken, into) {
   if (pending && pending.row) { pending.row.remove(); pending = null; }  // a typed or spoken discovery reply
   if (pending && !/^(yes|no)$/i.test(question)) { pending = null; }  // any other question drops the held action
   busy = true; send.disabled = true;
+  if (sideShown() && !window.matchMedia('(min-width: 1000px)').matches) toggleSide(false, true);  // the bank would cover the answer
   let t;
   if (into) {
     into.textContent = ''; const w = el('div', 'working'); w.appendChild(el('span', 'spin'));
@@ -419,8 +441,8 @@ document.addEventListener('keydown', (ev) => {
   if (altTimer) { clearTimeout(altTimer); altTimer = null; }
   if (ev.key === 'Escape') {
     if (recording) { altTalk = false; stopTalk(true); }
+    else if (sideShown()) toggleSide(false);
     else if (pending) pending.cancel();
-    else if (document.body.classList.contains('sideopen')) document.body.classList.remove('sideopen');
     ev.preventDefault(); return;
   }
   if (!recording && document.activeElement !== q && ev.key.length === 1 && !ev.metaKey && !ev.ctrlKey) q.focus();
@@ -442,13 +464,29 @@ const GROUPS = [
   ['me', 'Notes about you', (r) => r.folder === 'me'],
 ];
 function isWide() { return window.matchMedia('(min-width: 761px)').matches; }
-function toggleSide(show) {
-  const b = document.body;
-  if (isWide()) { const on = show ?? b.classList.contains('noside'); b.classList.toggle('noside', !on); store('muse.side', on ? '1' : '0'); }
-  else b.classList.toggle('sideopen', show ?? !b.classList.contains('sideopen'));
+// Show / hide the bank (a slide-over on the right): the bar's bank button, Done, Escape or ⌘B.
+// Remembered per viewer in wide windows; the compact panel always starts with it hidden.
+// keep: closing it for an answer doesn't change the remembered choice.
+function sideShown() { return document.body.classList.contains('bankopen'); }
+function syncSideBtn() {
+  const on = sideShown(), b = $('sidebtn');
+  b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.title = (on ? 'Hide' : 'Show') + ' the bank (⌘B)';
 }
-if (store('muse.side') === '0') document.body.classList.add('noside');
+function toggleSide(show, keep) {
+  const on = show ?? !sideShown();
+  document.body.classList.toggle('bankopen', on);
+  if (isWide() && !keep) store('muse.bank', on ? '1' : '0');
+  syncSideBtn();
+  if (!recording) q.focus();
+}
+if (isWide() && store('muse.bank') === '1') document.body.classList.add('bankopen');
 $('sidebtn').onclick = () => toggleSide();
+$('sideclose').onclick = () => toggleSide(false);
+window.matchMedia('(min-width: 761px)').addEventListener('change', (e) => { if (!e.matches) document.body.classList.remove('bankopen'); syncSideBtn(); });
+document.addEventListener('keydown', (ev) => {
+  if ((ev.metaKey || ev.ctrlKey) && !ev.altKey && !ev.shiftKey && ev.key.toLowerCase() === 'b') { ev.preventDefault(); toggleSide(); }
+});
+syncSideBtn();
 statusEl.onclick = () => toggleSide(true);
 
 function group(key, title, items, fill) {
