@@ -51,6 +51,11 @@ For a single day the day is left off each line. If there are no events, it says 
 
 Calendar.app's scripting is slow: about 3 s to read one calendar, and 5–6 s for the first read after launch. A `whose` date filter costs about 1.5 s for each property it fetches, so `applecal` fetches every event of the calendar in one bulk call and filters the dates in Python. It keeps the result for 60 s (`MUSE_CALENDAR_CACHE=<seconds>`), so only the first calendar question in a minute waits. An event you add in Calendar shows up within 60 s.
 
+## Permission and the offline proof
+
+- **Reading Calendar needs a one-time Automation allow.** The first calendar question asks "<terminal app>" wants access to control "Calendar"; click OK. Without it, every calendar answer is the "couldn't read Apple Calendar" message. Each terminal app (Terminal, iTerm, VS Code) asks separately.
+- **Calendar can't be read from a process under the network-blocking sandbox.** Under `sandbox-exec` with network denied (what the voice runs used), Calendar refuses the Apple events with -10004. So the `sandbox-exec` network-blocked check doesn't work for the calendar route. "Calendar works with the network off" is shown only by the real Wi-Fi-off run (Antranig's test). The run below blocks sockets inside the Python process instead, which doesn't cover the `osascript` child or Calendar.app.
+
 ## Live run (2026-11-14 23:46, Sat; network blocked in the process, localhost allowed)
 
 The demo calendar holds 7 made-up events. The network block is `reason.live_check.block_network()` in the Python process. **Not `sandbox-exec`**: under it, Calendar refuses Apple events (-10004).
