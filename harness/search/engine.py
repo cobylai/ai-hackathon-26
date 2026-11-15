@@ -25,6 +25,10 @@ TIMEOUT_MS = 20_000
 last_status = "OK"
 # Which engine answered the last search: "google", "duckduckgo" or "".
 last_engine = ""
+# The query that produced `last_status`, so a caller can tell a fresh status from
+# a stale one. Wrappers around `search` are common (the evaluation records the
+# engine per query and the research loop used to miss the status because of it).
+last_query = ""
 
 _fallback_until = 0.0
 
@@ -36,10 +40,11 @@ def _now() -> float:
 
 def reset() -> None:
     """Forget the fallback window and the last status (tests and new sessions)."""
-    global _fallback_until, last_status, last_engine
+    global _fallback_until, last_status, last_engine, last_query
     _fallback_until = 0.0
     last_status = "OK"
     last_engine = ""
+    last_query = ""
 
 
 def in_fallback() -> bool:
@@ -72,10 +77,11 @@ def _run(page: Page, url: str, parser, name: str) -> list[Result]:
 
 def search(query: str, page: Page | None = None) -> list[Result]:
     """Results for ``query``: Google, or DuckDuckGo if Google is walled or empty."""
-    global _fallback_until
+    global _fallback_until, last_query
     query = " ".join((query or "").split())
     if not query:
         return []
+    last_query = query
     # `_page()` installs ad blocking and restarts a dead browser once.
     current = page if page is not None else browser_tools._page()
 

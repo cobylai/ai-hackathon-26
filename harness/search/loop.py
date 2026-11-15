@@ -109,11 +109,11 @@ def research(
         rounds = round_no
         tried.add(query.lower())
         results = list(find(query))[:MAX_RESULTS]
-        if not results and find is engine.search and engine.last_status in (
-            "BLOCKED",
-            "LOGIN",
-            "ERR",
-        ):
+        # `last_query` proves the status came from this query; an identity check
+        # misses the case where the caller wraps `engine.search` (the evaluation
+        # does exactly that to record the engine per question).
+        fresh = engine.last_query == " ".join(query.split())
+        if not results and fresh and engine.last_status in ("BLOCKED", "LOGIN", "ERR"):
             # A wall, a sign-in or a dead engine is not a query problem: rewriting
             # hits the same thing, and Run 4 spent three searches per question proving it.
             break

@@ -226,6 +226,7 @@ def test_stops_after_one_search_when_the_engine_is_walled(monkeypatch):
 
     def walled(query: str):
         queries.append(query)
+        monkeypatch.setattr(loop.engine, "last_query", query)  # what engine.search does
         return []
 
     monkeypatch.setattr(loop.engine, "search", walled)
@@ -243,6 +244,7 @@ def test_stops_after_one_search_when_the_engine_errors(monkeypatch):
 
     def broken(query: str):
         queries.append(query)
+        monkeypatch.setattr(loop.engine, "last_query", query)
         return []
 
     monkeypatch.setattr(loop.engine, "search", broken)
@@ -272,6 +274,27 @@ def test_one_broken_page_does_not_end_the_run():
     assert outcome.pages == 2
     assert len(outcome.notes) == 1
     assert "b.example" in outcome.answer
+
+
+def test_wall_stop_survives_a_search_wrapper(monkeypatch):
+    """The evaluation wraps `engine.search`; the stop rule must still fire."""
+    queries: list[str] = []
+
+    def fake_engine(query: str):
+        queries.append(query)
+        monkeypatch.setattr(loop.engine, "last_query", query)
+        return []
+
+    monkeypatch.setattr(loop.engine, "search", fake_engine)
+    monkeypatch.setattr(loop.engine, "last_status", "BLOCKED")
+
+    def recording_wrapper(query: str):  # what scripts/eval_search.py does
+        return loop.engine.search(query)
+
+    fake = llm.FakeLLM(["a better query"])
+    outcome = loop.research("anything", ask=fake.ask, search=recording_wrapper)
+    assert len(queries) == 1
+    assert outcome.rounds == 1
 
 
 def test_empty_results_from_a_working_engine_still_rewrite(monkeypatch):
