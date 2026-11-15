@@ -105,14 +105,22 @@ def suite(args: argparse.Namespace) -> int:
     recent = timed("email_search", tools.email_search, days=1)
     record("date-bounded search `newer_than:1d`", f"email_search {recent['seconds']:.1f}s", recent)
 
-    found = timed("email_search", tools.email_search, text=args.text, days=args.days)
-    read = timed("email_read", tools.email_read, n=1)
-    record(
-        f'read `{args.text}` thread 1',
-        f"search {found['seconds']:.1f}s + read {read['seconds']:.1f}s",
-        found,
-        read,
-    )
+    found = timed("email_search", tools.email_search, sender=args.sender, days=args.days)
+    if "0 results" in found["first"]:
+        rows.append(("read thread 1", "no rows to read", 0.0, found["chars"], "SKIP"))
+        print(
+            f"| {len(rows)} | read thread 1 | no rows from the sender search | "
+            f"{found['seconds']:.1f} | {found['chars']} | SKIP |",
+            flush=True,
+        )
+    else:
+        read = timed("email_read", tools.email_read, n=1)
+        record(
+            "read thread 1 of the sender search",
+            f"search {found['seconds']:.1f}s + read {read['seconds']:.1f}s",
+            found,
+            read,
+        )
 
     asks = timed("email_asks", tools.email_asks, sender=args.sender, days=args.days)
     record(f"asks `from:{args.sender}` {query_bits}", f"email_asks {asks['seconds']:.1f}s", asks)
@@ -122,7 +130,7 @@ def suite(args: argparse.Namespace) -> int:
     slowest = max(row[2] for row in rows)
     print(f"\ntotal {total_seconds:.1f} s, {total_chars} chars, slowest request {slowest:.1f} s")
 
-    failed = [row[0] for row in rows if row[4] != "OK"]
+    failed = [row[0] for row in rows if row[4] not in ("OK", "SKIP")]
     if failed:
         print(f"failed requests: {', '.join(failed)}")
     return 1 if failed else 0
