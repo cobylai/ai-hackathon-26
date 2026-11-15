@@ -153,6 +153,19 @@ def read_messages(page: Page) -> list[tuple[str, str, str]]:
     return found
 
 
+def message_ids(page: Page) -> list[str]:
+    """Gmail's message ids, newest first (same order as read_messages); "" where absent."""
+    items = selectors.all_in(page, "thread_message")
+    ids = []
+    for i in range(items.count()):
+        try:
+            ids.append(items.nth(i).get_attribute("data-legacy-message-id") or "")
+        except Exception:
+            ids.append("")
+    ids.reverse()
+    return ids
+
+
 def render(messages: list[tuple[str, str, str]]) -> str:
     blocks = []
     for sender, date, body in messages:

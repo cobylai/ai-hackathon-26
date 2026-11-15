@@ -10,3 +10,10 @@ voice/swift/.swiftpm/
 voice/swift/Package.resolved
 app/build/
 app/dist/
+
+# Real data never goes in git: banks and mail-sync state live outside the repo (~/flux-bank).
+flux-bank/
+flux-*bank/
+.mailsync.json
+.mailsync.lock
+*.mailsync.json

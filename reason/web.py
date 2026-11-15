@@ -111,6 +111,8 @@ PAGE = """<!doctype html>
   @media (prefers-reduced-motion: reduce) { #side, body.bankopen #side { transition: none; } }
   #side .head { display: flex; align-items: center; justify-content: space-between; min-height: 38px; flex: none;
                 padding: 0 12px 0 16px; font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+  #syncmail { height: 22px; padding: 0 10px; font-size: 12px; font-weight: 400; margin-left: 8px; }
+  #syncnote { flex: 1; min-width: 0; margin: 0 8px; font-size: 11px; color: var(--muted, #888); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #sideclose { height: 22px; padding: 0 10px; font-size: 12px; font-weight: 400; color: var(--text); }
   #sidebtn[aria-pressed="true"], #chatsbtn[aria-pressed="true"] { background: var(--hover); color: var(--text); }
   #groups { flex: 1; overflow-y: auto; padding: 0 8px 12px; }
@@ -279,7 +281,7 @@ PAGE = """<!doctype html>
   </form>
 </main>
 <aside id="side" aria-label="In the bank">
-  <div class="head"><span>In the bank</span><button type="button" class="btn" id="sideclose" title="Close (Escape)">Done</button></div>
+  <div class="head"><span>In the bank</span><button type="button" class="btn" id="syncmail" title="Read new mail from Gmail into the bank (local, read-only)">Sync mail</button><span id="syncnote" aria-live="polite"></span><button type="button" class="btn" id="sideclose" title="Close (Escape)">Done</button></div>
   <div id="groups"></div>
 </aside>
 <script>
@@ -628,6 +630,15 @@ function toggleSide(show, keep) {
 if (isWide() && store('flux.bank') === '1') document.body.classList.add('bankopen');
 $('sidebtn').onclick = () => toggleSide();
 $('sideclose').onclick = () => toggleSide(false);
+$('syncmail').onclick = async () => {
+  const b = $('syncmail'), n = $('syncnote'); b.disabled = true; n.textContent = 'Syncing…';
+  try {
+    const r = await post('/sync');
+    n.textContent = r.text || (r.error || 'Done');
+    await loadBank(); refresh();
+  } catch (e) { n.textContent = "Couldn't sync mail."; }
+  b.disabled = false;
+};
 window.matchMedia('(min-width: 761px)').addEventListener('change', (e) => { if (!e.matches) document.body.classList.remove('bankopen'); syncSideBtn(); });
 document.addEventListener('keydown', (ev) => {
   if ((ev.metaKey || ev.ctrlKey) && !ev.altKey && !ev.shiftKey && ev.key.toLowerCase() === 'b') { ev.preventDefault(); toggleSide(); }
@@ -804,9 +815,21 @@ def bank_rows(entries) -> list[dict]:
     return rows
 
 
+handler_hooks: dict = {}
+
+
+def default_sync(budget_s: float = 120.0) -> str:
+    """One bounded pass over the last 14 days (resumable): bank.mailsync, read-only."""
+    from bank import mailsync
+    try:
+        return "Mail: " + mailsync.run(budget_s=budget_s).line()
+    except mailsync.Locked as e:
+        return f"Mail sync skipped: {e}"
+
+
 def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None,
                  entries_fn=None, speaker=None, session=None, chats_root=None, mail_fn=None, open_fn=None,
-                 draft_fn=None, run_fn=None, nudge_fn=None, now_fn=None, nudges_path=None):
+                 draft_fn=None, run_fn=None, nudge_fn=None, now_fn=None, nudges_path=None, sync_fn=None):
     entries_fn = entries_fn or store.all_entries
     cur = {"s": session or Session()}  # the open chat (single user); swapped on new / open
     answer_fn = answer_fn or (lambda q, today=None: _answer(q, today=today, session=cur["s"]))
@@ -817,6 +840,20 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
         compose.reset()   # so does a held "Who is this to?"
         cur["s"] = s
     online_fn = online_fn or _online
+    last_sync = {"text": None, "at": None}
+
+    def run_sync():
+        """Sync mail now, on the calling (main) thread: the Gmail browser is single-threaded."""
+        import time as _t
+        try:
+            text = (sync_fn or default_sync)()
+        except SystemExit as e:  # e.g. not signed in, bank path refused
+            text = f"Mail sync stopped: {e.code or e}"
+        except Exception as e:
+            text = f"Mail sync failed: {type(e).__name__}: {e}"
+        last_sync.update(text=text, at=_t.strftime("%H:%M:%S"))
+        return dict(last_sync)
+    handler_hooks["sync"] = run_sync
     count_fn = count_fn or (lambda: len(store.all_entries()))
 
     class Handler(BaseHTTPRequestHandler):
@@ -850,6 +887,8 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
             elif self.path == "/status":
                 self._json({"online": online_fn(), "items": count_fn(), "voice": talk is not None,
                             "voice_why": voice_why})
+            elif self.path == "/sync/status":
+                self._json(last_sync)
             elif self.path == "/bank":
                 self._json(bank_rows(entries_fn()))
             elif self.path == "/chats":
@@ -881,6 +920,8 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 speaker.stop()  # talking, a new question or the switch cuts off the spoken answer
             if self.path == "/speak/stop":
                 return self._json({"ok": True})
+            if self.path == "/sync":
+                return self._json(run_sync())
             if self.path.startswith("/chats/"):
                 return self._chats_post(self.path.split("/")[2:])
             if self.path.startswith(("/suggest/", "/draft/")):
@@ -979,6 +1020,8 @@ def main(argv=None) -> int:
     ap.add_argument("--today", help="pretend today is this date (YYYY-MM-DD)")
     ap.add_argument("--no-open", action="store_true", help="don't open a browser tab")
     ap.add_argument("--no-voice", action="store_true", help="typing only")
+    ap.add_argument("--auto-sync-minutes", type=float, default=0, metavar="N",
+                    help="also refresh mail from Gmail every N minutes (off by default)")
     args = ap.parse_args(argv)
     voice, why = (None, "turned off") if args.no_voice else start_voice()
     print("Voice: ready" if voice else f"Voice is unavailable ({why}); typing only.", flush=True)
@@ -994,7 +1037,17 @@ def main(argv=None) -> int:
     if not args.no_open:
         webbrowser.open(url)
     try:
-        srv.serve_forever()
+        if args.auto_sync_minutes > 0:  # on this thread, between requests (one Gmail browser)
+            import time
+            srv.timeout = 1.0
+            due = time.monotonic() + 5
+            while True:
+                srv.handle_request()
+                if time.monotonic() >= due:
+                    print(handler_hooks["sync"]()["text"], flush=True)
+                    due = time.monotonic() + args.auto_sync_minutes * 60
+        else:
+            srv.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:

@@ -177,3 +177,46 @@ def search(sender: str | None = None, text: str | None = None, days: int | None 
     rows = [parse_row(item, n) for n, item in enumerate(items, start=1)]
     _last[:] = rows
     return format_rows(query_text or "inbox", rows, len(visible_rows(page)))
+
+
+def _older_enabled(page: Page) -> bool:
+    btn = selectors.locator(page, "older_button")
+    try:
+        return bool(btn.count()) and btn.is_visible() and btn.get_attribute("aria-disabled") != "true"
+    except Exception:
+        return False
+
+
+def collect_rows(page: Page, days: int | None = None, limit: int = 200, max_pages: int = 10) -> list[Row]:
+    """Every result row (not just ten), paging with Gmail's "Older" button, up to ``limit``.
+
+    Read-only: loads a search URL and clicks only the list pager. Rows are
+    de-duplicated by thread id and numbered 1..n.
+    """
+    global _last_query
+    query_text = query.build(days=days)
+    _last_query = query_text
+    page.goto(query.search_url(query_text), wait_until="domcontentloaded", timeout=60000)
+    wait_results(page)
+    found: list[Row] = []
+    seen: set[str] = set()
+    for _ in range(max_pages):
+        if no_results(page):
+            break
+        for item in visible_rows(page):
+            row = parse_row(item, len(found) + 1)
+            if row.thread_id and row.thread_id not in seen:
+                seen.add(row.thread_id)
+                found.append(row)
+        if len(found) >= limit or not _older_enabled(page):
+            break
+        selectors.locator(page, "older_button").click()
+        waited = 0
+        while waited < 15000:  # wait until the list shows rows we have not seen
+            page.wait_for_timeout(500)
+            waited += 500
+            ids = {_attr(selectors.locator(i, "row_subject"), "data-legacy-thread-id") for i in visible_rows(page)}
+            if ids and not ids <= seen:
+                break
+    _last[:] = found[:limit]
+    return found[:limit]
