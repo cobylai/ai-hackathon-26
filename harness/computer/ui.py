@@ -203,7 +203,10 @@ def _set_value(el, text: str) -> bool:
 
 
 def _focus(el) -> None:
-    import ApplicationServices as AX
+    try:
+        import ApplicationServices as AX
+    except ImportError:  # not macOS: nothing to focus, the fallback reports its own error
+        return
 
     AX.AXUIElementSetAttributeValue(el, "AXFocused", True)
 

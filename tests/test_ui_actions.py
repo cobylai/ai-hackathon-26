@@ -127,3 +127,11 @@ def test_actions_are_logged(home, controls):
     assert "ALLOW\tTextEdit\tclick\tbold" in lines[0]
     assert "ALLOW\tTextEdit\ttype\t(empty text area)" in lines[1]
     assert "CONFIRM\tTextEdit\tclick\tDelete" in lines[2]
+
+
+def test_focus_without_applicationservices_is_a_noop(monkeypatch):
+    """Linux CI has no AX framework; focusing must not raise."""
+    import sys
+
+    monkeypatch.setitem(sys.modules, "ApplicationServices", None)
+    ui._focus(object())  # must not raise
