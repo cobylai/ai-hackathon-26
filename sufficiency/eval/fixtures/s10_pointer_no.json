@@ -1,9 +1,0 @@
-{
-  "id": "s10_pointer_no",
-  "task": "sufficiency",
-  "note": "pointer to another document, worded unlike s03",
-  "question": "How much is the final project worth in ECON 1110?",
-  "url": "https://econ.example.edu/courses/1110",
-  "page": "ECON 1110: Introductory Microeconomics\nInstructor: Prof. Hannah Okafor\nLectures: MWF 10:10-11:00, Uris Auditorium\nDiscussion sections meet weekly starting the second week of classes.\nFor a breakdown of grading weights, including exams and the final project, please consult the syllabus on Canvas.\nTextbook: Principles of Microeconomics, 9th edition.",
-  "expected": "not enough"
-}

@@ -1,7 +1,7 @@
 // swift-tools-version: 6.0
 //
 // argmax-voice: push-to-talk speech-to-text for Python, on the Argmax Pro SDK.
-// Needs the one-time Argmax registry login (see samples/argmax-pro-sdk/native/README.md).
+// Needs the one-time Argmax registry login (see Argmax's Pro SDK docs).
 // The executable name is fixed: the Neural Engine compile cache lives in
 // ~/Library/Caches/argmax-voice/, so renaming it costs a ~4-minute recompile.
 import PackageDescription

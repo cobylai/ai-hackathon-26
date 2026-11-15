@@ -5,14 +5,12 @@ A minimal chat window for [Bonsai 2 Small](https://huggingface.co/collections/pr
 ```
 bonsai-models/
 ├── shared/index.html   the chat window (plain HTML + JS, no build step)
-├── gguf/               Windows / Linux / Intel or Apple Mac: PrismML llama.cpp fork + llama-server
 └── mlx/                Apple Silicon only: mlx-vlm + mlx_vlm.server
 ```
 
 ## Which version should I use?
 
-- **Windows or Linux:** [`gguf/`](gguf/README.md)
-- **Apple Silicon Mac:** either works. [`mlx/`](mlx/README.md) is the native Apple path. `gguf/` also runs well on Metal.
+- **Apple Silicon Mac:** use [`mlx/`](mlx/README.md) is the native Apple path.
 
 Both versions do the same thing in three steps: download a runtime, download the model, and start a server on `localhost:8080`.
 

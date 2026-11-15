@@ -1,9 +1,0 @@
-{
-  "id": "p05_login_no",
-  "task": "sufficiency",
-  "note": "login wall",
-  "question": "What grade did I get on Prelim 1 in PHYS 2213?",
-  "url": "https://canvas.example.edu/courses/88/grades",
-  "page": "Sign in to continue\nUsername\nPassword\n[ Log in ]\nForgot your password?\nThis site requires two-factor authentication.",
-  "expected": "not enough"
-}

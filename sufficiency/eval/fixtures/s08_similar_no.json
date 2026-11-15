@@ -1,9 +1,0 @@
-{
-  "id": "s08_similar_no",
-  "task": "sufficiency",
-  "note": "similar course, different question",
-  "question": "When are the CS 4110 TA office hours?",
-  "url": "https://course.example.edu/cs3110/staff",
-  "page": "CS 3110 Course Staff - Fall 2026\nTA office hours:\n- Priya Raman: Mondays 3-5pm, Gates 344\n- Jonah Kim: Wednesdays 1-3pm, Gates G11\n- Sofia Alvarez: Fridays 10am-12pm, Rhodes 412\nFor CS 4110 staff, see that course's own website.",
-  "expected": "not enough"
-}
