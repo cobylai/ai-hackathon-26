@@ -14,6 +14,15 @@ ROOT = Path(__file__).resolve().parents[1]
 STATUS_WORDS = {"OK", "BLOCKED", "LOGIN", "ERR"}
 
 
+def _browsers_path() -> str:
+    """Playwright's browser cache, so the CLI can find Chromium with HOME moved."""
+    if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        return os.environ["PLAYWRIGHT_BROWSERS_PATH"]
+    if sys.platform == "darwin":
+        return str(Path.home() / "Library" / "Caches" / "ms-playwright")
+    return str(Path.home() / ".cache" / "ms-playwright")
+
+
 def check(result: str) -> str:
     assert isinstance(result, str)
     assert len(result) <= 1500, f"{len(result)} chars"
@@ -95,9 +104,7 @@ def test_navigation_failure(btools):
 def test_cli_prints_status_and_text(tmp_path, site):
     env = os.environ.copy()
     env["HOME"] = str(tmp_path)
-    env["PLAYWRIGHT_BROWSERS_PATH"] = str(
-        Path(os.path.expanduser("~")) / "Library" / "Caches" / "ms-playwright"
-    )
+    env["PLAYWRIGHT_BROWSERS_PATH"] = _browsers_path()
     proc = subprocess.run(
         [sys.executable, "-m", "harness", "goto", site.url("hello.html")],
         cwd=ROOT,
@@ -145,3 +152,48 @@ def test_registry_shape():
 def test_output_cap_on_long_text(btools):
     assert len(btools._cap("x" * 5000, "[more: call read(page=2)]")) <= 1500
     assert btools._cap("short") == "short"
+
+
+def test_click_after_navigation_is_refused(btools, site):
+    btools.goto(site.url("form.html"))
+    n = number_of(btools.elements(), "Submit")
+    btools.goto(site.url("hello.html"))
+    out = check(btools.click(n))
+    assert out.startswith("ERR")
+    assert "elements again" in out
+
+
+def test_locked_profile_returns_err(monkeypatch):
+    from harness.browser import tools
+
+    class Broken:
+        def start(self):
+            raise RuntimeError(
+                "Failed to create a ProcessSingleton for your profile directory."
+            )
+
+    monkeypatch.setattr(tools, "get_session", lambda: Broken())
+    out = check(tools.goto("https://example.com"))
+    assert out.startswith("ERR local")
+    assert "profile in use" in out
+
+
+def test_other_start_failure_returns_err(monkeypatch):
+    from harness.browser import tools
+
+    class Broken:
+        def start(self):
+            raise RuntimeError("Executable doesn't exist at /nowhere")
+
+    monkeypatch.setattr(tools, "get_session", lambda: Broken())
+    out = check(tools.back())
+    assert out.startswith("ERR local")
+    assert "browser failed to start" in out
+
+
+def test_elements_reports_truncation(btools, session, site):
+    btools.goto(site.url("hello.html"))
+    links = "".join(f'<a href="/x{i}">Headline number {i}</a>\n' for i in range(45))
+    session.page.set_content(f"<html><body>{links}</body></html>")
+    out = check(btools.elements())
+    assert out.splitlines()[0].endswith("40 of 45 elements")
