@@ -20,6 +20,7 @@ from .playbook import say
 
 BOOK = "about"
 NAV = [["Next", "next"], ["Back", "back"], ["Stop", "stop"]]
+FIXED = ("internet", "mail", "model", "send")  # about.md: one fixed answer each, no model call
 
 
 def _items(section: str) -> list[tuple[str, str]]:
@@ -70,10 +71,29 @@ def _item(today: date, root: Path | None) -> str | None:
     return None
 
 
-def _fill(question: str, how: str, name: str | None, item: str | None) -> str | None:
+def _senders(root: Path | None) -> set[str]:
+    from bank import store
+    return {(e.get("sender_name") or "").split()[0].lower() for e in store.all_entries(root)
+            if (e.get("sender_name") or "").strip()}
+
+
+def _course_subjects(root: Path | None) -> list[str]:
+    from bank import store
+    return [(e.get("subject") or "").lower() for e in store.all_entries(root) if e.get("folder") == "course"]
+
+
+def _fill(question: str, how: str, name: str | None, item: str | None, root: Path | None = None) -> str | None:
+    """The example as its playbook wrote it when the bank has its name or item, else with the
+    bank's own (name: newest sender with an ask; item: nearest coursework due item). None: neither."""
     if how == "name":
+        m = re.search(r"\b(?:did|to) ([A-Z][a-z]+)", question)
+        if m and m.group(1).lower() in _senders(root):
+            return question
         return re.sub(r"\b(did|to) [A-Z][a-z]+", lambda m: f"{m.group(1)} {name}", question) if name else None
     if how == "item":
+        m = re.search(r"\bfor (?:the )?(.+?)[.?]?$", question)
+        if m and any(m.group(1).lower() in s for s in _course_subjects(root)):
+            return question
         return re.sub(r"\bfor .+$", f"for {item}", question) if item else None
     return question
 
@@ -83,17 +103,16 @@ def _fill(question: str, how: str, name: str | None, item: str | None) -> str | 
 def overview(today: date, root: Path | None):
     from .answer import Answer
     name, item = _sender(root), _item(today, root)
-    lines, choices = [say(BOOK, "intro"), "", say(BOOK, "can_head")], []
-    for label, spec in _items("Overview"):
+    lines, choices = [say(BOOK, "intro"), say(BOOK, "intro2"), say(BOOK, "can_head")], []
+    for _label, spec in _items("Overview"):
         book, n, how = _refs(spec)[0]
-        q = _fill(_example(book, n), how, name, item)
+        q = _fill(_example(book, n), how, name, item, root)
         if q is None:  # the example names a sender or item this bank doesn't have: no staged names
-            lines.append(say(BOOK, "can_row_plain", label=label))
             continue
-        lines.append(say(BOOK, "can_row", label=label, question=q))
+        q = q.rstrip(".")
+        lines.append(say(BOOK, "can_row", question=q))
         choices.append([q, q])
-    lines += ["", say(BOOK, "show_me"), "", say(BOOK, "source")]
-    choices.append(["Show me", "show me"])
+    lines += ["", say(BOOK, "source")]
     return Answer("\n".join(lines), "about", choices=choices)
 
 
@@ -119,7 +138,7 @@ def step(i: int, today: date, root: Path | None, run, events, *, skipped: list[s
     while i < len(steps):
         key, spec = steps[i]
         refs = _refs(spec)
-        filled = [(_fill(_example(b, n), how, name, item), how) for b, n, how in refs]
+        filled = [(_fill(_example(b, n), how, name, item, root), how) for b, n, how in refs]
         missing = any(q is None for q, _ in filled) or (key == "catchup" and not _bank_has(root)) \
             or (key == "due" and not _due_tomorrow(today, root))
         if missing:
@@ -173,9 +192,19 @@ def _due_tomorrow(today: date, root: Path | None) -> bool:
     return bool(due(t, t, root))
 
 
-def handle(question: str, today: date, root: Path | None = None, *, session=None, run=None, events=None):
+def handle(question: str, today: date, root: Path | None = None, *, session=None, run=None, events=None,
+           held: bool = False):
     """An Answer for the overview or a tour move, else None (answer the question as usual)."""
     from .answer import Answer
+    for key in FIXED:  # fixed answers: never touch a held action or draft
+        if _whole(question, key):
+            text = say(BOOK, f"{key}_answer")
+            if key == "internet":
+                from .answer import online
+                text += " " + say(BOOK, "internet_online" if online() else "internet_offline")
+            return Answer(text + "\n\n" + say(BOOK, "source"), "about")
+    if held:
+        return None
     if _whole(question, "overview"):
         return overview(today, root)
     if session is None or run is None:

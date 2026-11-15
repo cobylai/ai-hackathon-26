@@ -70,20 +70,55 @@ class Overview(Base):
             a = self.ask(q)
             self.assertIsNotNone(a, q)
             self.assertEqual(a.route, "about")
-        a = self.ask("What's Flux?")
-        self.assertIn("runs entirely on this Mac", a.text)
-        self.assertIn('Say "show me"', a.text)
+        a = self.ask("What is Flux?")
+        self.assertTrue(a.text.startswith("I'm Flux, a personal assistant that lives on your Mac.\n"))
+        self.assertIn("Try asking:", a.text)
         self.assertTrue(a.text.rstrip().splitlines()[-1].startswith("Source:"))
         qs = [c[1] for c in a.choices]
-        # examples come from the routes' playbooks, with the bank's own sender and due item
-        self.assertIn("What did Felix ask me?", qs)
-        self.assertIn("Set me up for Problem set 7", qs)
-        self.assertEqual(qs[-1], "show me")
+        # examples come from the routes' playbooks, kept when the bank has their name, else the bank's own
+        self.assertIn("What did Felix ask me?", qs)            # Felix is a sender here: kept
+        self.assertIn("Set me up for Problem set 7", qs)      # no "lab report" here: the bank's due item
+        self.assertIn("- Remember that my lab is Tuesdays at 2\n", a.text)  # no closing full stop
         self.assertEqual(self.run_.asked, [])  # the overview runs nothing
 
     def test_whole_question_only(self):
         for q in ["help me draft a reply to Felix", "show me my calendar", "what's next week",
                   "skip the meeting?", "stop by the lab"]:
+            self.assertIsNone(self.ask(q), q)
+
+
+class Fixed(Base):
+    def test_each_fixed_answer(self):
+        for q, starts in [("Do you need the internet?", "No. I read your mail and coursework"),
+                          ("How did you get my mail?", "Through my own hidden browser."),
+                          ("What model are you running?", "Bonsai 2, the 4B model"),
+                          ("Will you send that?", "No. I write the draft and you send it."),
+                          ("Flux, what model are you running?", "Bonsai 2")]:
+            a = self.ask(q)
+            self.assertEqual(a.route, "about", q)
+            self.assertTrue(a.text.startswith(starts), q)
+            self.assertEqual(self.run_.asked, [])  # no route, no model
+
+    def test_internet_says_whether_online(self):
+        with mock.patch("reason.answer.online", return_value=False):
+            self.assertIn("You're offline right now, and I still work.", self.ask("Do you need the internet?").text)
+        with mock.patch("reason.answer.online", return_value=True):
+            self.assertIn("I only go online to sync and to look things up.", self.ask("Do you need the internet?").text)
+
+    def test_send_question_while_a_draft_waits(self):
+        """Asked right after a draft, while compose or act waits: answered, and the hold is untouched."""
+        from reason import act, compose
+        with mock.patch.object(compose, "waiting", return_value=True), \
+             mock.patch.object(act, "waiting", return_value=True), \
+             mock.patch.object(act, "reset") as act_reset, mock.patch.object(compose, "reset") as comp_reset:
+            a = answer("Will you send that?", today=SUN, root=self.root, session=self.s)
+            self.assertEqual(a.route, "about")
+            self.assertIn("I never send anything myself.", a.text)
+            self.assertFalse(act_reset.called or comp_reset.called)
+            self.assertIsNone(tour.handle("What is Flux?", SUN, self.root, session=self.s, held=True))  # waits
+
+    def test_not_part_of_another_question(self):
+        for q in ["will you send that to Felix tomorrow and also the other one?", "what model is the bike"]:
             self.assertIsNone(self.ask(q), q)
 
 
@@ -166,8 +201,8 @@ class EmptyBank(Base):
         a = self.ask("What's Flux?")
         qs = [c[1] for c in a.choices]
         self.assertNotIn("What did Felix ask me?", qs)  # no staged names on an empty bank
-        self.assertIn("- What someone asked you", a.text)
-        self.assertIn("show me", qs)
+        self.assertNotIn("Felix", a.text)
+        self.assertIn("Catch me up", qs)
 
 
 class Hook(Base):
