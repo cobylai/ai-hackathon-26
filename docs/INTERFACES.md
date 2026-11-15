@@ -180,9 +180,16 @@ answer(question, today=None) -> Answer
   - If offline, the answer says plainly that it isn't saved and the Mac is offline.
 - Chat loop: `python -m reason [--today YYYY-MM-DD]`. Voice should call `answer()` directly.
 
-## 7. Voice input — **planned** (Argmax, branch `argmax-runtime-test`)
+## 7. Voice input — **built** (`voice/`, branch `voice-input`)
 
-Argmax runs only from Swift, so voice is a small separate Swift program. It turns speech into text, and the text goes into the same entry point as a typed question. How the Swift program hands text to Python is **undecided**; it will be in `docs/argmax.md` once the runtime test reports.
+Argmax runs only from Swift, so voice is a small Swift program, `voice/swift/` → `argmax-voice`. It stays running, and Python drives it through `voice/listen.py`. Push to talk: it records only between start and stop. Details are in `docs/voice-input.md`; the offline findings are in `docs/argmax.md`.
+
+- **Python call:** `from voice.listen import Voice; voice = Voice()` once at startup (≈1.5 s warm). Then `question = voice.listen(wait_for_stop=input)` returns the text. `wait_for_stop` is any blocking function; recording stops when it returns.
+- **Errors:** `VoiceError` is raised for a microphone denial, a license or model failure, the process exiting, or a timeout. It never hangs silently.
+- **Needs:** `ARGMAX_API_KEY` in the environment (from the vault, loaded before Wi-Fi off), and the built binary (`swift build -c release` in `voice/swift`).
+- **Speed:** stop to text is about 1.1–1.25 s for a spoken question. It works with all network denied.
+- **Protocol** (if you drive the binary directly): stdin `start`/`stop`/`file <wav>`/`quit`. stdout JSON lines: `ready`, `recording`, `text` (`{"event":"text","text":"...","seconds":2.4}`), `error`.
+- **Chat loop:** replace `input()` with `voice.listen()`. These are the two lines in `docs/voice-input.md`, added after the reasoning layer lands.
 
 ## 8. Not decided yet
 

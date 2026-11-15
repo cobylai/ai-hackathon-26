@@ -5,3 +5,6 @@ __pycache__/
 *.gguf
 .DS_Store
 data/
+voice/swift/.build/
+voice/swift/.swiftpm/
+voice/swift/Package.resolved
