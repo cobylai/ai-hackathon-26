@@ -34,6 +34,8 @@ per `samples/bonsai-models/mlx/README.md` (Python 3.12+; mlx needs 3.10+). Then:
 
 ```bash
 curl -s localhost:8080/v1/models || scripts/serve_bonsai.sh 4B    # one server at a time, :8080
+# in a fresh worktree the models folder isn't there; point at an existing one:
+BONSAI_MODELS_DIR=<dir>/models BONSAI_VENV=<dir>/.venv scripts/serve_bonsai.sh 4B
 ```
 
 `llm/client.py` refuses any URL that isn't localhost (`BONSAI_BASE_URL`).
@@ -43,7 +45,8 @@ curl -s localhost:8080/v1/models || scripts/serve_bonsai.sh 4B    # one server a
   the event) as `ARGMAX_API_KEY`, and the Argmax registry login for the Swift
   package (`docs/argmax.md`). Don't use or paste Coby's key.
 - The model folder: `~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-large-v3-v20240930_626MB`
-  (or set `ARGMAX_MODEL_FOLDER`). Download it while online.
+  (or set `ARGMAX_MODEL_FOLDER`). Download it while online:
+  `hf download argmaxinc/whisperkit-coreml --include "openai_whisper-large-v3-v20240930_626MB/*" --local-dir ~/Documents/huggingface/models/argmaxinc/whisperkit-coreml`
 - Build: `cd voice/swift && swift build -c release && cd ../..`
 - First launch compiles for about **250 s** (cache in `~/Library/Caches/argmax-voice`).
   Allow the Keychain and microphone prompts for your terminal app.
@@ -64,7 +67,7 @@ The demo answers from sample mail, not anyone's real inbox. Build it outside
 the repo, with "today" set to the day you test (dates are offsets from it):
 
 ```bash
-DAY=2026-11-15
+DAY=$(date +%F)   # today
 rm -rf ~/muse-demo-mail ~/muse-demo-bank
 uv run python scripts/make_test_mail.py write ~/muse-demo-mail --today $DAY
 MUSE_BANK_DIR=~/muse-demo-bank uv run python -m bank.load ~/muse-demo-mail --kind email
