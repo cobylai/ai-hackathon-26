@@ -44,7 +44,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>$(date +%Y%m%d%H%M)</string>
   <key>LSMinimumSystemVersion</key><string>15.0</string>
   <key>LSUIElement</key><true/>
-  <key>NSAppleEventsUsageDescription</key><string>Flux reads your Flux demo calendar, and adds events, reminders or opens an email when you ask.</string>
+  <key>NSAppleEventsUsageDescription</key><string>Flux reads your calendar, and adds events, reminders or opens an email when you ask.</string>
   <key>NSMicrophoneUsageDescription</key><string>Flux listens only while you hold the hotkey or the talk button.</string>
   <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
   <key>FluxRepo</key><string>$REPO</string>
