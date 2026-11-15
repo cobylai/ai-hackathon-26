@@ -65,3 +65,7 @@
 - Controlled experiment (unique HOME profile dirs, teammate-proof): WITH the atexit fix 0 surviving Chromium processes; WITHOUT it also 0.
 - Conclusion: Playwright cleans up on normal interpreter exit via the driver pipe; the fix is harmless insurance, not a bug fix.
 - The earlier "leaks"/hangs trace to SIGKILLed runs (my 5-min tool timeout) and misattributed teammate processes, not to missing teardown.
+
+## Final verification (2026-11-15)
+- Full suite on main@ddd18cb (the shipped state): 295 passed, 0 failed. Includes CLI + token + computer tests.
+- scripts/eval_computer.py re-run on the merged tree: all 5 jobs pass.
