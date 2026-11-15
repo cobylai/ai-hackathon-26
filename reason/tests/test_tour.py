@@ -66,7 +66,7 @@ class Base(unittest.TestCase):
 class Overview(Base):
     def test_overview(self):
         for q in ["What's Flux?", "what is this", "What can you do?", "help", "How do I use this?",
-                  "Flux, what's Flux?"]:
+                  "Flux, what's Flux?", "What is flock?", "what's flocks", "Flocks, what is Flux?"]:
             a = self.ask(q)
             self.assertIsNotNone(a, q)
             self.assertEqual(a.route, "about")
