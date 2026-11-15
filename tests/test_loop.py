@@ -278,6 +278,36 @@ def test_research_tool_reports_a_blocked_wall(monkeypatch):
     engine.reset()
 
 
+def test_registry_research_runs_end_to_end_offline(monkeypatch, session, site):
+    """The decision tree calls `registry.TOOLS["research"]`; everything below must fit."""
+    from harness.browser import tools as browser_tools
+
+    monkeypatch.setattr(browser_tools, "_page", lambda: session.page)
+    monkeypatch.setattr(
+        engine,
+        "search",
+        lambda query: [
+            Result("The Keeper", site.url("article.html"), "127.0.0.1", "a story")
+        ],
+    )
+    replies = iter(
+        [
+            "1",
+            "The keeper climbed one hundred and twelve steps.",
+            "YES",
+            "He climbed one hundred and twelve steps [1].",
+        ]
+    )
+    monkeypatch.setattr(llm, "ask", lambda prompt, choices=None, max_tokens=64: next(replies))
+
+    out = registry.TOOLS["research"].run(question="how many steps did the keeper climb?")
+
+    assert out.startswith("OK research |")
+    assert "one hundred and twelve steps" in out
+    assert "Sources: 1. 127.0.0.1" in out
+    assert len(out) <= 1500
+
+
 def test_registry_exposes_research():
     entry = registry.TOOLS["research"]
     assert entry.args == {"question": str}
