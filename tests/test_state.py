@@ -20,6 +20,7 @@ def test_challenge_iframe_is_blocked(session, site):
         "<iframe src='https://challenges.cloudflare.com/cdn-cgi/challenge-platform/x'></iframe>"
         "</body></html>"
     )
+    session.page.wait_for_selector("iframe[src*='challenges.cloudflare.com']")
     assert classify(session.page) == "BLOCKED"
 
 
