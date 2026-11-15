@@ -14,6 +14,15 @@ ROOT = Path(__file__).resolve().parents[1]
 STATUS_WORDS = {"OK", "BLOCKED", "LOGIN", "ERR"}
 
 
+def _browsers_path() -> str:
+    """Playwright's browser cache, so the CLI can find Chromium with HOME moved."""
+    if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        return os.environ["PLAYWRIGHT_BROWSERS_PATH"]
+    if sys.platform == "darwin":
+        return str(Path.home() / "Library" / "Caches" / "ms-playwright")
+    return str(Path.home() / ".cache" / "ms-playwright")
+
+
 def check(result: str) -> str:
     assert isinstance(result, str)
     assert len(result) <= 1500, f"{len(result)} chars"
@@ -95,9 +104,7 @@ def test_navigation_failure(btools):
 def test_cli_prints_status_and_text(tmp_path, site):
     env = os.environ.copy()
     env["HOME"] = str(tmp_path)
-    env["PLAYWRIGHT_BROWSERS_PATH"] = str(
-        Path(os.path.expanduser("~")) / "Library" / "Caches" / "ms-playwright"
-    )
+    env["PLAYWRIGHT_BROWSERS_PATH"] = _browsers_path()
     proc = subprocess.run(
         [sys.executable, "-m", "harness", "goto", site.url("hello.html")],
         cwd=ROOT,

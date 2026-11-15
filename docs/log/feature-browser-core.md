@@ -22,3 +22,4 @@
 - B5 fix: click/type now refuse numbers taken before a navigation (or with no list) and return ERR "call elements again" instead of clicking a stale data-hn that may belong to a different control.
 - B7 fix: a locked profile (e.g. an open sign-in window) now returns "ERR local | profile in use; close the other Chromium window and retry" instead of a traceback; any other start failure returns ERR too. Blocking is now keyed on the page object, not its id.
 - B5 fix: `elements` now reports "40 of 62 elements" when the list is capped, instead of counting only the lines it printed (`list_elements_counts` returns shown/matched).
+- CI: added `.github/workflows/tests.yml` (uv + Playwright Chromium on ubuntu, runs pytest on feature/* pushes and PRs). Made the CLI test find the browser cache portably; 14 tool tests green locally.
