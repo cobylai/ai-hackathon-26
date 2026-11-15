@@ -6,9 +6,9 @@ What Flux is and how to use it. "What's Flux?", "What can you do?", "Help", "How
 
 ## Triggers
 
-Each must be the whole question (after a leading "Flux," or "please"); "help me draft a reply" is not the overview.
+Each must be the whole question (after a leading "Flux," or "please"); "help me draft a reply" is not the overview. Voice often hears "Flux" as "flock", "flocks" or "flucks", so those count too.
 
-- overview: `what(?:'s|’s| is) flux|what is (?:this|flux)|what can you do|what do you do|help|how do i use (?:this|flux|it)`
+- overview: `what(?:'s|’s| is) (?:flux|flocks?|flucks|fluxx?e?s)|what is (?:this|flux)|what can you do|what do you do|help|how do i use (?:this|flux|it)`
 - start: `show me|walk me through(?: it| flux)?|start the tour|give me (?:a|the) tour|tour`
 - next: `next|next one|go on|continue|keep going|ok next|okay next`
 - back: `back|go back|previous`
@@ -136,6 +136,7 @@ None. No step calls the model; the examples run through their own routes.
 | What model are you running? | about | Bonsai 2, the 4B model; Argmax |
 | Will you send that? | about | No. I write the draft and you send it. |
 | What's Flux? | about | Everything runs on this Mac; - What's due this week? |
+| What is flock? | about | I'm Flux, a personal assistant |
 | What can you do? | about | - Set me up for the lab report |
 | help | about | - Remember that my lab is Tuesdays at 2 |
 | next | about | There's no tour going on |
