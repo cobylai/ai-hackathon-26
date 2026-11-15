@@ -172,7 +172,7 @@ rebuild_index()                  # -> path of data/bank/index.md (every ingest a
 - **Partner's side:** the sync loop in §2 calls `ingest(body, source=thread_id, kind="email", sender_name=..., sender_address=..., sent_date=..., subject=...)`. For a page, it calls `ingest(text, source=url, kind="page")`.
 - **Data location:** `data/bank/` by default, or `$FLUX_BANK_DIR` if that is set. It is gitignored (`data/`) because it will hold real email.
 - **Preload:** `python -m bank.load <folder> --kind email|page`.
-- **Canvas entries** (`kind="canvas"`, from `scripts/sync_test_canvas.py`): `sender_name` = course
+- **Canvas entries** (`kind="canvas"`, from `scripts/demo/sync_test_canvas.py`): `sender_name` = course
   ("HIST 2147 Maps and Empires"), `subject` = assignment title, `source` = the assignment page's
   `file://` link, `deadlines` = the due date and time read from the page. They show up in `due`
   like mail and stay out of the person route (it only uses `kind="email"` senders). See `docs/canvas.md`.
@@ -243,7 +243,7 @@ answer(question, today=None, session=None) -> Answer
 - **Chat window:** `python -m reason.web [--today] [--port 8765]` serves one local page from the standard library, with no remote assets. It has a type box, hold-to-talk, a source line under each answer, and an "online/offline · N items in bank" label. Clicking the label lists the bank (`GET /bank`).
 - **Bank to use:** set `FLUX_BANK_DIR`. The demo uses `~/flux-demo-bank` (sample mail, see `docs/integration.md`).
 - **Playbooks** (`playbooks/`): one markdown file per route (`followup`, `remember` (remember, forget, about_me), `people`, `due`, `calendar`, `person`, `chat`, `bank`, `web`, plus the other workers' `discover`, `act`, `catchup`) plus `RULES.md` for every route. Code reads each route's trigger patterns, reply wording, not-found lines and prompt text from its file (`reason/playbook.py`: `say(book, key, **values)`, `prompt(book, key)`, `trigger(book, key)`), read once per start. The order of steps stays in code; `STEPS` in `reason/answer.py` must match each file's numbered steps (a test checks it). **A new route adds its own `playbooks/<route>.md`** in the same sections (listed in `RULES.md`), with examples, and its count in `STEPS`.
-- **Checker:** `FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check [--today 2026-11-15] [--only due]` runs every playbook's examples on a temporary copy of the bank, network blocked. Keep a playbook or prompt change only if it passes and brief M's score (`scripts/make_test_mail.py check`) doesn't drop.
+- **Checker:** `FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check [--today 2026-11-15] [--only due]` runs every playbook's examples on a temporary copy of the bank, network blocked. Keep a playbook or prompt change only if it passes and brief M's score (`scripts/demo/make_test_mail.py check`) doesn't drop.
 
 ## 7. Voice input — **built** (`voice/`, on `main`)
 

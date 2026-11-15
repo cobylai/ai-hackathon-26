@@ -1,6 +1,6 @@
 """File generated Canvas pages into a test or demo bank, then check them. No network.
 
-    FLUX_BANK_DIR=data/bank-canvas-test uv run python scripts/sync_test_canvas.py [data/test-canvas]
+    FLUX_BANK_DIR=data/bank-canvas-test uv run python scripts/demo/sync_test_canvas.py [data/test-canvas]
 
 Each course's assignments.html (from make_test_canvas.py) is read with
 canvas.read, each assignment page is opened for its description, and the
@@ -18,7 +18,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 

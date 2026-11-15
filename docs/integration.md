@@ -56,7 +56,7 @@ video says it is sample mail.
 Regenerate for the recording day (one command; set DAY to that day; Bonsai up):
 
 ```bash
-DAY=2026-11-15; rm -rf ~/flux-demo-bank && uv run python scripts/make_test_threads.py 20 --today $DAY --template ~/flux-demo-threads/template.html --out ~/flux-demo-threads && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/sync_test_threads.py ~/flux-demo-threads && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/make_test_mail.py check ~/flux-demo-threads --today $DAY --offline
+DAY=2026-11-15; rm -rf ~/flux-demo-bank && uv run python scripts/demo/make_test_threads.py 20 --today $DAY --template ~/flux-demo-threads/template.html --out ~/flux-demo-threads && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/demo/sync_test_threads.py ~/flux-demo-threads && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/demo/make_test_mail.py check ~/flux-demo-threads --today $DAY --offline
 ```
 
 The chat window uses the real clock, so build the bank for the day you record.
@@ -64,11 +64,11 @@ The chat window uses the real clock, so build the bank for the day you record.
 it, and `check` computes "this week" / "next week" / "tomorrow" with the same
 weekend rule as `reason.route`.
 
-How it works: `scripts/make_test_threads.py` writes each email into a copy of
+How it works: `scripts/demo/make_test_threads.py` writes each email into a copy of
 the saved message markup (sender name and address, date in the live format
 "15 Nov 2026, 09:12", subject, body), drops Gmail's scripts, and scrubs the
 template's real sender (it stops if any trace remains).
-`scripts/sync_test_threads.py` opens each page as a local file in the
+`scripts/demo/sync_test_threads.py` opens each page as a local file in the
 partner's browser (his `Session`, on the scratch profile `data/test-profile`,
 with every non-file request aborted), reads it with his `read_messages`, and
 files it the way the live sync does. It refuses any bank folder without
