@@ -50,6 +50,8 @@ Window check (2026-11-14, integration, process network blocked except localhost)
    - Otherwise every word is tried except a stoplist of common words that are also names: "will it rain" doesn't match Will, but "what did emily ask" matches Emily.
    - `bank.by_person` returns the entries, and the newest 8 go to Bonsai with the question. The model returns `{"answer", "used": [numbers]}` at temperature 0.2, and the used entries become the sources (all 8 if `used` is bad).
 
+2b. **Unknown person.** A question shaped "what did <name> ask / say / send / want" whose name is no sender in the bank answers "I have nothing from <name>." and stops, never reaching search (thinker ruling: a wrong answer about a person is worse than none). Pronouns ("what did you send") don't count.
+
 3. **Everything else.**
    - `bank.search(question, limit=5)`. The entries are written as numbered note blocks and passed to `sufficiency.judge` once. If it's enough, the route is `bank`, and the source is the block that holds the judge's quote.
    - If it's not enough and the network is up (one TCP connect to www.bing.com:443, 2 s timeout), the route is `web`. That runs `gather(question, sufficiency.websearch.search, harness.search.tools.open_page, max_seconds=60)`. websearch tries the partner's `engine.search` first, then Bing. On success the answer is filed with `bank.ingest(..., source=url, kind="page")`. harness is imported only here, so offline answers never load Playwright.

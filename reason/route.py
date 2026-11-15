@@ -90,6 +90,20 @@ def name_words(sender_name: str | None, sender_address: str | None) -> set[str]:
     return {w.lower() for w in words if len(w) >= 3 and w.lower() not in TITLES}
 
 
+_ASKED = re.compile(r"\bwhat\s+(?:did|has|does|do)\s+([A-Za-z][A-Za-z'\-]*)\s+(?:ever\s+|just\s+)?"
+                    r"(?:ask|asked|say|said|send|sent|want|wanted)\b", re.I)
+_PRONOUNS = set("i you he she they we it someone anyone everyone people that this".split())
+
+
+def asked_name(question: str) -> str | None:
+    """The name in "what did <name> ask/say/send/want", or None (pronouns don't count)."""
+    m = _ASKED.search(question or "")
+    if not m:
+        return None
+    name = re.sub(r"'s$|'$", "", m.group(1))
+    return None if name.lower() in _PRONOUNS else name
+
+
 def person_in(question: str, names: set[str]) -> str | None:
     """The first question word that is a sender's name word, or None.
 

@@ -157,6 +157,13 @@ class PersonRoute(Bank):
         self.assertTrue(a.text.endswith("Source: Emily Carter, Nov 10"))
         self.assertEqual(len(a.sources), 1)
 
+    def test_unknown_person_stops(self):
+        with mock.patch("sufficiency.judge", side_effect=AssertionError("must not search")), \
+             mock.patch("llm.client.complete_json", side_effect=AssertionError("no model")):
+            a = answer("What did Priya ask me?", today=WED, root=self.root, _online=lambda: True)
+        self.assertEqual((a.route, a.text, a.sources), ("person", "I have nothing from Priya.", []))
+        self.assertIsNone(route.asked_name("what did you send them"))
+
     def test_bad_used_falls_back_to_all(self):
         with mock.patch("llm.client.complete_json", return_value={"answer": "x", "used": ["z", 9]}):
             a = answer("what did emily want", today=WED, root=self.root)

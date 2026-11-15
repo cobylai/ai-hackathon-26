@@ -229,6 +229,10 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
         a = _due(q, today, root)
     elif (who := route.person_in(q, _senders(root))):
         a = _person(q, who, today, root)
+    elif (name := route.asked_name(q)):
+        # Shaped like a person question but nobody by that name is a sender: stop here.
+        # A wrong answer about a person is worse than none (thinker ruling).
+        a = Answer(f"I have nothing from {name[:1].upper() + name[1:]}.", "person")
     else:
         a = _bank(q, today, root)
         if a is None:
