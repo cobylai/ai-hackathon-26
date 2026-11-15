@@ -52,3 +52,7 @@
 - Main merged this branch at C7, then evolved (Flux). The last two commits (ui tools in registry, confirm tokens) were missing there.
 - Cherry-picked both onto bionic/computer-confirm-tokens (off main); conflicts: kept main's generalized registry test and Flux README.
 - 91 computer/registry tests + 11 search/no-send tests pass on main's tree; pushed for the team to merge.
+
+## CLI (2026-11-15)
+- harness/__main__.py now exposes all six computer tools (app_open/file_find/file_open/ui/ui_click/ui_type, --token where relevant); exit 0 on OK, 1 otherwise.
+- 10 offline CLI tests (arg mapping, exit codes, parser coverage); live smoke: file_find OK, app_open Terminal correctly denied. Landed on main as a1e5323.
