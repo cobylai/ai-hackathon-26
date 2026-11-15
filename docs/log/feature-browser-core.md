@@ -23,3 +23,4 @@
 - B7 fix: a locked profile (e.g. an open sign-in window) now returns "ERR local | profile in use; close the other Chromium window and retry" instead of a traceback; any other start failure returns ERR too. Blocking is now keyed on the page object, not its id.
 - B5 fix: `elements` now reports "40 of 62 elements" when the list is capped, instead of counting only the lines it printed (`list_elements_counts` returns shown/matched).
 - CI: added `.github/workflows/tests.yml` (uv + Playwright Chromium on ubuntu, runs pytest on feature/* pushes and PRs). Made the CLI test find the browser cache portably; 14 tool tests green locally.
+- Merged browser-core (85741a4) into feature/web-search, feature/email-gmail and feature/computer-control per the plan. Merges were conflict-free; browser tests on each branch: 53 / 50 / 50 passed, and CI is green on all three (computer-control needed a Linux stub for one macOS-only test).
