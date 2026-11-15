@@ -1,6 +1,14 @@
 # Voice input (push to talk, Argmax)
 
-You speak a question and Python gets it back as text. Speech-to-text runs on-device through the Argmax Pro SDK, and it needs no network. The plan is in `docs/plans/voice-input.md`.
+You speak a question and Python gets it back as text. Speech-to-text runs on-device through the Argmax Pro SDK, and it needs no network.
+
+**Status (main 0e65978): built and wired in.**
+- `uv run python -m reason`: an empty line starts talking, and Enter stops.
+- `uv run python -m reason.web`: hold the "Hold to talk" button.
+- In both, typing still works if voice can't start (no key, no binary, mic denied), and the reason is shown.
+- Voice was proven with the network denied in both.
+
+The original plan is in `docs/plans/voice-input.md`.
 
 ## Pieces
 
@@ -26,21 +34,31 @@ You speak a question and Python gets it back as text. Speech-to-text runs on-dev
 ## How to run
 
 ```bash
-cd voice/swift && swift build -c release && cd ../..     # once, ~65 s
-export ARGMAX_API_KEY="$(bw get password 'Argmax API key - ai-hackathon-26')"   # needs BW_SESSION
-python -m voice.listen        # Enter to start, Enter to stop; prints text and stop-to-text time
+cd voice/swift && swift build -c release && cd ../..     # once, ~65 s (needs the Argmax registry login, docs/argmax.md)
+export ARGMAX_API_KEY=ax_...                               # your own key, see below
+uv run python -m voice.listen   # try it alone: Enter to start, Enter to stop; prints text and stop-to-text time
+uv run python -m reason         # chat loop: empty line = talk
+uv run python -m reason.web     # window at http://localhost:8765: hold to talk
 ```
 
-Any Python 3.10+ works, since it uses the standard library only. I tested with `samples/bonsai-models/mlx/.venv/bin/python` in the main checkout.
+- **Other binary:** set `MUSE_VOICE_BIN` to use a built `argmax-voice` from another path, for example another checkout (`reason/speech.py`). The default is `voice/swift/.build/release/argmax-voice`.
+- **Model folder:** set `ARGMAX_MODEL_FOLDER` if the model isn't at the default path above.
+- **Turning voice off:** `--no-voice` on either command means typing only.
 
-## Two lines for the chat loop
+### The key
 
-```python
-from voice.listen import Voice; voice = Voice()   # once, at startup (≈1.5 s warm)
-question = voice.listen()                          # instead of input(): Enter to start talking, Enter to stop
-```
+- **Coby:** the key comes from the vault, loaded while still online:
+  `export BW_SESSION="$(bw unlock --raw)"` then `export ARGMAX_API_KEY="$(bw get password 'Argmax API key - ai-hackathon-26')"`.
+  Both `bw unlock` and `bw get` were tested with the network denied and work. So unlocking after Wi-Fi is off also works.
+- **Partner or any other tester:** you need **your own** `ax_` key. Argmax issues one per application, from Andrew at the event. Don't use Coby's key. The first launch on a new Mac also has to be online, to activate the license and download the model (`docs/argmax.md`).
 
-`listen(wait_for_stop)` takes any blocking function, for example a UI button event. The default is `input`. Call `voice.close()` on exit.
+## How it's wired
+
+`reason/speech.py` holds the glue:
+- `start_voice()` returns `(Voice, None)` when voice works, or `(None, reason)` when it doesn't.
+- `HoldToTalk` turns `Voice.listen(wait_for_stop)` into `start()`/`stop()` calls for the window's button.
+
+The chat loop calls `voice.listen(wait_for_stop=lambda: input(...))`. `listen` takes any blocking function, and recording stops when it returns.
 
 ## Results
 
@@ -57,42 +75,20 @@ question = voice.listen()                          # instead of input(): Enter t
 
 Stop to text is about 1.1–1.25 s for a spoken question. "Nine" comes back as "9" or "9:00", and the reasoning layer should treat these the same.
 
-Not verified: a real Wi-Fi-off run. That happens later, once, for the whole app. `sandbox-exec` blocks connections, but macOS still sees a network.
+The chat loop and the window were later proven by voice with the network denied too. Their logs are on main, in the step 2 and step 3 live results.
 
-## Steps for Coby
+## Setup on a new Mac (once, online)
 
-**Once, now:**
+1. Build: `cd voice/swift && swift build -c release`.
+2. First launch: run `uv run python -m voice.listen` once.
+   - It compiles for the Neural Engine for about **250 s**.
+   - The cache is in `~/Library/Caches/argmax-voice/` (129 MB). Don't clear it before a demo.
+   - The program name `argmax-voice` is fixed for this reason.
+3. Keychain: click **Always Allow** when asked whether `argmax-voice` may use the Keychain.
+4. Microphone: press Enter in `voice.listen` from the terminal app you'll demo from, and click **Allow**. If you get "microphone permission denied", turn the terminal on in System Settings → Privacy & Security → Microphone and restart.
 
-1. Build: `cd voice/swift && swift build -c release`. This is already done in this worktree.
-2. First launch: done (250 s compile). The cache is in `~/Library/Caches/argmax-voice/` (129 MB). Don't clear it before the demo. The program name `argmax-voice` is fixed for this reason.
-3. Keychain: if a prompt asks whether `argmax-voice` may use the Keychain, click **Always Allow**. It's a new binary, so it asks again even though meeting-scribe was allowed.
-4. Microphone: run `python -m voice.listen` from the terminal app you'll demo from, and press Enter. Click **Allow** on the microphone prompt. If no prompt appears and you get "microphone permission denied", go to System Settings → Privacy & Security → Microphone and turn your terminal app on. Then restart the command.
+On Coby's Mac all four are done.
 
-**Mic test (online, then with the network denied):**
+## Still to do
 
-```bash
-cd ~/code/ai-hackathon-26/.claude/worktrees/argmax-runtime-test-743dfa
-```
-```bash
-export BW_SESSION="$(bw unlock --raw)"
-```
-```bash
-export ARGMAX_API_KEY="$(bw get password 'Argmax API key - ai-hackathon-26')"
-```
-```bash
-~/code/ai-hackathon-26/samples/bonsai-models/mlx/.venv/bin/python -m voice.listen
-```
-
-Say these three: "What's due this week?", "Remind me to buy oat milk tomorrow at nine.", "Who emailed me about the lab report?". Then Ctrl+C and run it again with the network denied:
-
-```bash
-sandbox-exec -p '(version 1)(allow default)(deny network-outbound (remote ip))' ~/code/ai-hackathon-26/samples/bonsai-models/mlx/.venv/bin/python -m voice.listen
-```
-
-**Check that `bw unlock` works with no network.** The demo needs this if you unlock after Wi-Fi is off. It prints only ok or FAIL:
-
-```bash
-sandbox-exec -p '(version 1)(allow default)(deny network-outbound (remote ip))' bw unlock --raw > /dev/null && echo "bw unlock offline: ok" || echo "bw unlock offline: FAIL"
-```
-
-**At the demo (Wi-Fi off):** the safe order is to load the key **before** turning Wi-Fi off. Run the `bw unlock` and `export ARGMAX_API_KEY=...` lines above while you're online. Then turn Wi-Fi off and start the app from that same terminal. `bw get` with an existing session and `bw unlock` both work with no network (tested with `sandbox-exec`), so unlocking after Wi-Fi is off also works.
+- One real Wi-Fi-off run of the whole app: window, Bonsai and voice. Start everything while online, then turn Wi-Fi off and speak the demo questions. `sandbox-exec` blocks connections, but macOS still sees a network. The steps are in `docs/PARTNER-TESTING.md`.

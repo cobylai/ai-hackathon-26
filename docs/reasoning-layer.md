@@ -13,21 +13,33 @@ a.sources   # bank entry paths, or [url] on the web route
 a.seconds
 ```
 
-Typed chat loop (a thin wrapper, so voice can call `answer()` the same way):
+Both front ends are thin wrappers over `answer()`; neither adds logic.
+
+**Chat loop** (terminal):
 
 ```bash
-MUSE_BANK_DIR=~/muse-bank uv run python -m reason --today 2026-11-14
+MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason [--today YYYY-MM-DD] [--no-voice]
 ```
 
-Chat window: one local page served by Python's standard library, with nothing loaded from the internet, so it opens with Wi-Fi off. It calls the same `answer()`:
+Type a question and press Enter. Press Enter on an empty line to talk, and Enter again to stop; the words heard are printed as `you (spoken)>` and answered like typed text. `quit` or Ctrl-D exits.
+
+**Chat window** (one local page, standard library only, nothing loaded from the internet, so it opens with Wi-Fi off):
 
 ```bash
-MUSE_BANK_DIR=~/muse-bank uv run python -m reason.web --today 2026-11-14   # opens http://localhost:8765
+MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] [--port 8765] [--no-voice] [--no-open]
 ```
 
-Clicking the "N items in bank" label opens a read-only list of the bank, newest first: date, sender, subject, summary, deadline and ask (`GET /bank`). The window has the conversation, with each answer's `Source:` line in grey under it, a type box with Send, and a label like "offline · 18 items in bank". The "Hold to talk" button stays disabled until voice input is merged. The server is single-threaded on purpose, because the web route drives one Playwright browser.
+- The conversation, with each answer's `Source:` line in grey under it and the route and seconds under that.
+- A type box with Send (Enter also sends).
+- "Hold to talk": hold the button, speak, let go. The heard text appears with a 🎤 and is answered.
+- A label like "offline · 20 items in bank". Click it for a read-only list of the bank, newest first: date, sender, subject, summary, deadline and ask (`GET /bank`).
+- The server is single-threaded on purpose, because the web route drives one Playwright browser.
+- Endpoints: `GET /`, `GET /status`, `GET /bank`, `POST /ask`, `POST /listen/start`, `POST /listen/stop`.
 
-Window check (2026-11-14, integration, process network blocked except localhost): "what is due Monday" (due, 0.0 s), "what did Marcus ask me" (person, 1.0 s, Source: Marcus Bell, Nov 12) and "what is the capital of Peru" (offline message, 0.0 s) were typed in the in-app browser, and the label read "offline · 18 items in bank". No spoken question yet: brief J step 2 is held.
+**Voice** (`reason/speech.py`) starts `voice/listen.py`'s `Voice` once at launch.
+- Needs `ARGMAX_API_KEY` in the same shell, and a built `argmax-voice`. `MUSE_VOICE_BIN` points at a binary built in another checkout; the default is `voice/swift/.build/release/argmax-voice`.
+- If voice can't start (no key, no binary, mic denied), both front ends say "Voice is unavailable (<reason>)" and typing still works. The window's button stays disabled, and its tooltip gives the reason.
+- **Use easy names when speaking.** The person route needs the spoken name to come back spelled like the sender's name. Whisper heard "Coby" as "Kobe". Names that worked in the demo checks: Felix, Hugo, Ivy, Jonah, Greta, Omar, Lena, Milo. Avoid Nina (two senders), Tess, Kiri and Rafe.
 
 ## Routes, checked in this order
 
@@ -51,7 +63,7 @@ Window check (2026-11-14, integration, process network blocked except localhost)
    - **Ask questions** (ask / want / need in the question): code lists the sender's newest 8 entries as `date  subject: ask`, or `no ask. <summary>` when an entry has none. No model call (thinker ruling, brief P: the model misread the notes on 4 of 14). With a full name ("Nina Valdez"), only senders matching every name word are listed.
    - **Other person questions** ("what did Emily say about the lab"): `bank.by_person` returns the entries, and the newest 8 go to Bonsai with the question. The model returns `{"answer", "used": [numbers]}` at temperature 0.2, and the used entries become the sources (all 8 if `used` is bad).
 
-2b. **Unknown person.** A question shaped "what did <name> ask / say / send / want" whose name is no sender in the bank answers "I have nothing from <name>." and stops, never reaching search (thinker ruling: a wrong answer about a person is worse than none). Pronouns ("what did you send") don't count.
+2b. **Unknown person (no-match guard).** A question shaped "what did <name> ask / say / send / want" whose name is no sender in the bank answers "I have nothing from <name>." and stops, never reaching search (thinker ruling: a wrong answer about a person is worse than none). Pronouns ("what did you send") don't count.
 
 3. **Everything else.**
    - `bank.search(question, limit=5)`. The entries are written as numbered note blocks and passed to `sufficiency.judge` once. If it's enough, the route is `bank`, and the source is the block that holds the judge's quote.
@@ -60,6 +72,28 @@ Window check (2026-11-14, integration, process network blocked except localhost)
    - If gather finds nothing, the route is `not_found`, with gather's message.
 
 **What the web route files (a change from the plan).** The plan said to ingest the page itself. But the bank keeps a one or two sentence summary, not the page. cornell.edu's summary came out as a news item, so asking the same question offline got the offline message. The route now files a short text with the question, the answer and the quoted line, with `subject="<question> <answer>"`. ingest's `subject=` keyword wins over the model. With that change, "When did the Berlin Wall fall?" answered from the bank offline (below). The source is still the page url.
+
+## Scores on the many-sender check (`scripts/make_test_mail.py`)
+
+20 made-up emails from 13 senders, scored offline (`check --offline`, network blocked except localhost) against what the generator knows is true.
+
+| Date (`--today`) | Bank | Right | Person | No-match | Due | Bank route |
+|---|---|---|---|---|---|---|
+| Sat 2026-11-14, before brief P | scratch, `bank.load` | 32/37 | 10/14 | 2/2 | 15/15 | 5/6 |
+| Sat 2026-11-14, after brief P (code-listed asks) | scratch, `bank.load` | **36/37** | 14/14 | 2/2 | 15/15 | 5/6 |
+| Sun 2026-11-15 | demo bank (`~/muse-demo-bank`, via Gmail pages) | **37/38** | 14/14 | 2/2 | 16/16 | 5/6 |
+
+The one miss in every run: "What are the team name options for the hackathon?" gets the offline message, because the bank's summary of that email dropped the options. That's logged, with no fix (thinker ruling). How to build the demo bank: `docs/integration.md` ("Demo bank") and `docs/PARTNER-TESTING.md`.
+
+## Voice runs (Coby at the mic, network denied with `sandbox-exec`, localhost allowed, `~/muse-bank`)
+
+| Front end | Spoken | Heard | Answer | Seconds |
+|---|---|---|---|---|
+| chat loop | What's due this week? | exactly | due list: essay Mon 11:59pm, phone bill Thu ($42.18), housing Fri noon | 0.0 |
+| window, hold to talk | What's due this week? | exactly | same 3 rows | 0.0 |
+| window, hold to talk | What did Coby ask me? | "- What did Kobe ask me?" | "I have nothing from Kobe." (the guard is correct for what was heard) | 0.0 |
+
+Stop-to-text for the voice program alone is about 1.1–1.25 s (`docs/voice-input.md`).
 
 ## Live results (2026-11-14, Bonsai 2 4B on :8080 shared with worker 8, `--today 2026-11-14` a Saturday)
 
@@ -89,25 +123,36 @@ The web seconds include gather (the partner's engine.search and open_page) and t
 uv run python -m unittest discover -s reason/tests -t .
 ```
 
-18 pass. They cover:
+30 pass. They cover:
 - every row of the date table, plus Sunday "this weekend"
 - the due words
 - person matching: capitals, lowercase, `'s`, "will it rain" and "Will it rain in Ithaca?" against a sender named Will, titles and automated senders
 - the due answer for one day, a week, and nothing due, with a model call failing the test
-- the person route with only that person's entries in the prompt, and a bad `used`
+- "this week" on a Saturday and a Sunday (runs to the coming Sunday)
+- due rows carrying the entry summary
+- ask questions listed by code with no model call, "no ask" plus the summary, and full names narrowing two Ninas
+- the no-match guard ("What did Priya ask me?" → "I have nothing from Priya.", no search or model call)
+- other person questions with only that person's entries in the prompt, and a bad `used`
 - the bank route (and no network check when it answers)
 - the offline message, with judge skipped when search finds nothing
 - the web route filing the answer under the url, and not_found
 - a child process checking that the due route imports neither harness nor playwright
+- the window: the page loads nothing remote, `/status`, `/ask`, `/bank` (newest first), and `/listen/start` without voice
+- hold to talk with a fake voice, and the chat loop's spoken and voice-unavailable paths
 
 ## Not run / known gaps
 
-- **Wi-Fi was not actually turned off.** The stand-in is the per-process `socket.connect` block, with Bonsai on localhost. The partner's browser was not started in the offline runs.
-- **Real email:** only the synthetic fixtures were used; no Gmail sync went into this bank.
+- **Wi-Fi was not actually turned off.** The stand-ins are the per-process `socket.connect` block (checks) and `sandbox-exec` with only localhost allowed (voice runs). macOS still saw a network.
+- **Real email:** answers were checked on made-up mail only: the bank fixtures, the many-sender check, and the demo emails sent through Gmail. No real inbox.
+- **Names by voice:** Whisper can misspell a name ("Coby" → "Kobe"). Then the guard answers "I have nothing from <name>", which is safe but not the answer. Use the easy names above, and test each once by voice before recording.
+- **Bank summaries lose details:** the hackathon team-name options and the housing form's contents aren't in the summaries, so questions about them miss.
+- **Due questions always get the dated list,** even "how much is my phone bill and when is it due?". The amount shows only when it's in the summary (thinker ruling: keep the list).
 - **Few web questions:** Berlin (harness engine.search, ed93e1c), Frankenstein (sufficiency.websearch, 4af9140), and Cornell before the filing change. gather's pointer-page weak spot applies here unchanged.
 - **The online check is DNS plus one connect to www.bing.com.** A captive portal would count as online, and then gather fails into `not_found`, not `offline`.
 - **Person route:**
   - a sender whose only name word is in the stoplist (a lone "Will", all lowercase) is never matched
-  - with two senders who share a first name, `by_person` returns both
+  - with two senders who share a first name, a first-name question lists both; a full name narrows it
+  - names come from the From line, not the sign-off, so mail sent from one account files every message under that account's name
+  - "who is waiting on me" has no route (dropped from the video)
 - **Due route:** a question that mentions "due" but is really about something else ("why was the quiz moved, it was due Friday") takes the due route.
 - **Duplicate rows:** an entry with two deadlines in range is listed twice with the same ask, as Aisha's was.
