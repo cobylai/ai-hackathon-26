@@ -4,7 +4,6 @@
 - Found before the check: the visible login window and the hidden session used different cookie keys (macOS keychain vs mock), so the first headless launch dropped the session. Browser-core B8 (66fa981) now matches the key stores; this branch merged it.
 - E2: one selector map (role/aria first, class fallback) plus `selfcheck`, which walks inbox, first thread and a blank compose; every name matched live. Two hand-made fixtures load in `tests/test_selectors.py`.
 - E2 notes: Gmail keeps hidden duplicate rows and cells, hence `first_visible()`; `draft_saved_label` only exists after a save, hence `wait_for()`; Reply buttons live outside the message container.
-
 - E3: `build()` assembles from:/quoted phrase/newer_than:/is:unread/has:attachment in a fixed order; `search_url()` percent-encodes it and an empty query maps to the inbox. 22 table cases.
 - E4: `email_search` opens the `#search/` URL, waits for a settled list (Gmail keeps the old rows for a moment after the hash change), and prints up to ten `n. sender | subject | date | snippet` rows; snippet 80, cap 1500 with a hint. Order kept in `search.last_rows()` for E5.
 - E4 also lands `status.signed_in()` (E1's code, because every email tool checks it first) and `GROUPS["email"]`.
@@ -15,4 +14,5 @@
 - E6 live: 2 asks from the last 14 days. Fixed two read bugs found here: a message body renders after its container, and a thread hash change leaves the previous thread on screen, so `open_thread` now reloads.
 - E7: `email_draft(to, subject, body)` clicks Compose, fills the three fields, waits for Gmail's "Draft saved" label, then Save & close; `OK draft saved` or `ERR <reason>`. `tests/test_no_send.py` fails on any Send label, selector, function or tool name.
 - E8: `email_reply_draft(n, body)` opens thread n, clicks the last visible Reply, fills the inline box, waits for "Draft saved" and closes. Code shared with E7's `draft.py`; test covers the fixture thread.
-- E7/E8 are waiting for the HUMAN check: one real draft in Drafts and one reply draft in its thread, nothing sent.
+- E7/E8 live (user-approved): `[harness test] draft` sits in Drafts and the reply draft sits in `What I want to talk to Aakash about` (`Re:` subject, same thread id). `in:sent subject:"[harness test]"` gives 0; nothing sent. Gmail's conversation view did not render the reply draft, but the Drafts row and the opened compose do.
+- E9: `scripts/eval_email.py` times one pass and counts returned chars: search 5.3 s/1428, read 2.1 s/334, asks 28.5 s/33, draft 1.3 s/14; total 37.2 s and 1809 chars. Notes in `docs/plan/notes-email-eval.md`.
