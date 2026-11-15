@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import os
 import subprocess
+import threading
 import time as _time
 from datetime import date, datetime, time, timedelta
 
 DEFAULT_CALENDAR = "Muse demo"
-TIMEOUT = 20
+TIMEOUT = 45  # a cold read is 5-6 s, slower when the Mac is busy
 
 
 class CalendarError(RuntimeError):
@@ -94,7 +95,28 @@ CACHE_SECONDS = 60
 _CACHE: dict[str, tuple[float, list[dict]]] = {}  # calendar name -> (monotonic time, all events)
 
 
+_LOCK = threading.Lock()  # a question asked during warm() waits for that read, not a second one
+
+
+def warm(calendar: str | None = None) -> threading.Thread:
+    """Read the calendar into the cache in the background, so the first calendar question
+    doesn't wait for the cold read. Errors are ignored here; the question reports them."""
+    def run():
+        try:
+            _fetch(calendar or calendar_name())
+        except CalendarError:
+            pass
+    t = threading.Thread(target=run, name="applecal-warm", daemon=True)
+    t.start()
+    return t
+
+
 def _fetch(name: str) -> list[dict]:
+    with _LOCK:
+        return _fetch_locked(name)
+
+
+def _fetch_locked(name: str) -> list[dict]:
     """Every event in the calendar. Calendar.app scripting takes ~3 s, so the result is kept
     for MUSE_CALENDAR_CACHE seconds (default 60): later questions answer at once."""
     ttl = float(os.environ.get("MUSE_CALENDAR_CACHE") or CACHE_SECONDS)

@@ -150,5 +150,15 @@ class Filing(unittest.TestCase):
                 sync.main([str(self.root)])
 
 
+class MailCheck(unittest.TestCase):
+    def test_due_check_counts_only_mail(self):
+        mm = _load("make_test_mail")
+        by_path = {"m.md": {"subject": "Hackathon team name", "kind": "email"},
+                   "c.md": {"subject": "Essay 2 Final", "kind": "canvas"}}
+        a = mock.Mock(sources=["m.md", "c.md"])
+        self.assertEqual(mm._subjects_from(a, by_path, kinds=("email",)), {"Hackathon team name"})
+        self.assertEqual(mm._subjects_from(a, by_path), {"Hackathon team name", "Essay 2 Final"})
+
+
 if __name__ == "__main__":
     unittest.main()
