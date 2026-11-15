@@ -69,3 +69,6 @@
 ## Final verification (2026-11-15)
 - Full suite on main@ddd18cb (the shipped state): 295 passed, 0 failed. Includes CLI + token + computer tests.
 - scripts/eval_computer.py re-run on the merged tree: all 5 jobs pass.
+
+## CI fix (2026-11-15)
+- Teammate added .github/workflows/tests.yml (ubuntu). First run caught a real Linux hole: test_type_fallback_failure didn't stub _focus -> ModuleNotFoundError. Fixed; CI now 140 passed / 3 skipped.
