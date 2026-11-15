@@ -85,3 +85,7 @@ Not verified yet, each checked by a SPIKE task in the feature doc: how Hermes wi
 - **Tether**: short leash, guardrails, stays on device.
 - **Porchlight**: on when you need it, at your own house.
 - **Kiln**: small models, fired locally.
+
+## Sharing work
+
+Every commit on a `feature/*` or `plan/*` branch is pushed to GitHub automatically by a `post-commit` hook in the shared clone (`.git/hooks/post-commit`; push errors go to `.git/autopush.log`). Teammates can `git fetch` and build on any branch at any time. `main` is never pushed to automatically. The hook is local to that clone: on another machine, copy the file or push by hand.
