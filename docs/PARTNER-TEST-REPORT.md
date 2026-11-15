@@ -9,8 +9,8 @@ Tested `main` at 0e65978 (`origin/main` has since moved 7 commits; not retested)
 | 1 | Setup from the guide alone | PASS with 3 gaps (below) |
 | 2 | Test runs | PASS |
 | 3 | Demo questions, typed | PASS (11/11 as expected) |
-| 3 | Demo questions, spoken | NOT RUN (see Voice) |
-| 4 | Wi-Fi-off run | NOT RUN (deferred by Antranig) |
+| 3 | Demo questions, spoken | PASS for routing, with one real bug (see Voice and problem 7) |
+| 4 | Wi-Fi-off run | PASS for typed answers (see Wi-Fi-off run); voice while offline not captured |
 | 5 | Own code inside the merge | PASS for email reading and computer control; draft tools not run live (see below) |
 
 ## Test counts
@@ -48,17 +48,30 @@ Tested `main` at 0e65978 (`origin/main` has since moved 7 commits; not retested)
 - **Computer control, live (`scripts/eval_computer.py`):** 5/5 TextEdit jobs pass, document closed without saving, 0 documents left open.
 - **Draft tools:** not run live (approval was read-only). Their unit tests are in the 274.
 
-## Voice
+## Voice (spoken by Antranig into the window at localhost:8765, online)
 
-Not tested. Setup reached: `swift build -c release` in `voice/swift` succeeded (registry login already present); the Whisper model folder was downloaded (598 MB, `openai_whisper-large-v3-v20240930_626MB`). Blocked on the last step: the agent could not pass Antranig's own `ARGMAX_API_KEY` to the app (writing it to a temp file was denied by the safety check, and I did not work around it). To finish, in a terminal:
+Setup worked: Swift build, speech model download (598 MB), Antranig's own key. Spoken results, read from the window:
 
-```bash
-export ARGMAX_API_KEY=ax_...        # Antranig's own key
-cd harness-partner-testing
-MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web    # http://localhost:8765
-```
+| Heard | Answer |
+|---|---|
+| (first press) | "Voice error: recording too short (0.0 s)" |
+| "Hey, can you hear me okay? Hope you're doing well." | web route: not found after 3 searches, 20 pages (6 unreachable), 45.6 s |
+| What did Felix ask me? | correct (person) |
+| "Hugo, ask me." (misheard) | still routed to Hugo, correct |
+| What did Ivy ask me? | correct, "no ask" |
+| "What did Greta ask me?" | correct |
+| What did Omar ask me? | correct |
+| What did Lena ask me? | correct (twice) |
+| "Elena asked me" (Lena misheard) | **wrong**: web route returned "Prove your humanity" (a Reddit bot-check page) and saved it to the bank |
+| What did Milo ask me? | correct (twice) |
+| What's due this week? | correct list, Nov 15 to Nov 22 |
+| What's due tomorrow? / What's it due tomorrow? | correct, Mon Nov 16 |
+| What did Zelda ask me? | correct, "I have nothing from Zelda." |
+| What did everyone ask me? | **wrong**: "Prove your humanity" again |
 
-First launch compiles about 250 s and asks for Keychain and microphone permission.
+## Wi-Fi-off run (typed, real Wi-Fi off)
+
+A script waited for the network to drop, then asked 14 questions. The app's own status read `online: false`, 20 items in the bank. Every answer matched the online answers: the 11 demo questions, "Where is the review session now?" (Barrow Hall room 112, bank, 1.6 s), "How much is my share for the cabin trip?" (35, bank, 0.94 s). "What's the weather in Ithaca today?" returned "I don't have that saved, and the Mac is offline, so I can't look it up." (route offline). Person and due routes took 0.0 s. Voice with Wi-Fi off was not captured.
 
 ## Problems and findings
 
@@ -68,3 +81,7 @@ First launch compiles about 250 s and asks for Keychain and microphone permissio
 4. **Bonsai binds to all interfaces:** `lsof` shows `*:8080` (mlx_vlm.server default), so the model server is reachable from the local network. `reason.web` correctly binds 127.0.0.1:8765. Suggest adding `--host 127.0.0.1` in `scripts/serve_bonsai.sh`.
 5. **`email_asks` numbering:** the output prefixes every ask with `2.` instead of 1 to 7. Cosmetic.
 6. **Leftover test drafts in the Gmail account** from the earlier harness live runs (including a reply draft sitting in a SignUpGenius thread, plus blank drafts). Drafts only; nothing was sent. Antranig will clean them up.
+7. **Bot-check page saved as an answer (real bug).** A mis-heard name ("Elena asked me") or an off-topic question ("What did everyone ask me?") goes to the web route, which returned Reddit's "Prove your humanity" page as the answer and filed it into the bank ("Saved to your notes"). The bank grew to 21 items, and later questions can return it. Reproduced twice. Cause: "prove your humanity" was not in `harness/browser/state.py` `BLOCKED_PHRASES`, so the page was classified OK. Fixed on this branch (one phrase plus a test, `tests/test_state.py`). The web route (Coby's side) should also refuse to save any BLOCKED page. The two bad entries were removed from the demo bank.
+8. **Off-topic speech goes to the web:** "Hey, can you hear me okay?" triggered 3 web searches and 20 page loads (45.6 s) and sent the spoken text to search engines. A misheard name does the same. Consider answering "I have nothing from X" for a near-miss of a known name, and not searching for chat.
+9. **First voice press** gave "recording too short (0.0 s)". Cosmetic.
+
