@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -142,6 +143,12 @@ PAGE = """<!doctype html>
   #status .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text3); margin-right: 6px; vertical-align: 1px; }
   #status.on .dot { background: var(--green); }
 
+  #nudges { flex: none; padding: 0 20px; }
+  #nudges .nudge { display: flex; gap: 10px; align-items: center; margin: 6px 0; padding: 7px 12px; border-radius: 10px;
+                   background: var(--side); border: 1px solid var(--line); font-size: 13px; }
+  #nudges .nudge span { flex: 1; }
+  #nudges .nudge .src { color: var(--text3); font-size: 11px; }
+  #nudges .nudge .btn { color: var(--text2); }
   #log { flex: 1; overflow-y: auto; padding: 4px 0 24px; }
   .turn, .empty { max-width: 680px; margin: 0 auto; padding: 18px 24px 0; }
   .turn + .turn { border-top: 1px solid var(--line); margin-top: 18px; }
@@ -260,6 +267,7 @@ PAGE = """<!doctype html>
     <button type="button" id="status" title="Show what's in the bank"><span class="dot"></span>Checking…</button>
     <button class="iconbtn" type="button" id="sidebtn" title="Show the bank (⌘B)" aria-pressed="false"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
   </div>
+  <div id="nudges" aria-label="Reminders" hidden></div>
   <div id="log" aria-live="polite"></div>
   <form id="f">
     <div class="field">
@@ -755,8 +763,25 @@ toggleChats(chatsShown());
 window.matchMedia('(min-width: 761px)').addEventListener('change', (e) => { if (!e.matches) toggleChats(false); });
 window.fluxChats = { refresh: loadChats, open: openChat, new: newChat, remove: (id) => removeChat(id, null) };
 
+/* ---------- nudges: Flux speaks first (off unless FLUX_NUDGES=1; docs/agent/proactive.md) ---------- */
+async function loadNudges() {
+  const box = $('nudges');
+  try {
+    const r = await (await fetch('/nudges')).json();
+    box.textContent = '';
+    for (const n of r.nudges || []) {
+      const row = el('div', 'nudge'), t = el('span', null, n.text);
+      t.appendChild(el('div', 'src', 'From ' + n.source));
+      const b = el('button', 'btn', 'Dismiss'); b.type = 'button';
+      b.addEventListener('click', async () => { await postJSON('/nudges/dismiss', { id: n.id }); loadNudges(); });
+      row.appendChild(t); row.appendChild(b); box.appendChild(row);
+    }
+    box.hidden = !box.childNodes.length;
+  } catch (e) { box.hidden = true; }
+}
+
 showEmpty();
-refresh(); loadBank(); loadChats();
+refresh(); loadBank(); loadChats(); loadNudges(); setInterval(loadNudges, 60000);
 q.focus();
 </script>
 </body></html>
@@ -781,7 +806,7 @@ def bank_rows(entries) -> list[dict]:
 
 def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None,
                  entries_fn=None, speaker=None, session=None, chats_root=None, mail_fn=None, open_fn=None,
-                 draft_fn=None, run_fn=None):
+                 draft_fn=None, run_fn=None, nudge_fn=None, now_fn=None, nudges_path=None):
     entries_fn = entries_fn or store.all_entries
     cur = {"s": session or Session()}  # the open chat (single user); swapped on new / open
     answer_fn = answer_fn or (lambda q, today=None: _answer(q, today=today, session=cur["s"]))
@@ -807,8 +832,20 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
         def _json(self, obj, code=200):
             self._send(code, json.dumps(obj), "application/json")
 
+        def _nudges(self):
+            import proactive
+            if not (proactive.enabled() or nudge_fn):
+                return {"enabled": False, "nudges": []}
+            if nudge_fn:
+                return {"enabled": True, "nudges": nudge_fn()}
+            from proactive import live
+            from datetime import datetime
+            return {"enabled": True, "nudges": live.poll_once(now_fn or datetime.now, entries_fn, None, nudges_path)}
+
         def do_GET(self):
-            if self.path == "/":
+            if self.path == "/nudges":
+                self._json(self._nudges())
+            elif self.path == "/":
                 self._send(200, PAGE, "text/html; charset=utf-8")
             elif self.path == "/status":
                 self._json({"online": online_fn(), "items": count_fn(), "voice": talk is not None,
@@ -826,6 +863,20 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 self._send(404, "not found", "text/plain")
 
         def do_POST(self):
+            if self.path == "/nudges/dismiss":
+                import proactive
+                from datetime import datetime
+                body = self._body()
+                nid = str(body.get("id") or "")
+                if not nid:
+                    return self._json({"error": "no id"}, 400)
+                st = proactive.load(nudges_path)
+                if body.get("snooze_minutes"):
+                    proactive.snooze(st, nid, (now_fn or datetime.now)(), int(body["snooze_minutes"]))
+                else:
+                    proactive.dismiss(st, nid)
+                proactive.save(st, nudges_path)
+                return self._json({"ok": True})
             if speaker is not None and self.path in ("/ask", "/listen/start", "/speak/stop"):
                 speaker.stop()  # talking, a new question or the switch cuts off the spoken answer
             if self.path == "/speak/stop":
@@ -934,6 +985,11 @@ def main(argv=None) -> int:
     srv = HTTPServer(("127.0.0.1", args.port), make_handler(
         today=args.today, talk=HoldToTalk(voice) if voice else None, voice_why=why, speaker=Speaker()))
     url = f"http://localhost:{args.port}/"
+    import proactive
+    poller = None
+    if proactive.enabled() and os.environ.get("FLUX_NUDGES_OSASCRIPT") == "1":
+        from proactive import live  # background poll so macOS notifications fire without the page open
+        poller = live.start_poller()
     print(f"Flux window at {url}  (Ctrl-C to stop)", flush=True)
     if not args.no_open:
         webbrowser.open(url)
@@ -942,6 +998,8 @@ def main(argv=None) -> int:
     except KeyboardInterrupt:
         pass
     finally:
+        if poller:
+            poller.stop()
         if voice:
             voice.close()
     return 0
