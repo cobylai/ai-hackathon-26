@@ -14,7 +14,8 @@ does not freeze the window. See finding 18 in docs/test-results/antranig-full.md
     POST /ask     {"question": str, "speak": bool} -> {"text", "route", "sources", "seconds", "pending"}
                   speak: read the answer aloud with the Mac's `say` (the Speak switch in the bar)
                   pending: an action is held for a yes; the page shows Yes / Cancel
-                  choices: [[label, word]] when a discovery question is held; the page shows
+                  choices: [[label, word]] when a discovery question is held, or the tour's buttons
+                  (reason/tour.py: overview examples, Next / Back / Stop); the page shows
                   those buttons instead (Yes / No / Skip / Stop), each reply as a new turn
                   suggestions: [{"id", "line", "button", "kind"}], at most 2 (playbooks/suggest.md)
                   draft: {"id", "to", "to_name", "subject", "body", "used", "kind"} for the draft box
@@ -288,7 +289,7 @@ const NL = String.fromCharCode(10);
 const MIC = '<svg width="12" height="16" viewBox="0 0 12 16"><rect x="3.25" y=".75" width="5.5" height="9.5" rx="2.75" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1 7.5a5 5 0 0 0 10 0M6 12.5V15" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
 const CHEV = '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
 // From the playbooks' Examples tables (due.md, calendar.md, person.md).
-const EXAMPLES = ["What's due tomorrow?", "When is my next meeting?", "What did Felix ask me?"];
+const EXAMPLES = ["What's Flux?", "What's due tomorrow?", "When is my next meeting?", "What did Felix ask me?"];
 const ASK_YES = /^say or type yes/i;
 let rows = [], busy = false, recording = false, voiceOk = false, pending = null;
 
@@ -382,7 +383,7 @@ function confirmRow(t, what) {
   pending = { cancel: () => no.click() };
 }
 
-// Discovery: one button per answer; the reply (and the next question) is a new turn.
+// Discovery and the tour: one button per answer; the reply (and the next question) is a new turn.
 function choiceRow(t, choices) {
   const c = el('div', 'confirm');
   const choose = (word) => { if (busy) return; pending = null; c.remove(); ask(word, false); };
@@ -391,7 +392,9 @@ function choiceRow(t, choices) {
     b.onclick = () => choose(word); c.appendChild(b);
   });
   t.appendChild(c);
-  pending = { cancel: () => choose('stop'), row: c };
+  // Escape: "stop" where Stop is a choice (discovery, the tour); else it just puts the buttons away.
+  const stops = choices.some(([, w]) => w === 'stop');
+  pending = { cancel: stops ? () => choose('stop') : () => { pending = null; c.remove(); }, row: c };
 }
 
 function showAnswer(t, r) {
@@ -894,7 +897,7 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 held = a.route == "discover" and discover.waiting()
                 self._json({"text": a.text, "route": a.route, "sources": a.sources,
                             "seconds": a.seconds, "pending": held or (a.route == "act" and act.waiting()),
-                            "choices": DISCOVER_CHOICES if held else None,
+                            "choices": DISCOVER_CHOICES if held else a.choices,
                             "suggestions": suggest.public(a.suggestions), "draft": a.draft})
             except Exception as e:  # show it in the window; keep serving
                 self._json({"text": f"Error: {type(e).__name__}: {e}", "route": "error",
