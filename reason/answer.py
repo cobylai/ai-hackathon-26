@@ -2,6 +2,7 @@
 
 Routes, picked in code (reason/route.py), in this order:
   remember, forget, about_me, people -> reason/me.py: notes about the user and person pages, no model call
+  catchup -> reason/catchup.py: today's calendar, due soon, recent asks; no model call
   due     -> bank.due over a date range, list written in code, no model call
   calendar-> Apple Calendar events over a date range (applecal), written in code, no model call
   person  -> bank.by_person, Bonsai answers from those entries only
@@ -29,7 +30,7 @@ GATHER_SECONDS = 60
 
 # Wording and prompts come from playbooks/<route>.md. STEPS is how many numbered steps
 # each playbook lists; the code below runs them in that order (a test checks the count).
-STEPS = {"act": 5, "remember": 4, "people": 4, "due": 5, "calendar": 4, "person": 4, "bank": 4, "web": 5}
+STEPS = {"act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 4, "bank": 4, "web": 5}
 PERSON_SYSTEM = playbook.prompt("person", "person_system")
 PERSON_PROMPT = playbook.prompt("person", "person_prompt")
 PERSON_HINT = playbook.prompt("person", "person_hint")
@@ -38,7 +39,7 @@ PERSON_HINT = playbook.prompt("person", "person_hint")
 @dataclass
 class Answer:
     text: str
-    route: str  # act | remember | forget | about_me | people | due | calendar | person | bank | web | offline | not_found
+    route: str  # act | remember | forget | about_me | people | catchup | due | calendar | person | bank | web | offline | not_found
     sources: list[str] = field(default_factory=list)  # bank entry paths, or one url
     seconds: float = 0.0
 
@@ -295,10 +296,12 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
     if not q:
         return Answer(say("RULES", "empty_question"), "none", [], 0.0)
 
-    from . import act, me  # actions first: "draft a reply to Felix" names a sender
+    from . import act, catchup, me  # actions first: "draft a reply to Felix" names a sender
     if (got := act.handle(q, today, root)) is not None:
         a = got
     elif (got := me.handle(q, today, root)) is not None:  # remember / forget / about_me / people
+        a = got
+    elif (got := catchup.handle(q, today, root, _events)) is not None:  # reason/catchup.py
         a = got
     elif route.is_due(q):
         a = _due(q, today, root)
