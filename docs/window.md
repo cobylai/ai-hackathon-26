@@ -52,7 +52,8 @@ Keep these working:
 - `window.museFocus()`: puts the cursor in the text field (it does nothing while listening).
 - `POST /ask` → `pending: true` shows Cancel / Yes. Yes and Cancel send `yes` / `no` to `/ask`.
 - `POST /ask` → `choices: [[label, word]]` (discovery) shows those buttons instead; each sends its word to `/ask`. `#discover` is the Discover button.
-- `#chats`: the left slot. It is an empty `<nav id="chats" hidden>` before `<main>`, kept for a chats list (past conversations, worker 18). Remove `hidden` to show it as a 240 px column at the left. It is hidden in the compact panel.
+- `#chats`: the left column, the saved chats (worker 18, brief T2). It holds `#newchat` (New chat), day headings (`.chday`: Today, Yesterday, then the date) and one `.chat[data-id]` per chat, newest first, titled by its first question (`.chtitle`), with `.on` on the open chat and a delete control (`.chdel`: the first click shows "Delete?", the second deletes the file). `window.museChats.refresh() / .open(id) / .new() / .remove(id)`. It is a 240 px column, hidden in the compact panel (there is no control to show it there yet; worker 15 places and styles it).
+- Saved chats: `GET /chats`, `GET /chats/<id>`, `POST /chats/new`, `POST /chats/<id>/open`, `POST /chats/<id>/delete` (`reason/web.py` docstring). A reopened chat redraws its answers as they were given, with no rerun; a follow-up runs fresh against the current bank. Each launch starts a new chat.
 - `#side` / `#sidebtn` / `#sideclose` and `body.bankopen`: the bank slide-over and its toggles.
 - `GET /bank` rows carry `folder` (course, person, other, me) and `id`, which the sidebar groups by and the source line links by.
 

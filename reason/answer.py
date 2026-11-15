@@ -350,7 +350,7 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
 
     import discover  # a held discovery question takes its yes / no / skip first
     from . import act, catchup, chat, me  # actions first: "draft a reply to Felix" names a sender
-    follow = None
+    follow, asked = None, q  # asked: as the user said it, for the saved turn
     if session is not None and not discover.waiting() and not act.waiting():
         from .session import resolve  # playbooks/followup.md: code only, no model call
         follow = resolve(q, session, today, root)
@@ -399,7 +399,7 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
                 a = _web(q, today, root, **(_web_fns or {}))
             else:
                 a = Answer(OFFLINE_TEXT, "offline")
-    if session is not None:
-        session.record(q, a, root)
     a.seconds = round(time.monotonic() - t0, 2)
+    if session is not None:
+        session.record(q, a, root, asked=asked)
     return a

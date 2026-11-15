@@ -16,9 +16,16 @@ stay on one thread.
                   those buttons instead (Yes / No / Skip / Stop), each reply as a new turn
     POST /speak/stop  stop reading aloud (the Speak switch turned off)
 The Discover button in the bar sends "discover" to /ask (playbooks/discover.md).
-Follow-ups ("and tomorrow?", "the first one", "open it") lean on the last answer: one
-Session (reason/session.py) for the whole server, since the window serves one person and
-the Mac app shows the same page. It is in memory only and gone on restart.
+Follow-ups ("and tomorrow?", "the first one", "open it") lean on the last answer of the
+open chat: one current Session (reason/session.py) for the server, since the window serves
+one person and the Mac app shows the same page. Each chat is saved after every answer
+(reason/chats.py, outside the repo); launch starts a new one.
+
+    GET  /chats             {"current": id, "chats": [{"id", "title", "started", "updated", "turns"}]}, newest first
+    GET  /chats/<id>        the saved chat: {"id", "title", "started", "turns": [{"question", "route", "text", "sources", ...}]}
+    POST /chats/new         start a new chat -> {"current": id}
+    POST /chats/<id>/open   make it the current chat (follow-ups go on from it) -> the saved chat
+    POST /chats/<id>/delete delete its file; deleting the open chat starts a new one -> {"ok", "current"}
 Any /ask and /listen/start stop the spoken answer first, so talking cuts it off.
 """
 from __future__ import annotations
@@ -33,6 +40,7 @@ from bank import store
 
 from . import act
 from .answer import answer as _answer, online as _online
+from . import chats
 from .session import Session
 from .speak import Speaker
 from .speech import HoldToTalk, start_voice
@@ -67,6 +75,17 @@ PAGE = """<!doctype html>
 
   /* left slot: kept empty for a chats list (past conversations, worker 18); show it by removing [hidden] */
   #chats { width: 240px; flex: none; background: var(--side); border-right: 1px solid var(--line); overflow-y: auto; }
+  /* chats list (worker 18): plain placement; worker 15 owns the look */
+  #chats { padding: 10px 8px; }
+  #newchat { width: 100%; margin-bottom: 8px; }
+  #chats .chday { padding: 10px 8px 4px; font-size: 11px; font-weight: 600; color: var(--text2); }
+  #chats ul { list-style: none; margin: 0; padding: 0; }
+  #chats .chat { display: flex; align-items: center; border-radius: 6px; }
+  #chats .chat.on { background: var(--fieldline); }
+  #chats .chtitle { flex: 1; min-width: 0; text-align: left; padding: 5px 8px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #chats .chdel { padding: 2px 8px; font-size: 12px; color: var(--text3); visibility: hidden; }
+  #chats .chat:hover .chdel, #chats .chdel.armed, #chats .chdel:focus { visibility: visible; }
+  #chats .chdel.armed { color: #d70015; }
   /* the bank: a slide-over from the right */
   #side { position: fixed; z-index: 3; top: 0; right: 0; bottom: 0; width: 320px; max-width: 100%; background: var(--side);
           border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(0,0,0,.10); display: flex; flex-direction: column;
@@ -185,7 +204,7 @@ PAGE = """<!doctype html>
   }
 </style></head>
 <body>
-<nav id="chats" aria-label="Chats" hidden></nav>
+<nav id="chats" aria-label="Chats"></nav>
 <main>
   <div class="bar">
     <h1>Muse</h1>
@@ -369,7 +388,7 @@ async function ask(question, spoken, into) {
   }
   busy = false; send.disabled = false; bottom();
   if (!recording) q.focus();
-  refresh(); loadBank();
+  refresh(); loadBank(); loadChats();
 }
 
 $('discover').addEventListener('click', () => ask('discover', false));
@@ -543,8 +562,66 @@ async function loadBank() {
 }
 
 talkState('idle');
+/* ---------- saved chats (left column, #chats) ----------
+   Hooks for the layout: #newchat, .chat[data-id] (.on = the open chat), .chtitle, .chdel;
+   window.museChats.refresh() / .open(id) / .new() / .remove(id). A reopened chat shows its
+   answers as they were given; nothing is asked again. Delete takes two clicks. */
+const chatsEl = $('chats');
+let currentChat = null;
+function dayLabel(iso) {
+  const d = new Date((iso || '').slice(0, 10) + 'T12:00:00'); if (isNaN(d)) return '';
+  const today = new Date(); today.setHours(12, 0, 0, 0);
+  const n = Math.round((today - d) / 864e5);
+  if (n === 0) return 'Today'; if (n === 1) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+function drawChats(list) {
+  chatsEl.textContent = '';
+  const nb = el('button', 'btn', 'New chat'); nb.id = 'newchat'; nb.type = 'button'; nb.onclick = () => newChat();
+  chatsEl.appendChild(nb);
+  let day = null, ul = null;
+  for (const c of list) {
+    const d = dayLabel(c.updated);
+    if (d !== day) { day = d; chatsEl.appendChild(el('div', 'chday', d)); ul = el('ul'); chatsEl.appendChild(ul); }
+    const li = el('li', 'chat' + (c.id === currentChat ? ' on' : '')); li.dataset.id = c.id;
+    const b = el('button', 'chtitle', c.title); b.type = 'button'; b.title = c.title; b.onclick = () => openChat(c.id);
+    const x = el('button', 'chdel', '×'); x.type = 'button'; x.title = 'Delete this chat'; x.setAttribute('aria-label', 'Delete chat: ' + c.title);
+    x.onclick = () => removeChat(c.id, x);
+    li.appendChild(b); li.appendChild(x); ul.appendChild(li);
+  }
+}
+async function loadChats() {
+  try { const r = await (await fetch('/chats')).json(); currentChat = r.current; drawChats(r.chats || []); } catch (e) { /* the list waits for the next answer */ }
+}
+function clearLog() { log.textContent = ''; pending = null; }
+async function newChat() {
+  if (busy) return;
+  try { await post('/chats/new'); } catch (e) { return; }
+  clearLog(); showEmpty(); loadChats(); q.focus();
+}
+async function openChat(id) {
+  if (busy) return;
+  let r; try { r = await post('/chats/' + id + '/open'); } catch (e) { return; }
+  if (!r || r.error) { loadChats(); return; }
+  clearLog();
+  for (const t of r.turns || []) showAnswer(newTurn(t.question, false), { text: t.text, route: t.route, sources: t.sources, seconds: t.seconds || 0 });
+  if (!(r.turns || []).length) showEmpty();
+  bottom(); loadChats(); q.focus();
+}
+async function removeChat(id, btn) {
+  if (btn && !btn.classList.contains('armed')) {  // first click asks; the second deletes
+    btn.classList.add('armed'); btn.textContent = 'Delete?';
+    setTimeout(() => { btn.classList.remove('armed'); btn.textContent = '×'; }, 3000);
+    return;
+  }
+  try { await post('/chats/' + id + '/delete'); } catch (e) { return; }
+  if (id === currentChat) { clearLog(); showEmpty(); }
+  loadChats();
+}
+window.museChats = { refresh: loadChats, open: openChat, new: newChat, remove: (id) => removeChat(id, null) };
+
 showEmpty();
-refresh(); loadBank();
+refresh(); loadBank(); loadChats();
 q.focus();
 </script>
 </body></html>
@@ -568,10 +645,15 @@ def bank_rows(entries) -> list[dict]:
 
 
 def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None,
-                 entries_fn=None, speaker=None, session=None):
+                 entries_fn=None, speaker=None, session=None, chats_root=None):
     entries_fn = entries_fn or store.all_entries
-    session = session or Session()  # one conversation for the whole server (single user)
-    answer_fn = answer_fn or (lambda q, today=None: _answer(q, today=today, session=session))
+    cur = {"s": session or Session()}  # the open chat (single user); swapped on new / open
+    answer_fn = answer_fn or (lambda q, today=None: _answer(q, today=today, session=cur["s"]))
+
+    def _switch(s):
+        act.reset()       # a held yes/no belongs to the chat it was asked in
+        discover.reset()
+        cur["s"] = s
     online_fn = online_fn or _online
     count_fn = count_fn or (lambda: len(store.all_entries()))
 
@@ -596,6 +678,13 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                             "voice_why": voice_why})
             elif self.path == "/bank":
                 self._json(bank_rows(entries_fn()))
+            elif self.path == "/chats":
+                self._json({"current": cur["s"].id, "chats": chats.listing(chats_root)})
+            elif self.path.startswith("/chats/"):
+                try:
+                    self._json(chats.read(self.path.split("/")[2], chats_root))
+                except (ValueError, OSError):
+                    self._json({"error": "no such chat"}, 404)
             else:
                 self._send(404, "not found", "text/plain")
 
@@ -604,6 +693,8 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 speaker.stop()  # talking, a new question or the switch cuts off the spoken answer
             if self.path == "/speak/stop":
                 return self._json({"ok": True})
+            if self.path.startswith("/chats/"):
+                return self._chats_post(self.path.split("/")[2:])
             if self.path in ("/listen/start", "/listen/stop"):
                 if talk is None:
                     return self._json({"error": f"voice is unavailable ({voice_why})"})
@@ -618,6 +709,10 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 body = json.loads(self.rfile.read(n) or b"{}")
                 question = str(body.get("question") or "")
                 a = answer_fn(question, today=today)
+                try:
+                    chats.save(cur["s"], chats_root)
+                except OSError as e:  # the answer still stands; say it once in the server log
+                    print(f"Couldn't save the chat: {e}", flush=True)
                 if speaker is not None and body.get("speak") and a.route != "error":
                     speaker.speak(a.text)
                 held = a.route == "discover" and discover.waiting()
@@ -627,6 +722,24 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
             except Exception as e:  # show it in the window; keep serving
                 self._json({"text": f"Error: {type(e).__name__}: {e}", "route": "error",
                             "sources": [], "seconds": 0.0})
+
+        def _chats_post(self, parts):
+            if parts == ["new"]:
+                _switch(Session())
+                return self._json({"current": cur["s"].id})
+            if len(parts) != 2 or parts[1] not in ("open", "delete"):
+                return self._send(404, "not found", "text/plain")
+            chat_id, verb = parts
+            try:
+                if verb == "open":
+                    _switch(chats.load(chat_id, chats_root))
+                    return self._json(chats.read(chat_id, chats_root))
+                chats.delete(chat_id, chats_root)
+            except (ValueError, OSError):
+                return self._json({"error": "no such chat"}, 404)
+            if chat_id == cur["s"].id:
+                _switch(Session())
+            return self._json({"ok": True, "current": cur["s"].id})
 
         def log_message(self, fmt, *args):  # quiet
             pass

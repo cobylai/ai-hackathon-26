@@ -98,11 +98,12 @@ class Session:
         s.rows = [_event_back(r) for r in st.get("rows") or []]
         return s
 
-    def record(self, question: str, a, root=None) -> None:
-        """Add the turn, and keep what a follow-up may lean on. Follow-up and act answers
-        keep the rows they used."""
-        self.turns.append({"question": question, "route": a.route, "text": a.text,
-                           "sources": list(a.sources or []), "rows": _jsonable(list(a.rows or [])),
+    def record(self, question: str, a, root=None, asked: str | None = None) -> None:
+        """Add the turn (asked: the words as said, when a follow-up rewrote them), and keep
+        what a follow-up may lean on. Follow-up and act answers keep the rows they used."""
+        self.turns.append({"question": asked or question, "route": a.route, "text": a.text,
+                           "sources": list(a.sources or []), "seconds": a.seconds,
+                           "rows": _jsonable(list(a.rows or [])),
                            "at": datetime.now().isoformat(timespec="seconds")})
         if a.route in ("followup", "act"):
             return
