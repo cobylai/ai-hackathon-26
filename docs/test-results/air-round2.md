@@ -9,7 +9,7 @@ Tested `main` at d3e75b6 following `docs/PARTNER-TESTING.md` then `docs/PARTNER-
 | Chip / RAM | Apple M5, 32 GB | **Apple M1, 8 GB** |
 | macOS | 27.0.1 | 15.8.2 |
 | Developer tools | Xcode, Homebrew, uv, Python 3.15 | **Command Line Tools only** (Swift 6.1.2); no uv, no Homebrew, system Python 3.9.6 |
-| Network | open | Cornell eduroam; **IPv6 broken** (see failures) |
+| Network | Cornell eduroam | Same Cornell eduroam (10.48.x), but Chromium cannot browse on the Air (see failure 4) |
 | Bank (model) answers | 0.8 to 1.5 s | **2.8 to 4.2 s** (about 3x slower) |
 | Plain-code answers (due, person) | 0.0 s | 0.0 s |
 | pytest | 70 s | 57 to 62 s |
@@ -59,7 +59,7 @@ Command: `MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check`
 | The same draft request offline | **DIFFERS from the guide**: the compose route still produced the draft offline instead of saying it needs a connection. (The guide's row is about the Gmail draft path, which I did not run.) |
 | What's due this week? then "and next week?" then "the first one" | PASS (follow-ups answer from the last list) |
 | Hey, can you hear me okay? | PASS: `I can hear you. Ask me about your mail, what's due, or your calendar.` route chat, no web |
-| Who wrote Frankenstein? (online) | **FAIL**: `Not found after 3 search(es) and 14 page(s) (14 unreadable).` (route not_found, 6.2 s). Cause below. |
+| Who wrote Frankenstein? (online) | **FAIL on the Air**: `Not found after 3 search(es) and 14 page(s) (14 unreadable).` (route not_found, 6.2 s). Chromium cannot load pages on this Air; see failure 4. |
 | Edit one line of playbooks/due.md, restart, ask | PASS: changed the `nothing_due` wording; after restart "What is due on November 30?" answered `AIR TEST: nothing due Mon Nov 30.` Restored the file afterwards. |
 | Everything above, spoken | **NOT RUN**: no Argmax key or registry login on the Air (voice must not use anyone else's key; the guide has you enter your own). |
 
@@ -82,7 +82,7 @@ Nothing hung or errored. The Air's link dropped during the run and came back by 
 | Item | Result |
 |---|---|
 | Window server (`python -m reason.web --no-open --no-voice`) | starts; `/status` returns online, 23 items, voice off |
-| Window visuals (answer styles, bank sidebar, Yes/Cancel, Escape, narrow and full screen) | **NOT RUN** (needs a screen) |
+| Window visuals, answer styles, bank sidebar, Yes/Cancel, Escape | **PASS** (checked with a headless Chromium on the Air against the local window at 1280x800 and 420x800; not at the Air's real screen, and "full screen" was not run). Answers render as dated tables with sources; "N items in the bank" status shows; the bank opens as a right-side slide-over grouped (Mail 21, ...), Escape closes it; "open my calendar" shows `I'll open Calendar.` with **Cancel** and **Yes, do it** inline, and Escape cancels it. Screenshots: `docs/test-results/air-round2-shots/wide-bank.png` and `narrow-pending.png`. |
 | `MUSE_REPO="$PWD" app/build.sh` on the Air | PASS in 17 s with Command Line Tools only (no Xcode): `Built .../app/build/Muse.app (signed: adhoc ...)`. Signed ad hoc, so macOS permissions will not survive rebuilds. |
 | First launch key pop-up, Fn-Space tap and hold, Accessibility/microphone/Calendar prompts, "Check setup", Quit leaves no servers on :8765/:8080 | **NOT RUN**: I did not open the app because it needs the user to enter their own keys and click macOS prompts. |
 | DMG path (Muse.dmg, INSTALL.html) | NOT RUN: used the local build instead. I read INSTALL.html and setup.sh before touching anything. |
@@ -97,11 +97,11 @@ Nothing hung or errored. The Air's link dropped during the run and came back by 
    Error: read ECONNRESET   (errno: -54)
    ```
    Worked around by copying `chromium-1255` and `chromium_headless_shell-1255` from the other Mac.
-4. **IPv6 is broken on the Air's network, which breaks `localhost` and Chromium.**
+4. **Chromium cannot browse on the Air, and `localhost` does not work there.** Two separate symptoms, one probable root cause I could not confirm.
    - `curl http://localhost:8080/v1/models` fails with `curl: (56) Recv failure: Connection reset by peer` (localhost resolves to `::1` first); `http://127.0.0.1:8080` works. The app's default `BONSAI_BASE_URL` is `http://localhost:8080/v1`, so I set `BONSAI_BASE_URL=http://127.0.0.1:8080/v1` for every run. `llm/client.py` accepts 127.0.0.1.
    - Consequence for `setup.sh` step 7: its `until curl -s -m 2 localhost:8080/v1/models; do sleep 2; done` can never succeed here (inferred from the curl failure above; I did not run `setup.sh`). The guide's `curl -s localhost:8080/v1/models || scripts/serve_bonsai.sh 4B` would also start a second server.
-   - `curl -4 https://en.wikipedia.org/...` returns 200; `curl -6` returns `Recv failure: Connection reset by peer` (also for cdn.playwright.dev).
-   - Chromium via Playwright (`channel="chromium"`, headless new) gets `net::ERR_CONNECTION_RESET` on example.com, pypi.org, bing.com, wikipedia.org (HTTP and HTTPS) and works on duckduckgo.com. Adding `--disable-ipv6` (and `--disable-quic`) did not fix it, so I did not isolate the cause. **This is why the web route fails here.** Try another network (a phone hotspot) before calling it a code bug.
+   - Chromium via Playwright (`channel="chromium"`, headless new) gets `net::ERR_CONNECTION_RESET` on example.com (HTTP and HTTPS), pypi.org, bing.com and wikipedia.org, and works on duckduckgo.com. Playwright's own Node download also fails (`read ECONNRESET`). `curl -4` to the same hosts returns 200. `--disable-ipv6` and `--disable-quic` did not help.
+   - **It is not the campus network and not IPv6 by itself:** the first Mac, on the same eduroam subnet (10.48.x) with no IPv6 either (`curl -6` also fails there), loads all five test sites in the same Chromium build without trouble. So the cause is specific to the Air. The Air runs **Malwarebytes real-time protection** (`com.malwarebytes.mbam.rtprotection.daemon`, running) and a Tailscale network extension; the first Mac has neither. Malwarebytes is my main suspect, but I did **not** confirm it: I did not touch the security software, and real Google Chrome is not installed on the Air to compare. To confirm, someone at the Air can pause Malwarebytes' real-time/web protection for a minute and rerun `uv run python -m harness goto https://en.wikipedia.org/wiki/Frankenstein`.
 5. **`scripts/serve_bonsai.sh` binds `*:8080` (all interfaces).** On a campus network that exposes the model. I ran the server with `--host 127.0.0.1` instead. Suggest adding that flag to the script.
 6. **The guide's step "Xcode 16+" is not needed to build the app.** `app/build.sh` built with only Command Line Tools. `setup.sh` step 0 also passes on Command Line Tools (`xcrun --find swift`). I did not run the voice build: the Air has no `~/.swiftpm/configuration` (no Argmax registry login), and the guide has you paste your own `axst_` token.
 
