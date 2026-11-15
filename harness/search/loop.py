@@ -48,6 +48,8 @@ class Outcome:
     rounds: int
     pages: int
     notes: list[Note] = field(default_factory=list)
+    # Non-empty when the harness could not do the work (a silent model, for one).
+    error: str = ""
 
 
 def _words(text: str, limit: int) -> str:
@@ -104,6 +106,7 @@ def research(
     query = question
     rounds = 0
     pages = 0
+    error = ""
 
     for round_no in range(1, MAX_ROUNDS + 1):
         rounds = round_no
@@ -117,7 +120,14 @@ def research(
             # A wall, a sign-in or a dead engine is not a query problem: rewriting
             # hits the same thing, and Run 4 spent three searches per question proving it.
             break
-        picks = prompts.pick(question, results, ask)[:MAX_PAGES_PER_ROUND] if results else []
+        if results:
+            picks = prompts.pick(question, results, ask)
+            if picks is None:
+                error = "the model returned nothing; check LLM_BASE_URL and LLM_MODEL"
+                break
+            picks = picks[:MAX_PAGES_PER_ROUND]
+        else:
+            picks = []
         first_new_note = len(notes)
 
         for number in picks:
@@ -159,11 +169,13 @@ def research(
             break
         query = new_query
 
-    if not notes:
+    if error:
+        answer = "The model did not answer, so the question could not be researched."
+    elif not notes:
         answer = (
             f'No useful results were found for "{question}" after '
             f"{rounds} search round{'s' if rounds != 1 else ''}."
         )
     else:
         answer = _answer(question, notes, ask)
-    return Outcome(answer, rounds, pages, notes)
+    return Outcome(answer, rounds, pages, notes, error)

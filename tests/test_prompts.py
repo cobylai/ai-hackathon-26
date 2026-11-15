@@ -52,7 +52,8 @@ def test_pick_returns_numbers_in_order():
 def test_pick_drops_out_of_range_and_duplicate_numbers():
     assert prompts.pick("q", RESULTS, ask=llm.FakeLLM(["9, 2, 2, 0"]).ask) == [2]
     assert prompts.pick("q", RESULTS, ask=llm.FakeLLM(["none"]).ask) == []
-    assert prompts.pick("q", RESULTS, ask=llm.FakeLLM([""]).ask) == []
+    # An empty reply is a dead model, not "nothing looked useful".
+    assert prompts.pick("q", RESULTS, ask=llm.FakeLLM([""]).ask) is None
     assert prompts.pick("q", [], ask=llm.FakeLLM(["1"]).ask) == []
 
 

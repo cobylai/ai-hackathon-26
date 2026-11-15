@@ -60,8 +60,12 @@ def _numbers(reply: str, count: int, limit: int = MAX_PICKS) -> list[int]:
     return picked[:limit]
 
 
-def pick(question: str, results: Sequence, ask: Ask | None = None) -> list[int]:
-    """Result numbers worth opening, best first; [] when nothing looks useful."""
+def pick(question: str, results: Sequence, ask: Ask | None = None) -> list[int] | None:
+    """Result numbers worth opening, best first.
+
+    [] means the model said NONE; None means it said nothing at all, which usually
+    means the model server is down and must not be read as "nothing looked useful".
+    """
     ask = _ask(ask)
     listing = "\n".join(_result_line(n, item) for n, item in enumerate(results, 1))
     prompt = (
@@ -70,7 +74,10 @@ def pick(question: str, results: Sequence, ask: Ask | None = None) -> list[int]:
         "Which results are worth opening? Reply with up to 3 numbers, best first, "
         "comma separated. Only numbers from the list. NONE if none help."
     )
-    return _numbers(ask(prompt, max_tokens=24), len(results))
+    reply = ask(prompt, max_tokens=24)
+    if not (reply or "").strip():
+        return None
+    return _numbers(reply, len(results))
 
 
 def note(question: str, chunk: str, ask: Ask | None = None) -> str | None:

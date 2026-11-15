@@ -157,6 +157,8 @@ def open_result(n: int, page: int = 1) -> str:
 def research(question: str) -> str:
     """Answer a question from the web: search, read, take notes, retry."""
     outcome = loop.research(question)
+    if outcome.error:
+        return _cap(f"ERR research | {outcome.error}", "[end]")
     word = "OK"
     if not outcome.notes and engine.last_status in ("BLOCKED", "LOGIN", "ERR"):
         word = engine.last_status

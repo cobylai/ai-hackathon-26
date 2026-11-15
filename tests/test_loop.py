@@ -338,6 +338,17 @@ def test_answer_is_capped_at_120_words():
     assert answer_words(outcome.answer) == loop.MAX_ANSWER_WORDS
 
 
+def test_a_silent_model_is_an_error_not_an_empty_result():
+    site = Script()
+    outcome = loop.research(
+        "q", ask=llm.FakeLLM([]).ask, search=site.search, open_page=site.open_page
+    )
+    assert outcome.error and "LLM_BASE_URL" in outcome.error
+    assert outcome.rounds == 1
+    assert not outcome.notes
+    assert "did not answer" in outcome.answer
+
+
 def test_empty_question_is_handled():
     outcome = loop.research("   ")
     assert outcome.rounds == 0 and outcome.pages == 0

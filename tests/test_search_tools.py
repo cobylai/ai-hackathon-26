@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from harness import registry
-from harness.search import engine, tools
+from harness.search import engine, loop, tools
 from harness.search.google import Result
 
 STATUS_WORDS = {"OK", "BLOCKED", "LOGIN", "ERR"}
@@ -143,6 +143,18 @@ class _FakePage:
 
     def inner_text(self, selector):
         return "Hello page text."
+
+
+def test_research_reports_a_silent_model(monkeypatch):
+    monkeypatch.setattr(
+        loop,
+        "research",
+        lambda question: loop.Outcome(
+            "The model did not answer.", 1, 0, [], "the model returned nothing"
+        ),
+    )
+    out = check(tools.research("q"))
+    assert out.startswith("ERR research | the model returned nothing")
 
 
 def test_open_page_restarts_a_dead_browser(monkeypatch):
