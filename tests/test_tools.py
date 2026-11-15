@@ -4,6 +4,7 @@ import inspect
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -205,3 +206,39 @@ def test_elements_reports_truncation(btools, session, site):
     session.page.set_content(f"<html><body>{links}</body></html>")
     out = check(btools.elements())
     assert out.splitlines()[0].endswith("40 of 45 elements")
+
+
+
+def test_second_process_on_live_profile_returns_err(monkeypatch, tmp_path):
+    """A real second Chromium holding the profile is what users hit with B8."""
+    from harness.browser import tools as tools_mod
+    from harness.browser.session import Session as _Session
+
+    profile = tmp_path / "profile"
+    code = (
+        "import time\n"
+        "from harness.browser.session import Session\n"
+        f"s = Session({str(profile)!r})\n"
+        "s.start()\n"
+        "time.sleep(20)\n"
+        "s.stop()\n"
+    )
+    holder = subprocess.Popen([sys.executable, "-c", code], cwd=ROOT)
+    try:
+        deadline = time.time() + 30
+        # SingletonLock is a dangling symlink, so is_symlink() is the right test.
+        lock = profile / "SingletonLock"
+        while time.time() < deadline and not lock.is_symlink():
+            time.sleep(0.1)
+        assert lock.is_symlink(), "holder never started"
+
+        monkeypatch.setattr(tools_mod, "get_session", lambda: _Session(profile))
+        out = check(tools_mod.goto("https://example.com"))
+        assert out.startswith("ERR local")
+        assert "profile in use" in out
+    finally:
+        holder.terminate()
+        try:
+            holder.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            holder.kill()

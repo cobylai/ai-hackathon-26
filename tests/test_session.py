@@ -3,7 +3,10 @@
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
+
+import pytest
 
 from harness.browser.session import Session, get_session
 
@@ -56,3 +59,57 @@ def test_profile_dir_can_be_overridden(tmp_path):
     # while another one holds the default.
     env = dict(os.environ, HARNESS_PROFILE_DIR=str(tmp_path / "other-profile"))
     assert profile_dir_from_env(env) == str(tmp_path / "other-profile")
+def test_profile_keeps_cookies_across_restarts(tmp_path):
+    """B8 rests on this: a sign-in written by one session is visible to the next."""
+    profile = tmp_path / "profile"
+    first = Session(profile)
+    first.start()
+    try:
+        first._context.add_cookies(
+            [
+                {
+                    "name": "signed_in",
+                    "value": "yes",
+                    "domain": "example.com",
+                    "path": "/",
+                    "expires": time.time() + 3600,  # session cookies die with the browser
+                }
+            ]
+        )
+    finally:
+        first.stop()
+
+    second = Session(profile)
+    second.start()
+    try:
+        cookies = {c["name"]: c["value"] for c in second._context.cookies("https://example.com")}
+        assert cookies.get("signed_in") == "yes"
+    finally:
+        second.stop()
+
+
+def test_failed_start_releases_playwright(monkeypatch, tmp_path):
+    """A failed launch must not leave a driver behind (it poisons later starts)."""
+    stopped = []
+
+    class FakeChromium:
+        def launch_persistent_context(self, *args, **kwargs):
+            raise RuntimeError("profile locked")
+
+    class FakePlaywright:
+        chromium = FakeChromium()
+
+        def stop(self):
+            stopped.append(True)
+
+    class FakeManager:
+        def start(self):
+            return FakePlaywright()
+
+    monkeypatch.setattr("harness.browser.session.sync_playwright", lambda: FakeManager())
+
+    session = Session(tmp_path / "profile")
+    with pytest.raises(RuntimeError, match="profile locked"):
+        session.start()
+    assert stopped == [True]
+    assert session._playwright is None
