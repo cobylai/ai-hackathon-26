@@ -1,6 +1,6 @@
 # Muse interfaces: guide for the partner's agents
 
-Last updated: 2026-11-14, against main `d118285`. Each item below is marked **built**, **planned** or **undecided**. "Planned" means a worker has written a plan that hasn't been built yet, so names can still change. Update this file when you change an interface.
+Last updated: 2026-11-14, after the partner code review. Each item below is marked **built**, **planned** or **undecided**. "Planned" means a worker has written a plan that hasn't been built yet, so names can still change. Update this file when you change an interface.
 
 ## 1. Ground rules
 
@@ -21,33 +21,48 @@ Last updated: 2026-11-14, against main `d118285`. Each item below is marked **bu
 
 | Area | Owner | Folder |
 |---|---|---|
-| Browser (search, scrape, uBlock Origin), email access | Partner | `browser/` (**undecided**, proposed) |
+| Browser (hidden Chromium, ad-blocking, login), web search, Gmail reading, computer control | Partner | `harness/` |
 | Bonsai client | Coby | `llm/` |
-| Sufficiency check | Coby | `sufficiency/` |
-| Context store | Coby | `bank/` |
-| Reasoning layer, UI, voice input | Coby | not started |
-| Computer control | **undecided** | |
+| Sufficiency check (the search loop) | Coby | `sufficiency/` |
+| Context store, plus the email sync loop | Coby | `bank/` |
+| Reasoning layer (decision tree), UI, voice input | Coby | not started |
 
-## 2. Browser contract (what the partner provides) — **planned, needs Coby and partner to agree**
+## 2. Browser contract — **agreed shape, adapters not built yet** (thinker ruling 2026-11-14; Coby to confirm with partner)
 
-Coby's side calls the browser through exactly two functions. Both are passed in as arguments, never imported by name, so this contract can change in one adapter (`sufficiency/gather.py`).
+The partner's code already exists in `harness/` (Python 3.12, uv, Playwright). Coby's side uses it as it is, through small adapters on Coby's side. The partner doesn't need to change his return types.
+
+**Web search and pages:** the partner provides these, and Coby's adapter lives in `sufficiency/gather.py`:
 
 ```python
-def search(query: str) -> list[dict]:
-    """Run a web search. Return hits in ranked order, at least the first 10."""
-    # each hit: {"title": str, "url": str, "snippet": str}
-
-def open(url: str) -> dict:
-    """Load the page in the isolated Chromium and scrape its visible text."""
-    # returns {"title": str, "text": str}
+harness.engine.search(q) -> [Result(title, url, domain, snippet)]    # live Google, DDG fallback
+harness.search.tools.open_page(url) -> (status, full_text)           # status "OK" | "BLOCKED" | "LOGIN" | "ERR"; 24 h cache
 ```
 
-- `text` is plain visible text with no HTML, and should include the whole page. Coby's side splits long pages itself, so don't truncate.
-- On failure (timeout, blocked page), either raise an exception or return empty `text`. The caller skips that URL and moves on.
-- **Email reading is `open()` on a mail page** after the browser is logged in. No connector is needed. How the partner logs in and finds messages is up to them.
-- The browser is isolated from the user's own Chrome. It never shares cookies or profiles with it.
+The adapter turns those into the shapes `gather()` takes:
+- `search_fn(q)` returns `[{"title", "url", "snippet"}]`.
+- `open_fn(url)` returns `{"title": "", "text": full_text}` when the status is OK, and `{"title": "", "text": ""}` otherwise.
 
-**Offline plan ("sync online, answer offline"):** while Wi-Fi is on, the browser scrapes email (and later Canvas) and hands each item's text to the context store (§5). With Wi-Fi off, Muse answers only from the store.
+**The search loop is Coby's `gather()`, not `harness` `research()`.** `gather()` has the quote check and has been tested on Bonsai 4B. `research()` stays unused for the core tasks.
+
+**Email:** the partner provides these, and Coby's sync loop lives in `bank/`:
+
+```python
+email_search(sender=None, text=None, days=N) -> numbered rows, each with a thread_id
+read_messages(...) -> [("Name <addr>", date, body), ...]
+```
+
+Sync is a short loop on Coby's side:
+1. `email_search(days=N)`
+2. Read each row.
+3. `bank.ingest(body, source=thread_id, kind="email", sender_name=..., sender_address=..., sent_date=..., subject=...)`. The name and address are split from `"Name <addr>"`.
+
+The partner doesn't need to build a separate `recent_messages()` call.
+
+**Who picks the tool:** Coby's decision tree calls the partner's tools directly for the core tasks, as agreed in the team plan. The partner's tool registry (`TOOLS`/`GROUPS`) stays the list of available tools; the model doesn't choose from it for the core tasks.
+
+**Model calls in `harness/`:** `harness/llm.py`'s `ask()` must call `llm.client.complete` with the same signature. That gives it the 32k guard and real errors instead of `""`. Nothing in `harness/` may reach a model that isn't on localhost, so **no Claude Haiku stand-in in the shipped app.**
+
+**Offline plan ("sync online, answer offline"):** while Wi-Fi is on, the sync loop reads email into the context store (§5). With Wi-Fi off, search and `open_page` return BLOCKED/ERR, and Muse answers only from the store.
 
 ## 3. Bonsai client — **built** (`llm/`, on main)
 
@@ -123,10 +138,9 @@ Argmax runs only from Swift, so voice is a small separate Swift program. It turn
 
 ## 7. Not decided yet
 
-- Coby and partner to agree:
-  - the browser folder name
-  - the final `search`/`open` shapes
-  - whether `open` takes a "wait for selector" option for mail pages
-  - **a way to list messages.** `open(url)` on the inbox returns the inbox page's text, not the individual emails, so the sync step can't walk the mailbox with `search`/`open` alone. The browser side needs something like `recent_messages(limit) -> list[{"source_id", "text"}]` (each message as plain text with a stable id), and the same later for Canvas.
-- Who builds computer control.
+- **Integration, planned for tonight:** once sufficiency-check and context-store land, one worker merges main and the partner's branches into an integration branch. The partner flags a `registry.py` conflict. Done means:
+  - a typed question runs `gather()` against his real browser on Bonsai 4B
+  - one real email goes through `read_messages` into the bank
+- The app's name: "Muse" vs "Hearth" (Coby's call; no code depends on it).
 - The UI (built last), and the main entry point that typed and spoken questions go into.
+- Canvas sync, later, on the same pattern as email.
