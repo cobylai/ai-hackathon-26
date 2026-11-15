@@ -349,6 +349,39 @@ def test_a_silent_model_is_an_error_not_an_empty_result():
     assert "did not answer" in outcome.answer
 
 
+class SteppingClock:
+    """Advances on every read, so a budget test needs no sleeping."""
+
+    def __init__(self, step: float = 1.0) -> None:
+        self.value = 0.0
+        self.step = step
+
+    def __call__(self) -> float:
+        self.value += self.step
+        return self.value
+
+
+def test_a_spent_budget_answers_from_the_notes(monkeypatch):
+    monkeypatch.setattr(loop, "MAX_SECONDS", 2.0)
+    monkeypatch.setattr(loop, "_now", SteppingClock(1.0))
+    fake = llm.FakeLLM(["1", "The keeper kept the light.", "NO", "q2"])
+    site = Script()
+    outcome = loop.research("q", ask=fake.ask, search=site.search, open_page=site.open_page)
+    assert outcome.rounds == 1
+    assert len(outcome.notes) == 1
+    assert "The keeper kept the light." in outcome.answer
+    assert "Sources: 1." in outcome.answer
+
+
+def test_a_budget_spent_before_the_first_search_says_so(monkeypatch):
+    monkeypatch.setattr(loop, "MAX_SECONDS", 0.0)
+    site = Script()
+    outcome = loop.research("q", ask=llm.FakeLLM([]).ask, search=site.search, open_page=site.open_page)
+    assert outcome.rounds == 0
+    assert "Ran out of time" in outcome.answer
+    assert not site.queries
+
+
 def test_empty_question_is_handled():
     outcome = loop.research("   ")
     assert outcome.rounds == 0 and outcome.pages == 0

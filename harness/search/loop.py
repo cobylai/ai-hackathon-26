@@ -9,6 +9,7 @@ a repeated query stops it early.
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass, field
 from typing import Callable, Sequence
 
@@ -37,7 +38,28 @@ def _env_int(name: str, default: int = 0) -> int:
 # 0 keeps the measured behaviour; HARNESS_STOP_AFTER_NOTES=2 turns it on.
 STOP_AFTER_NOTES = _env_int("HARNESS_STOP_AFTER_NOTES")
 
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+
+
+# Wall-clock ceiling for one question. The step caps bound how many things happen;
+# a hung page plus slow model calls can still stall for minutes without this.
+MAX_SECONDS = _env_float("HARNESS_RESEARCH_SECONDS", 120.0)
+
 Note = tuple[int, str, str]
+
+
+class BudgetSpent(Exception):
+    """Raised inside the loop when a question runs past `MAX_SECONDS`."""
+
+
+def _now() -> float:
+    """Monotonic clock, separate so tests can drive it."""
+    return time.monotonic()
 
 
 @dataclass
@@ -77,7 +99,13 @@ def _answer(question: str, notes: Sequence[Note], ask: Callable[..., str]) -> st
     )
     text = " ".join((ask(prompt, max_tokens=260) or "").split())
     if not text:
-        text = " ".join(note for _, _, note in notes)
+        return _notes_answer(notes)
+    return f"{_words(text, MAX_ANSWER_WORDS)}\n{_sources(notes)}"
+
+
+def _notes_answer(notes: Sequence[Note]) -> str:
+    """The answer without asking the model: the notes themselves, plus sources."""
+    text = " ".join(note for _, _, note in notes)
     return f"{_words(text, MAX_ANSWER_WORDS)}\n{_sources(notes)}"
 
 
@@ -107,8 +135,14 @@ def research(
     rounds = 0
     pages = 0
     error = ""
+    started = _now()
+
+    def spent() -> bool:
+        return _now() - started > MAX_SECONDS
 
     for round_no in range(1, MAX_ROUNDS + 1):
+        if spent():
+            break
         rounds = round_no
         tried.add(query.lower())
         results = list(find(query))[:MAX_RESULTS]
@@ -131,6 +165,8 @@ def research(
         first_new_note = len(notes)
 
         for number in picks:
+            if spent():
+                break
             item = results[number - 1]
             if item.url in seen_urls:
                 continue
@@ -163,6 +199,8 @@ def research(
         if notes and prompts.enough(question, notes, ask):
             break
 
+        if spent():
+            break
         # The rewrite only needs to know what this round added.
         new_query = prompts.rewrite(question, query, notes[first_new_note:], ask)
         if not new_query or new_query.lower() in tried:
@@ -171,11 +209,16 @@ def research(
 
     if error:
         answer = "The model did not answer, so the question could not be researched."
+    elif not rounds:
+        answer = f'Ran out of time before searching for "{question}".'
     elif not notes:
         answer = (
             f'No useful results were found for "{question}" after '
             f"{rounds} search round{'s' if rounds != 1 else ''}."
         )
+    elif spent():
+        # Out of time: report what the notes already say instead of calling the model.
+        answer = _notes_answer(notes)
     else:
         answer = _answer(question, notes, ask)
     return Outcome(answer, rounds, pages, notes, error)

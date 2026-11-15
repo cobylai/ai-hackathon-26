@@ -58,6 +58,8 @@ most three rounds, two pages per round), then answer in at most 120 words with a
 | `LLM_REASONING_EFFORT` | unset | Set to `none` for reasoning models that otherwise return empty content |
 | `HARNESS_PROFILE_DIR` | `~/.harness/profile` | Chromium profile; set it to run a second process alongside the first |
 | `HARNESS_CACHE_DB` | `~/.harness/cache.db` | Page cache (24-hour TTL, keyed by URL) |
+| `HARNESS_RESEARCH_SECONDS` | `120` | Wall-clock ceiling for one question; when it expires the notes are reported as-is |
+| `HARNESS_STOP_AFTER_NOTES` | `0` | Experiment: end a round that collected this many notes instead of asking `enough` |
 
 Point it at a local runtime (llama.cpp server, `mlx_lm.server`, LM Studio) or at a hosted
 model; swapping is a config change, not a code change.
