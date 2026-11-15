@@ -66,13 +66,25 @@ class CountingAsk:
         return reply
 
 
-def is_pass(answer: str, expect: str, notes: int) -> bool:
-    """A question passes only if the loop found notes and the text is in the answer.
+def expects_of(item: dict) -> list[str]:
+    """Acceptable answers: one substring, or any of several (`expect_any`).
+
+    A weather answer can be right without repeating the city name, so questions
+    where the subject is also a valid answer take a list.
+    """
+    return list(item.get("expect_any") or [item["expect"]])
+
+
+def is_pass(answer: str, expects, notes: int) -> bool:
+    """A question passes only if the loop found notes and one expected text is in the answer.
 
     Without the notes check, the "no useful results for <question>" message would
     pass every question whose expected string appears in its own question.
     """
-    return notes > 0 and expect.lower() in (answer or "").lower()
+    if notes <= 0:
+        return False
+    text = (answer or "").lower()
+    return any(expect.lower() in text for expect in expects)
 
 
 def load_questions(path: Path, limit: int | None = None) -> list[dict]:
@@ -109,12 +121,13 @@ def run_one(item: dict) -> dict:
     seconds = time.monotonic() - started
 
     answer = " ".join(outcome.answer.split())
-    passed = is_pass(answer, item["expect"], len(outcome.notes))
+    expects = expects_of(item)
+    passed = is_pass(answer, expects, len(outcome.notes))
     return {
         "id": item["id"],
         "kind": item["kind"],
         "question": item["question"],
-        "expect": item["expect"],
+        "expect": " | ".join(expects),
         "pass": passed,
         "rounds": outcome.rounds,
         "pages": outcome.pages,
@@ -182,7 +195,7 @@ def main(argv: list[str] | None = None) -> int:
                         "id": item["id"],
                         "kind": item["kind"],
                         "question": item["question"],
-                        "expect": item["expect"],
+                        "expect": " | ".join(expects_of(item)),
                         "pass": False,
                         "rounds": 0,
                         "pages": 0,

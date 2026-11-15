@@ -18,19 +18,28 @@ def load_script():
 def test_question_echo_is_not_a_pass():
     module = load_script()
     answer = 'No useful results were found for "What is the weather in Seattle?" after 1 round.'
-    assert module.is_pass(answer, "Seattle", notes=0) is False
+    assert module.is_pass(answer, ["Seattle"], notes=0) is False
 
 
 def test_pass_needs_notes_and_the_expected_text():
     module = load_script()
-    assert module.is_pass("The capital is Lisbon [1].", "Lisbon", notes=1) is True
-    assert module.is_pass("The capital is Porto [1].", "Lisbon", notes=1) is False
-    assert module.is_pass("The capital is Lisbon [1].", "Lisbon", notes=0) is False
+    assert module.is_pass("The capital is Lisbon [1].", ["Lisbon"], notes=1) is True
+    assert module.is_pass("The capital is Porto [1].", ["Lisbon"], notes=1) is False
+    assert module.is_pass("The capital is Lisbon [1].", ["Lisbon"], notes=0) is False
 
 
 def test_grading_is_case_insensitive():
     module = load_script()
-    assert module.is_pass("hypertext transfer protocol", "Hypertext", notes=1) is True
+    assert module.is_pass("hypertext transfer protocol", ["Hypertext"], notes=1) is True
+
+
+def test_any_of_several_expected_answers_counts():
+    module = load_script()
+    item = {"expect_any": ["Seattle", "degrees", "rain"]}
+    expects = module.expects_of(item)
+    assert module.is_pass("Sunday is rainy, high of 61 degrees.", expects, notes=1) is True
+    assert module.is_pass("No useful results were found.", expects, notes=1) is False
+    assert module.expects_of({"expect": "1989"}) == ["1989"]
 
 
 def test_verdict_judges_each_budget_on_its_own():
@@ -72,6 +81,8 @@ def test_question_file_has_twelve_well_formed_rows():
     items = module.load_questions(module.QUESTIONS)
     assert len(items) == 12
     for item in items:
-        assert set(item) == {"id", "kind", "question", "expect"}
-        assert item["id"] and item["question"] and item["expect"]
+        assert {"id", "kind", "question"} <= set(item)
+        assert set(item) - {"id", "kind", "question"} in ({"expect"}, {"expect_any"})
+        assert item["id"] and item["question"]
+        assert item.get("expect") or item.get("expect_any")
     assert len({item["id"] for item in items}) == 12

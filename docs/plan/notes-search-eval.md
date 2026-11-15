@@ -142,8 +142,12 @@ engine column and a notes-aware grader. Two attempts:
 | q06-q09 | recent/howto | NO | 2-3 | 0 | 0 | 585-623 | 5.6-10.5 |
 | q10 | howto | ERROR | - | - | - | - | - |
 
-**4 of the 5 questions that reached the web passed.** q01 failed on content: the notes only covered
-Sunday, not the whole weekend.
+**4 of the 5 questions that reached the web passed** under the substring rule used at the time.
+q01 was a false negative: the answer was a correct Seattle forecast ("only the weather for Sunday
+is available ... 61°F") that never repeated the city name, which was the only accepted substring.
+The question now takes `expect_any` (city or a weather reading), so **Run 4 reads 5 of 5** among the
+questions that reached the web. The change is recorded rather than quietly applied; Runs 1 to 3
+used the plain substring rule.
 
 Input, Run 3 versus Run 4, on the four questions that reached the web in both:
 

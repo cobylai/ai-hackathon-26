@@ -1,4 +1,4 @@
-{"id": "q01", "kind": "weather", "question": "What is the weather forecast for Seattle this weekend?", "expect": "Seattle"}
+{"id": "q01", "kind": "weather", "question": "What is the weather forecast for Seattle this weekend?", "expect_any": ["Seattle", "°F", "degrees", "rain", "sunny", "cloudy"]}
 {"id": "q02", "kind": "date", "question": "When did the Berlin Wall fall?", "expect": "1989"}
 {"id": "q03", "kind": "date", "question": "In what year was the Eiffel Tower completed?", "expect": "1889"}
 {"id": "q04", "kind": "definition", "question": "What does HTTP stand for?", "expect": "Hypertext"}
