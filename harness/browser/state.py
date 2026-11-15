@@ -13,6 +13,15 @@ BLOCKED_PHRASES = (
     "access denied",
 )
 
+# These are unambiguous, so they count on any page. The rest are common words
+# that appear in real articles, so they only count on short (wall-sized) pages.
+STRONG_PHRASES = (
+    "are you a robot",
+    "unusual traffic",
+    "verify you are human",
+)
+WALL_MAX_BODY = 1500
+
 CHALLENGE_SELECTORS = (
     "iframe[src*='recaptcha']",
     "iframe[src*='hcaptcha']",
@@ -54,10 +63,15 @@ def _title_blocked(page: Page) -> bool:
 
 def _looks_blocked(page: Page) -> bool:
     try:
-        text = f"{page.title()}\n{page.inner_text('body')}".lower()
+        body = page.inner_text("body")
+        text = f"{page.title()}\n{body}".lower()
     except Exception:
-        text = ""
-    if any(phrase in text for phrase in BLOCKED_PHRASES):
+        body, text = "", ""
+    if any(phrase in text for phrase in STRONG_PHRASES):
+        return True
+    # "captcha" and "access denied" are ordinary words in long articles (for
+    # example Wikipedia's CAPTCHA page); only trust them on wall-sized pages.
+    if len(body) <= WALL_MAX_BODY and any(phrase in text for phrase in BLOCKED_PHRASES):
         return True
     for selector in CHALLENGE_SELECTORS:
         try:

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from harness.browser import text as text_mod
 from harness.browser.text import page_text, paginate
 
 ARTICLE = (Path(__file__).parent / "pages" / "article.html").read_text(encoding="utf-8")
@@ -49,3 +50,29 @@ def test_edge_cases():
     long_word = "x" * 250
     chunk, total = paginate(long_word, 1, max_chars=100)
     assert total == 3 and len(chunk) == 100
+
+
+def test_sliver_extraction_falls_back_to_body():
+    body = "A headline long enough to keep\n" * 100
+    assert text_mod._pick_text("tiny", body) == body.strip()
+
+
+def test_real_article_extraction_wins_over_body():
+    full = page_text(ARTICLE)
+    body = text_mod._fallback_text(ARTICLE)
+    assert len(full) > 0.2 * len(body)
+    assert text_mod._pick_text(full, body) == full
+
+
+def test_fallback_text_drops_scripts_and_keeps_spacing():
+    html = "<html><body><script>var x = 1;</script><p>Real words</p><p>Second line</p></body></html>"
+    assert text_mod._fallback_text(html) == "Real words\nSecond line"
+
+
+def test_body_text_is_used_when_extraction_is_empty():
+    assert page_text("<html><body><p></p></body></html>", "Visible words") == "Visible words"
+
+
+def test_body_fallback_drops_menu_labels():
+    body = "Home\nNews\nSport\nA real headline that is long enough to keep\n"
+    assert text_mod._clean_body(body) == "A real headline that is long enough to keep"
