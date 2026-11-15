@@ -22,15 +22,18 @@ __all__ = ["ingest", "search", "by_person", "due", "rebuild_index", "bank_dir"]
 def ingest(text: str, source: str, kind: str, *, sender_name: str | None = None,
            sender_address: str | None = None, sent_date: date | str | None = None,
            subject: str | None = None, today: date | None = None,
-           root: Path | None = None) -> dict:
+           root: Path | None = None, deadlines: list[dict] | None = None) -> dict:
     """Extract facts with Bonsai and file one entry.
 
     The optional sender/date/subject keywords are for callers (the email sync)
     that already have them split out; they win over anything in the text.
+    kind="canvas" is a Canvas assignment: sender_name is the course, and the
+    caller passes deadlines=[{"phrase", "date", "time"}] read from the page,
+    which replace the model's deadlines (dates are worked out in code).
     Returns {"status": "added" | "duplicate", "path": str, "entry": dict, "raw": [model replies]}.
     """
-    if kind not in ("email", "page"):
-        raise ValueError(f"kind must be 'email' or 'page', got {kind!r}")
+    if kind not in ("email", "page", "canvas"):
+        raise ValueError(f"kind must be 'email', 'page' or 'canvas', got {kind!r}")
     if any((sender_name, sender_address, sent_date, subject)):
         frm = (f"{sender_name} <{sender_address}>" if sender_name and sender_address
                else sender_address or sender_name)
@@ -47,14 +50,19 @@ def ingest(text: str, source: str, kind: str, *, sender_name: str | None = None,
     from . import extract
     raws = []
     for c in extract.chunks(text):
-        r = extract.ask_model(c, kind)
+        r = extract.ask_model(c, "page" if kind == "canvas" else kind)
         phrases = extract._phrases(r.get("deadlines"))
         if phrases and not extract._clean(r.get("ask")):
-            r["ask"] = extract.ask_for_deadline(c, kind, phrases[0])
+            r["ask"] = extract.ask_for_deadline(c, "page" if kind == "canvas" else kind, phrases[0])
             r["_ask_from_followup"] = True
         raws.append(r)
     entry = extract.build_fields(text, kind, today or date.today(), raws)
     entry.update(id=cid, source=source)
+    if kind == "canvas" and sender_name:
+        entry["sender_name"] = sender_name
+    if deadlines is not None:
+        entry["deadlines"] = [{"phrase": d.get("phrase"), "date": d.get("date"), "time": d.get("time")}
+                              for d in deadlines]
     path = store.write_entry(entry, root)
     entry["path"] = str(path)
     rebuild_index(root)
