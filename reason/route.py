@@ -95,6 +95,14 @@ _ASKED = re.compile(r"\bwhat\s+(?:did|has|does|do)\s+([A-Za-z][A-Za-z'\-]*)\s+(?
 _PRONOUNS = set("i you he she they we it someone anyone everyone people that this".split())
 
 
+_ASK_VERB = re.compile(r"\b(ask|asks|asked|asking|want|wants|wanted|need|needs|needed)\b", re.I)
+
+
+def is_ask_question(question: str) -> bool:
+    """'What did Emily ask / want / need': answered as a code-written list of asks."""
+    return bool(_ASK_VERB.search(question or ""))
+
+
 def asked_name(question: str) -> str | None:
     """The name in "what did <name> ask/say/send/want", or None (pronouns don't count)."""
     m = _ASKED.search(question or "")

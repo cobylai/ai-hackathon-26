@@ -150,12 +150,28 @@ class PersonRoute(Bank):
             return {"answer": "She asked for your lab 6 notes before Tuesday.", "used": [1]}
 
         with mock.patch("llm.client.complete_json", side_effect=fake):
-            a = answer("what did Emily ask me", today=WED, root=self.root)
+            a = answer("what did Emily say about the lab", today=WED, root=self.root)
         self.assertEqual(a.route, "person")
         self.assertIn("lab 6 notes", seen["prompt"])
         self.assertNotIn("Reyes", seen["prompt"])  # only Emily's entries go to the model
         self.assertTrue(a.text.endswith("Source: Emily Carter, Nov 10"))
         self.assertEqual(len(a.sources), 1)
+
+    def test_ask_question_listed_by_code(self):
+        with mock.patch("llm.client.complete_json", side_effect=AssertionError("no model")):
+            a = answer("what did Emily ask me", today=WED, root=self.root)
+            b = answer("What does Will want?", today=WED, root=self.root)
+        self.assertEqual(a.route, "person")
+        self.assertEqual(a.text, "From Emily Carter:\n- Nov 10  lab 6 notes: Send Emily your lab 6 notes.\n"
+                                 "Source: Emily Carter, Nov 10")
+        self.assertIn("Reply to Will if you can come.", b.text)
+
+    def test_ask_question_no_ask_shows_summary(self):
+        store.write_entry(E("a00000000005", "person", "Ivy Marlow", "im@x.edu", "2026-11-11", "garden news",
+                            "The garden club planted tulips.", ask=None), self.root)
+        with mock.patch("llm.client.complete_json", side_effect=AssertionError("no model")):
+            a = answer("what did Ivy ask me", today=WED, root=self.root)
+        self.assertIn("garden news: no ask. The garden club planted tulips.", a.text)
 
     def test_unknown_person_stops(self):
         with mock.patch("sufficiency.judge", side_effect=AssertionError("must not search")), \
@@ -166,7 +182,7 @@ class PersonRoute(Bank):
 
     def test_bad_used_falls_back_to_all(self):
         with mock.patch("llm.client.complete_json", return_value={"answer": "x", "used": ["z", 9]}):
-            a = answer("what did emily want", today=WED, root=self.root)
+            a = answer("what did emily say", today=WED, root=self.root)
         self.assertEqual(len(a.sources), 1)  # Emily has one entry
         self.assertIn("Source: Emily Carter", a.text)
 

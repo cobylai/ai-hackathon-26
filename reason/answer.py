@@ -127,7 +127,32 @@ def _senders(root) -> set[str]:
     return names
 
 
+def _person_asks(question: str, who: str, root) -> Answer:
+    """'What did <name> ask / want / need': each entry's ask, listed by code. No model call."""
+    entries = bank.by_person(who, root=root)
+    # "Nina Valdez": keep only senders that also match the question's other name words.
+    words = {w.lower() for w in route._WORD.findall(question)} & _senders(root)
+    narrowed = [e for e in entries
+                if words <= route.name_words(e.get("sender_name"), e.get("sender_address"))]
+    entries = (narrowed or entries)[:PERSON_LIMIT]
+    many = len({e.get("sender_name") or e.get("sender_address") for e in entries}) > 1
+    lines = []
+    for e in entries:
+        who_ = f"{e.get('sender_name') or e.get('sender_address')}, " if many else ""
+        head = f"- {who_}{_short_date(e.get('sent_date'))}  {e.get('subject') or '(no subject)'}: "
+        ask = (e.get("ask") or "").strip()
+        if ask:
+            lines.append(head + ask)
+        else:
+            lines.append(head + "no ask. " + (e.get("body") or "").strip())
+    name = entries[0].get("sender_name") or who.title()
+    top = "From " + (" / ".join(dict.fromkeys(e.get("sender_name") or "" for e in entries)) if many else name) + ":"
+    return Answer(_with_source("\n".join([top] + lines), entries), "person", [e["path"] for e in entries])
+
+
 def _person(question: str, who: str, today: date, root) -> Answer:
+    if route.is_ask_question(question):
+        return _person_asks(question, who, root)
     from llm import client
     entries = bank.by_person(who, root=root)[:PERSON_LIMIT]
     display = entries[0].get("sender_name") or who.title()

@@ -183,7 +183,7 @@ def check(out_dir: Path) -> int:
             want = f"person route, mentions one of {asks}, sources only {name}'s mail"
         else:
             ok = a.route == "person" and any(w in text for w in ("don't say", "didn't ask", "did not ask",
-                                                                     "nothing", "no request")) \
+                                                                     "nothing", "no request", "no ask")) \
                 and _subjects_from(a, by_path) <= {m["subject"] for m in mine}
             want = f"person route, says {name} asked nothing; sources only {name}'s mail"
         record("person", q, ok, a, want)

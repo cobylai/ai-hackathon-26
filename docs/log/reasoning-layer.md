@@ -15,3 +15,4 @@
   - Wrong: Jonah ("don't say", although the entry's ask is "book a study room").
   - Wrong: "What are the team name options for the hackathon?" (offline: the bank summary dropped the options. Online it went to the web and timed out at 60 s).
   - Right: "What did Nina ask me?" answered with Nina Brooks only. With both Ninas, `by_person("nina")` returns both entries, and the model picked one.
+- 2026-11-14 (brief P): person questions with ask/want/need are now listed by code (date, subject, ask; or "no ask" plus the summary), with no model call. Rerun of brief M (`check --offline`): **36/37** (before: 32/37). Person went from 10/14 to 14/14; no-match 2/2, due 15/15 and bank 5/6 are unchanged. The checker now also accepts "no ask" as "asked nothing". Without that, Rafe and Ivy would fail on wording and person would be 12/14, still up. Kept. The bank miss (team name options dropped by the summary) is logged, no fix.

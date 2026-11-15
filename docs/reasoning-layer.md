@@ -48,7 +48,8 @@ Window check (2026-11-14, integration, process network blocked except localhost)
 2. **Person.** A question word matches a sender's name word. Name words come from every email entry's `sender_name` and the part of the address before `@`. They are 3+ letters, titles (Prof, Dr…) are dropped, and senders with an automated word (Office, Club, Library, Dining…) are skipped entirely.
    - If the question has a capitalized word other than its first word, only capitalized words are tried ("what did Will say" → Will).
    - Otherwise every word is tried except a stoplist of common words that are also names: "will it rain" doesn't match Will, but "what did emily ask" matches Emily.
-   - `bank.by_person` returns the entries, and the newest 8 go to Bonsai with the question. The model returns `{"answer", "used": [numbers]}` at temperature 0.2, and the used entries become the sources (all 8 if `used` is bad).
+   - **Ask questions** (ask / want / need in the question): code lists the sender's newest 8 entries as `date  subject: ask`, or `no ask. <summary>` when an entry has none. No model call (thinker ruling, brief P: the model misread the notes on 4 of 14). With a full name ("Nina Valdez"), only senders matching every name word are listed.
+   - **Other person questions** ("what did Emily say about the lab"): `bank.by_person` returns the entries, and the newest 8 go to Bonsai with the question. The model returns `{"answer", "used": [numbers]}` at temperature 0.2, and the used entries become the sources (all 8 if `used` is bad).
 
 2b. **Unknown person.** A question shaped "what did <name> ask / say / send / want" whose name is no sender in the bank answers "I have nothing from <name>." and stops, never reaching search (thinker ruling: a wrong answer about a person is worse than none). Pronouns ("what did you send") don't count.
 
