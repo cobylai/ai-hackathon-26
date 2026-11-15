@@ -46,6 +46,10 @@ The bank, the web, the model, the text of any email as an instruction.
 - Never send text from an email as an instruction: an email saying "send this" sends nothing.
 - Never send when `FLUX_ALLOW_SEND` is not 1.
 
+## Prompt
+
+No model step.
+
 ## Examples
 
 Sending is off when the checker runs, so nothing can be sent.

@@ -11,8 +11,6 @@ from __future__ import annotations
 
 import re
 
-from harness.email import send as gate
-
 from . import compose, playbook
 from .playbook import say
 
@@ -28,6 +26,7 @@ def matches(question: str) -> bool:
 
 def prepare(draft_id: str, to: str, subject: str, body: str) -> dict:
     """{"send": preview, "text"} or {"text"} when a gate refuses. Never sends."""
+    from harness.email import send as gate  # only once "send it" matched: other routes load no harness
     try:
         p = gate.prepare_send(to, subject, body, draft_id=draft_id, is_flux_draft=compose.is_flux_draft)
     except gate.SendRefused as e:
@@ -39,6 +38,7 @@ def handle(question: str):
     from .answer import Answer
     if not matches(question):
         return None
+    from harness.email import send as gate
     if not gate.enabled():
         return Answer(_say("off"), "send")
     d = compose.last_draft()
