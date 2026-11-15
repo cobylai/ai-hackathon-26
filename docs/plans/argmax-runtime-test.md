@@ -60,7 +60,9 @@ The command line only. Muse code is not touched.
 **Steps for Coby:**
 1. Now: run `bw unlock --raw > SP/bw_session && chmod 600 SP/bw_session` in your terminal. I'll send the full path.
 2. Later, the real Wi-Fi-off run: turn Wi-Fi off, then run `cd N && ARGMAX_API_KEY=... .build/release/meeting-scribe file <clip> --no-speakers`. The exact line goes in `docs/argmax.md`. Paste me the output, then turn Wi-Fi back on.
-3. Only if Muse needs it before the demo: run `meeting-scribe live` once and allow the microphone for your terminal app.
+3. Required before the demo: run `meeting-scribe live` once and allow the microphone for your terminal app. It uses the same model, so there's no extra download.
+
+Adjustments from thinker 0 after approval: the Wi-Fi-off run comes right after A and B pass, and the microphone step is required. The 34-character key check stays, because `samples/argmax-pro-sdk/shared/.env.example` documents that ax_ keys are 34 chars.
 
 ## Open questions
 

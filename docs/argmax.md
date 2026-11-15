@@ -107,6 +107,21 @@ Do steps 1–2 **while still online**.
 5. Paste the whole output into the chat. A transcript means offline works. A license error or the 60 s "Model not found" error means it doesn't, and the error text says which part failed.
 6. Turn Wi-Fi back on.
 
+## Coby: microphone permission (required before the demo)
+
+Live mode uses the same model as file mode, so there's nothing extra to download. But macOS has to allow the microphone for the terminal app that will run it, and only you can click that prompt.
+
+1. In the terminal app you'll demo from, with `ARGMAX_API_KEY` set as in step 1 above:
+   ```bash
+   cd ~/code/ai-hackathon-26/.claude/worktrees/argmax-runtime-test-743dfa/samples/argmax-pro-sdk/native
+   ```
+   ```bash
+   .build/release/meeting-scribe live
+   ```
+2. Click **Allow** on the microphone prompt. If no prompt appears and nothing is transcribed, go to System Settings → Privacy & Security → Microphone and turn your terminal app on.
+3. Say a sentence. You should see the words appear. Press Ctrl+C to stop.
+4. If you'll demo from a different app (a Muse app instead of the terminal), that app needs its own permission. Grant it the same way before the demo.
+
 ## For Muse
 
 - How text gets to Python, proposed in `docs/INTERFACES.md` section 6: a long-running Swift process writes one line of text per utterance to stdout, and Python reads it.
