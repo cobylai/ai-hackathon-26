@@ -131,20 +131,33 @@ gather(question: str, search_fn, open_fn, max_results: int = 10, max_rephrases: 
 - **Time limit.** `max_seconds` (default 60, `None` for no limit) stops the loop and returns the normal not-found result, with a message starting "Ran out of time". A judge call already running is not cut off.
 - **Known weak spot.** A page that only says where the answer is ("posted on our Instagram") can be accepted as the answer.
 
-## 5. Context store — **planned** (`bank/`, branch `context-store`)
+## 5. Context store — **built** (`bank/`, branch `context-store`)
 
-A store of everything Muse has read, kept as markdown files. This is what the Wi-Fi-off demo answers from.
+A store of everything Muse has read, kept as markdown files. This is what the Wi-Fi-off demo answers from. Full details are in `docs/context-store.md`.
 
 ```python
-ingest(text, source, kind)   # kind = "email" | "page"; Bonsai pulls out the facts, then one .md entry is written
-search(query, limit)         # keyword search, offline, no model call
-by_person(name)
-due(start_date, end_date)    # entries with a deadline in the range
+from bank import ingest, search, by_person, due, rebuild_index
+
+ingest(text, source, kind, *, sender_name=None, sender_address=None, sent_date=None, subject=None)
+    # kind = "email" | "page". Needs the Bonsai server. The keywords win over anything in the text.
+    # -> {"status": "added" | "duplicate", "path": str, "entry": dict, "raw": [model replies]}
+search(query, limit=10)          # -> [entry]; keyword score, subject/sender hits count double, ties newest first
+by_person(name)                  # -> [entry]; part-word match on sender name or address, newest first
+due(start_date, end_date)        # -> [{"date", "time", "phrase", "entry"}]; inclusive, sorted by date then time
+rebuild_index()                  # -> path of data/bank/index.md (every ingest also rebuilds it)
 ```
 
-- **Partner's side:** after an email or page is scraped, call `ingest(text, source=url, kind="email")`.
-- **Data location:** `data/bank/` by default. It's gitignored because it will hold real email.
-- **Status:** the exact entry format and function details will be in `docs/plans/context-store.md` once that plan is written.
+- **Readers are offline:** `search`, `by_person` and `due` never call the model or the network, and never import `llm`.
+- **Entry:** one file at `data/bank/{course,person,other}/<sent_date>-<subject-slug>-<id12>.md`.
+  - The front matter, as JSON values, is `id`, `kind`, `folder`, `source`, `sender_name`, `sender_address`, `sent_date`, `subject`, `ask`, `deadlines`, `course`, `topic` and `ingested_at`.
+  - `deadlines` is a list of `[{"phrase", "date", "time"}]`. `date` is `YYYY-MM-DD` or null, and `time` is `HH:MM` or null.
+  - The body is a one or two sentence summary.
+  - An `entry` dict holds those fields plus `body` and `path`.
+- **Index:** `data/bank/index.md` has one line per entry: `date | from | folder | summary | deadlines | file`. It is capped at 20k tokens so it can be handed to Bonsai whole.
+- **Duplicates:** an item with the same `source` is skipped, with the content hash as a fallback. Pass a stable id such as the `thread_id` as `source`.
+- **Partner's side:** the sync loop in §2 calls `ingest(body, source=thread_id, kind="email", sender_name=..., sender_address=..., sent_date=..., subject=...)`. For a page, it calls `ingest(text, source=url, kind="page")`.
+- **Data location:** `data/bank/` by default, or `$MUSE_BANK_DIR` if that is set. It is gitignored (`data/`) because it will hold real email.
+- **Preload:** `python -m bank.load <folder> --kind email|page`.
 
 ## 6. Voice input — **planned** (Argmax, branch `argmax-runtime-test`)
 

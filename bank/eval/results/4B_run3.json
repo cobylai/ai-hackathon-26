@@ -1,0 +1,827 @@
+{
+  "run": 3,
+  "size": "4B",
+  "model": "/Users/cobylai/code/ai-hackathon-26/samples/bonsai-models/mlx/models/bonsai2-4b-mlx",
+  "prompt": "Read the {kind} below and fill in the JSON.\n\nRules:\n- sender_address: the email address in the From line. Never a name.\n- ask: the main thing the reader should do, as a short instruction. Any request or instruction to the reader counts, even polite or automated ones: pay, submit, send, book, register, fill out, push, reply. A bill or statement that says payments are due asks the reader to pay, even if it also says some people need no action. Pick the task given to the reader (\"could you take X?\") over closing lines like \"let me know\". Use null only when the text asks nothing of the reader, as in a newsletter or a thank-you note; a generic line like \"visit the website\" or \"questions? contact us\" alone is not an ask.\n- deadlines: every time by which the reader must do something, copied exactly as written, including relative words like \"tomorrow morning\", \"Friday at 5pm\", \"before Tuesday\", \"the 25th\". Do not turn them into dates. Event days, menus and opening hours are not deadlines. Empty list if none.\n- course: a course code like \"CS 3110\" if the text names one, else null.\n\n{KIND}:\n{text}",
+  "system": "You extract facts from emails and web pages for a student's notes. You copy words exactly and never invent information.",
+  "hint": "{\"sender_name\": \"name in the From line, or null\", \"sender_address\": \"email address in the From line, or null\", \"sender_is_person\": true, \"subject\": \"subject line or page title\", \"summary\": \"one or two sentences\", \"ask\": \"one sentence, or null\", \"deadlines\": [\"each phrase exactly as written\"], \"course\": \"course code or null\", \"topic\": \"a few words\"}",
+  "summary": {
+    "original": {
+      "n": 10,
+      "correct": 10,
+      "field_sender_address": 10,
+      "field_sent_date": 10,
+      "field_ask": 10,
+      "field_deadlines": 10,
+      "field_folder": 10,
+      "field_course": 10,
+      "field_summary": 10,
+      "model_only_sender_address": 10
+    },
+    "new": {
+      "n": 6,
+      "correct": 6,
+      "field_sender_address": 6,
+      "field_sent_date": 6,
+      "field_ask": 6,
+      "field_deadlines": 6,
+      "field_folder": 6,
+      "field_course": 6,
+      "field_summary": 6,
+      "model_only_sender_address": 6
+    },
+    "median_s": 6.62,
+    "due_2026_11_16_to_20": [
+      "2026-11-16 23:59 'Monday 11:59pm' [e04237aaef1f]",
+      "2026-11-16  'next Monday' [9cf9901b5187]",
+      "2026-11-17  'before Tuesday' [3f315665b1b2]",
+      "2026-11-18  'Wednesday at 2:30' [ccd495727029]",
+      "2026-11-18  'by 11/18' [85dc6ab9dc21]",
+      "2026-11-18  'end of day Wednesday' [1296f149aeb3]",
+      "2026-11-20 23:59 'Nov 20 at 11:59pm' [0399a9d20ad7]",
+      "2026-11-20  'the Friday after' [ccd495727029]"
+    ]
+  },
+  "rows": [
+    {
+      "id": "n01_ta_explicit_date",
+      "set": "new",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 8.72,
+      "entry": {
+        "sender_address": "wz88@univ.example.edu",
+        "sent_date": "2026-11-14",
+        "ask": "Submit HW 9 by then.",
+        "deadlines": [
+          {
+            "phrase": "Nov 20 at 11:59pm",
+            "date": "2026-11-20",
+            "time": "23:59"
+          }
+        ],
+        "folder": "course",
+        "course": "MATH 2940",
+        "body": "The homework assignment for MATH 2940 is available on the course site and covers sections 5.1 to 5.3."
+      },
+      "raw": [
+        {
+          "sender_name": "Wei",
+          "sender_address": "wz88@univ.example.edu",
+          "sender_is_person": true,
+          "subject": "MATH 2940 HW 9 posted",
+          "summary": "The homework assignment for MATH 2940 is available on the course site and covers sections 5.1 to 5.3.",
+          "ask": "Submit HW 9 by then.",
+          "deadlines": [
+            "Nov 20 at 11:59pm"
+          ],
+          "course": "MATH 2940",
+          "topic": "Homework",
+          "_ask_from_followup": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "n02_library_overdue",
+      "set": "new",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 6.35,
+      "entry": {
+        "sender_address": "library-notices@univ.example.edu",
+        "sent_date": "2026-11-13",
+        "ask": "Please return it by 11/18",
+        "deadlines": [
+          {
+            "phrase": "by 11/18",
+            "date": "2026-11-18",
+            "time": null
+          }
+        ],
+        "folder": "other",
+        "course": null,
+        "body": "The library is notifying the reader that a specific book is overdue and must be returned by a certain date to avoid fees."
+      },
+      "raw": [
+        {
+          "sender_name": "Olin Library",
+          "sender_address": "library-notices@univ.example.edu",
+          "sender_is_person": false,
+          "subject": "Overdue item reminder",
+          "summary": "The library is notifying the reader that a specific book is overdue and must be returned by a certain date to avoid fees.",
+          "ask": "Please return it by 11/18",
+          "deadlines": [
+            "by 11/18"
+          ],
+          "course": null,
+          "topic": "Overdue item"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "n03_friend_tonight",
+      "set": "new",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 16.97,
+      "entry": {
+        "sender_address": "tb405@univ.example.edu",
+        "sent_date": "2026-11-14",
+        "ask": "could you send me your notes tonight?",
+        "deadlines": [
+          {
+            "phrase": "tonight",
+            "date": "2026-11-14",
+            "time": null
+          }
+        ],
+        "folder": "person",
+        "course": null,
+        "body": "The sender missed Thursday's lecture and is requesting notes."
+      },
+      "raw": [
+        {
+          "sender_name": "Theo Brandt",
+          "sender_address": "tb405@univ.example.edu",
+          "sender_is_person": true,
+          "subject": "notes??",
+          "summary": "The sender missed Thursday's lecture and is requesting notes.",
+          "ask": "could you send me your notes tonight?",
+          "deadlines": [],
+          "course": null,
+          "topic": "lecture notes"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "n04_prof_next_monday",
+      "set": "new",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 6.9,
+      "entry": {
+        "sender_address": "lo23@univ.example.edu",
+        "sent_date": "2026-11-11",
+        "ask": "Bring a calculator.",
+        "deadlines": [
+          {
+            "phrase": "next Monday",
+            "date": "2026-11-16",
+            "time": null
+          }
+        ],
+        "folder": "course",
+        "course": "PHYS 1112",
+        "body": "A reminder that the PHYS 1112 quiz on rotational motion is next Monday at the start of lecture."
+      },
+      "raw": [
+        {
+          "sender_name": "Prof. Lena Ortiz",
+          "sender_address": "lo23@univ.example.edu",
+          "sender_is_person": true,
+          "subject": "Quiz reminder",
+          "summary": "A reminder that the PHYS 1112 quiz on rotational motion is next Monday at the start of lecture.",
+          "ask": "Bring a calculator.",
+          "deadlines": [
+            "next Monday"
+          ],
+          "course": "PHYS 1112",
+          "topic": "rotational motion",
+          "_ask_from_followup": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "n05_course_page",
+      "set": "new",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 4.8,
+      "entry": {
+        "sender_address": null,
+        "sent_date": "2026-11-14",
+        "ask": "Submit PS5",
+        "deadlines": [
+          {
+            "phrase": "Nov 24 at 11:59pm",
+            "date": "2026-11-24",
+            "time": "23:59"
+          },
+          {
+            "phrase": "Dec 4",
+            "date": "2026-12-04",
+            "time": null
+          }
+        ],
+        "folder": "course",
+        "course": "CS 2800",
+        "body": "This page lists the schedule and due dates for Week 12 and the Final project."
+      },
+      "raw": [
+        {
+          "sender_name": null,
+          "sender_address": null,
+          "sender_is_person": true,
+          "subject": "CS 2800 Discrete Structures - Fall 2026",
+          "summary": "This page lists the schedule and due dates for Week 12 and the Final project.",
+          "ask": "Submit PS5",
+          "deadlines": [
+            "Nov 24 at 11:59pm",
+            "Dec 4"
+          ],
+          "course": "CS 2800",
+          "topic": "Graph coloring",
+          "_ask_from_followup": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "n06_club_rsvp",
+      "set": "new",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 5.46,
+      "entry": {
+        "sender_address": "robotics@clubs.univ.example.edu",
+        "sent_date": "2026-11-16",
+        "ask": "please RSVP on the form",
+        "deadlines": [
+          {
+            "phrase": "end of day Wednesday",
+            "date": "2026-11-18",
+            "time": null
+          }
+        ],
+        "folder": "other",
+        "course": null,
+        "body": "The Robotics Club board is announcing the next build night and providing pizza for members to attend."
+      },
+      "raw": [
+        {
+          "sender_name": "Robotics Club board",
+          "sender_address": "robotics@clubs.univ.example.edu",
+          "sender_is_person": false,
+          "subject": "Build night + pizza",
+          "summary": "The Robotics Club board is announcing the next build night and providing pizza for members to attend.",
+          "ask": "please RSVP on the form",
+          "deadlines": [
+            "end of day Wednesday"
+          ],
+          "course": null,
+          "topic": "build night"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "o01_ta_regrade",
+      "set": "original",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 6.2,
+      "entry": {
+        "sender_address": "pn42@univ.example.edu",
+        "sent_date": "2026-11-09",
+        "ask": "Could you send me the commit hash of the version you think we graded by mistake?",
+        "deadlines": [
+          {
+            "phrase": "Friday at 5pm",
+            "date": "2026-11-13",
+            "time": "17:00"
+          }
+        ],
+        "folder": "course",
+        "course": "CS 3110",
+        "body": "The sender is requesting a commit hash for a specific question to update grades before the prelim."
+      },
+      "raw": [
+        {
+          "sender_name": "Priya Natarajan",
+          "sender_address": "pn42@univ.example.edu",
+          "sender_is_person": true,
+          "subject": "CS 3110 PS4 regrade",
+          "summary": "The sender is requesting a commit hash for a specific question to update grades before the prelim.",
+          "ask": "Could you send me the commit hash of the version you think we graded by mistake?",
+          "deadlines": [
+            "Friday at 5pm"
+          ],
+          "course": "CS 3110",
+          "topic": "PS4 regrade"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "o02_club_social",
+      "set": "original",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 18.61,
+      "entry": {
+        "sender_address": "outing@clubs.univ.example.edu",
+        "sent_date": "2026-11-10",
+        "ask": null,
+        "deadlines": [],
+        "folder": "other",
+        "course": null,
+        "body": "The Outing Club thanks members for attending the gorge hike and shares a slideshow of the best photos on the club drive."
+      },
+      "raw": [
+        {
+          "sender_name": "Outing Club",
+          "sender_address": "outing@clubs.univ.example.edu",
+          "sender_is_person": false,
+          "subject": "Fall photo slideshow!",
+          "summary": "The Outing Club thanks members for attending the gorge hike and shares a slideshow of the best photos on the club drive.",
+          "ask": null,
+          "deadlines": [],
+          "course": null,
+          "topic": "photo slideshow"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "o03_advisor_meeting",
+      "set": "original",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 6.05,
+      "entry": {
+        "sender_address": "hokafor@univ.example.edu",
+        "sent_date": "2026-11-11",
+        "ask": "Please book a 15 minute slot with me before Tuesday",
+        "deadlines": [
+          {
+            "phrase": "before Tuesday",
+            "date": "2026-11-17",
+            "time": null
+          }
+        ],
+        "folder": "person",
+        "course": null,
+        "body": "The sender is asking students to book a pre-enrollment slot for spring schedule confirmation."
+      },
+      "raw": [
+        {
+          "sender_name": "Dr. Helen Okafor",
+          "sender_address": "hokafor@univ.example.edu",
+          "sender_is_person": true,
+          "subject": "Pre-enrollment check-in",
+          "summary": "The sender is asking students to book a pre-enrollment slot for spring schedule confirmation.",
+          "ask": "Please book a 15 minute slot with me before Tuesday",
+          "deadlines": [
+            "before Tuesday"
+          ],
+          "course": null,
+          "topic": "Pre-enrollment"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "o04_lab_partner",
+      "set": "original",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 5.44,
+      "entry": {
+        "sender_address": "mb771@univ.example.edu",
+        "sent_date": "2026-11-12",
+        "ask": "push your part of the circuit analysis to the shared doc",
+        "deadlines": [
+          {
+            "phrase": "tomorrow morning",
+            "date": "2026-11-13",
+            "time": null
+          }
+        ],
+        "folder": "person",
+        "course": null,
+        "body": "Marcus asks the reader to push their circuit analysis part to a shared document and requests scope screenshots from Tuesday."
+      },
+      "raw": [
+        {
+          "sender_name": "Marcus Bell",
+          "sender_address": "mb771@univ.example.edu",
+          "sender_is_person": true,
+          "subject": "re: lab 6",
+          "summary": "Marcus asks the reader to push their circuit analysis part to a shared document and requests scope screenshots from Tuesday.",
+          "ask": "push your part of the circuit analysis to the shared doc",
+          "deadlines": [
+            "tomorrow morning"
+          ],
+          "course": null,
+          "topic": "lab 6"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "o05_newsletter",
+      "set": "original",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 6.93,
+      "entry": {
+        "sender_address": "dining-news@univ.example.edu",
+        "sent_date": "2026-11-13",
+        "ask": null,
+        "deadlines": [],
+        "folder": "other",
+        "course": null,
+        "body": "This email announces the menus for this week at Campus Dining, including taco night on Monday, noodle bar on Wednesday, and pumpkin bread from the bakery through the weekend."
+      },
+      "raw": [
+        {
+          "sender_name": "dining-news",
+          "sender_address": "dining-news@univ.example.edu",
+          "sender_is_person": false,
+          "subject": "This week at Campus Dining",
+          "summary": "This email announces the menus for this week at Campus Dining, including taco night on Monday, noodle bar on Wednesday, and pumpkin bread from the bakery through the weekend.",
+          "ask": null,
+          "deadlines": [],
+          "course": null,
+          "topic": "Campus Dining"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "o06_prof_extension",
+      "set": "original",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 6.88,
+      "entry": {
+        "sender_address": "dreyes@univ.example.edu",
+        "sent_date": "2026-11-12",
+        "ask": "Please submit your final notebook and a one page reflection on the course site.",
+        "deadlines": [
+          {
+            "phrase": "Monday 11:59pm",
+            "date": "2026-11-16",
+            "time": "23:59"
+          }
+        ],
+        "folder": "course",
+        "course": "ENGRD 2700",
+        "body": "Due to a server outage, the ENGRD 2700 project deadline has been moved from Friday to Monday at 11:59pm."
+      },
+      "raw": [
+        {
+          "sender_name": "Prof. Daniel Reyes",
+          "sender_address": "dreyes@univ.example.edu",
+          "sender_is_person": true,
+          "subject": "ENGRD 2700 project extension",
+          "summary": "Due to a server outage, the ENGRD 2700 project deadline has been moved from Friday to Monday at 11:59pm.",
+          "ask": "Please submit your final notebook and a one page reflection on the course site.",
+          "deadlines": [
+            "Monday 11:59pm"
+          ],
+          "course": "ENGRD 2700",
+          "topic": "project extension"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "o07_long_messy",
+      "set": "original",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 19.85,
+      "entry": {
+        "sender_address": "jk2290@univ.example.edu",
+        "sent_date": "2026-11-10",
+        "ask": "can you do the registration?",
+        "deadlines": [
+          {
+            "phrase": "Thursday at noon",
+            "date": "2026-11-12",
+            "time": "12:00"
+          }
+        ],
+        "folder": "person",
+        "course": null,
+        "body": "Jordan is responding to a forwarded email about hackathon team registration and housing issues, noting that the landlord has ignored the lease renewal and asking for help with form registration."
+      },
+      "raw": [
+        {
+          "sender_name": "Jordan",
+          "sender_address": "jk2290@univ.example.edu",
+          "sender_is_person": true,
+          "subject": "Fwd: Fwd: re: hackathon team + housing + random stuff",
+          "summary": "Jordan is responding to a forwarded email about hackathon team registration and housing issues, noting that the landlord has ignored the lease renewal and asking for help with form registration.",
+          "ask": "can you do the registration?",
+          "deadlines": [
+            "Thursday at noon"
+          ],
+          "course": null,
+          "topic": "hackathon housing registration"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "o08_rec_letter",
+      "set": "original",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 6.31,
+      "entry": {
+        "sender_address": "sa338@univ.example.edu",
+        "sent_date": "2026-11-09",
+        "ask": "Would you be willing to fill out the short form they'll email you?",
+        "deadlines": [],
+        "folder": "person",
+        "course": null,
+        "body": "The sender is applying for a summer research program and needs a peer reference. They are asking the recipient to fill out a short form."
+      },
+      "raw": [
+        {
+          "sender_name": "Sam",
+          "sender_address": "sa338@univ.example.edu",
+          "sender_is_person": true,
+          "subject": "Quick favor?",
+          "summary": "The sender is applying for a summer research program and needs a peer reference. They are asking the recipient to fill out a short form.",
+          "ask": "Would you be willing to fill out the short form they'll email you?",
+          "deadlines": [],
+          "course": null,
+          "topic": "summer research program"
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "o09_bursar",
+      "set": "original",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 6.07,
+      "entry": {
+        "sender_address": "bursar@univ.example.edu",
+        "sent_date": "2026-11-11",
+        "ask": "Pay by then",
+        "deadlines": [
+          {
+            "phrase": "5:00pm on the 25th",
+            "date": "2026-11-25",
+            "time": "17:00"
+          }
+        ],
+        "folder": "other",
+        "course": null,
+        "body": "Your November student account statement is available in the portal, and payments are due by a specific time."
+      },
+      "raw": [
+        {
+          "sender_name": "Bursar Office",
+          "sender_address": "bursar@univ.example.edu",
+          "sender_is_person": false,
+          "subject": "Statement available",
+          "summary": "Your November student account statement is available in the portal, and payments are due by a specific time.",
+          "ask": "Pay by then",
+          "deadlines": [
+            "5:00pm on the 25th"
+          ],
+          "course": null,
+          "topic": "student account statement",
+          "_ask_from_followup": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "o10_long_group_project",
+      "set": "original",
+      "correct": true,
+      "fields": {
+        "sender_address": true,
+        "sent_date": true,
+        "ask": true,
+        "deadlines": true,
+        "folder": true,
+        "course": true,
+        "summary": true
+      },
+      "model_only": {
+        "sender_address": true
+      },
+      "seconds": 9.59,
+      "entry": {
+        "sender_address": "ar512@univ.example.edu",
+        "sent_date": "2026-11-13",
+        "ask": "could you (yes you!) take the slides?",
+        "deadlines": [
+          {
+            "phrase": "Sunday night",
+            "date": "2026-11-15",
+            "time": null
+          },
+          {
+            "phrase": "Wednesday at 2:30",
+            "date": "2026-11-18",
+            "time": null
+          },
+          {
+            "phrase": "the Friday after",
+            "date": "2026-11-20",
+            "time": null
+          }
+        ],
+        "folder": "course",
+        "course": "INFO 1200",
+        "body": "Aisha provides a recap of the group project's current status and assigns tasks to team members for the next steps."
+      },
+      "raw": [
+        {
+          "sender_name": "Aisha Rahman",
+          "sender_address": "ar512@univ.example.edu",
+          "sender_is_person": true,
+          "subject": "INFO 1200 group project: status, plan, and asks",
+          "summary": "Aisha provides a recap of the group project's current status and assigns tasks to team members for the next steps.",
+          "ask": "could you (yes you!) take the slides?",
+          "deadlines": [
+            "Sunday night",
+            "Wednesday at 2:30",
+            "the Friday after"
+          ],
+          "course": "INFO 1200",
+          "topic": "group project"
+        }
+      ],
+      "error": null
+    }
+  ]
+}
