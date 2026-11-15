@@ -263,10 +263,13 @@ def reply(n: int, body: str) -> str:
             return "ERR mail.google.com | refused to edit a restored reply draft | body is not empty"
 
         box.fill(body or "")
+        state = compose_state(page, box)
+        who = ", ".join((state or {}).get("to_list") or [])
         if not wait_saved(page):
             close_compose(page)
             return "ERR mail.google.com | draft did not save | Gmail showed no 'Draft saved'"
         close_compose(page)
-        return DRAFT_SAVED
+        # A reply goes to whoever the thread says; name them so it is visible.
+        return f"{DRAFT_SAVED} | to {who}" if who else DRAFT_SAVED
     except Exception as exc:
         return f"ERR mail.google.com | reply draft failed | {_short(exc)}"
