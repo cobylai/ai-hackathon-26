@@ -46,3 +46,7 @@ act.parse(question) -> {"kind": "draft", "name", "gist"} | {"kind": "open", "tar
 `deps` replaces `online`, `open_app`, `open_page`, `save_draft` and `write_reply`; the tests use it.
 
 Tests: `python -m unittest reason.tests.test_act`. These need no model, network or browser, and nothing is opened.
+
+## Playbook
+
+All wording, the trigger patterns and the draft prompt live in `playbooks/act.md` (format: `playbooks/RULES.md`). Its examples run with `MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check --only act`: 6/6 on 2026-11-15, with the network blocked. No example says yes, so the checker never opens or drafts anything.
