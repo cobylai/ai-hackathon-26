@@ -175,8 +175,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         syncItem = m.addItem(withTitle: "Sync mail", action: #selector(syncMail), keyEquivalent: "")
         syncInfo = m.addItem(withTitle: "", action: nil, keyEquivalent: "")
         syncInfo.isEnabled = false; syncInfo.isHidden = true
-        let disc = m.addItem(withTitle: "Discover", action: nil, keyEquivalent: "")
-        disc.isEnabled = false   // not built yet
+        m.addItem(withTitle: "Discover", action: #selector(discover), keyEquivalent: "")
         m.addItem(.separator())
         m.addItem(withTitle: "Check setup", action: #selector(checkSetup), keyEquivalent: "")
         m.addItem(withTitle: "Set Argmax key…", action: #selector(setKey), keyEquivalent: "")
@@ -454,6 +453,12 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
 
     // ---- Menu actions ----
     @objc func openPanel() { show() }
+
+    /// The page's own Discover button: it asks "discover" and shows the Yes/No/Skip/Stop choices.
+    @objc func discover() {
+        show()
+        js("(b => b && b.click())(document.getElementById('discover'))")
+    }
     @objc func quit() { NSApp.terminate(nil) }
 
     @objc func checkSetup() {

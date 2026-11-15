@@ -92,7 +92,7 @@ The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it 
 
 - **Fn-Space, tap** (Fn = the Globe key): shows or hides the panel, with the cursor in the question box. Escape or clicking another app hides it.
 - **Fn-Space, hold:** push to talk. It records while held and stops on release; the panel shows the transcript and the answer. It calls the page's own talk start and stop (`window.museTalk.start()/stop()` when the page has them, else the "Hold to talk" button).
-- **Menu bar** (waveform icon): Open, Sync mail (`scripts/sync_email.py 7`; the last result shows under it), Discover (disabled until it's built), Check setup, Set Argmax key…, Quit Muse.
+- **Menu bar** (waveform icon): Open, Sync mail (`scripts/sync_email.py 7`; the last result shows under it), Discover (presses the page's Discover button), Check setup, Set Argmax key…, Quit Muse.
 - The hotkey is two constants at the top of `app/Muse.swift` (`hotKeyCode`, `hotKeyFlags`). The system hotkey call ignores Fn, so Muse reads the keyboard with an event tap, which needs **Accessibility** for Muse. It swallows Fn-Space, so no space reaches the app in front.
 
 ### First launch (once, online or off)
