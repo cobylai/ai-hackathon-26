@@ -162,12 +162,11 @@ def read(page: int = 1) -> str:
 def elements(filter: str | None = None) -> str:
     """List visible clickable and typeable items as numbered lines."""
     current = _page()
-    listing = elements_mod.list_elements(current, filter)
-    count = len(listing.splitlines()) if listing else 0
+    listing, shown, matched = elements_mod.list_elements_counts(current, filter)
     word = state.classify(current)
     if word in ("BLOCKED", "LOGIN", "ERR"):
         listing = "(page is not usable; list may be incomplete)\n" + listing
-    suffix = f"{count} elements"
+    suffix = f"{shown} of {matched} elements" if shown < matched else f"{matched} elements"
     hint = "[more: call elements with a filter]"
     return _cap(f"{_status_line(word, current, suffix)}\n{listing}", hint)
 

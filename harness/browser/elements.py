@@ -33,6 +33,13 @@ def _require_fresh_listing(page: Page) -> None:
 
 def list_elements(page: Page, filter: str | None = None) -> str:
     """Return numbered lines like ``3. button "Sign in"`` (at most 40)."""
+    return list_elements_counts(page, filter)[0]
+
+
+def list_elements_counts(
+    page: Page, filter: str | None = None
+) -> tuple[str, int, int]:
+    """Return ``(lines, shown, matched)`` so callers can report truncation."""
     items = scan(page)
     if filter:
         needle = filter.strip().lower()
@@ -41,9 +48,11 @@ def list_elements(page: Page, filter: str | None = None) -> str:
             for item in items
             if needle in item["label"].lower() or needle in item["kind"].lower()
         ]
-    return "\n".join(
-        f'{item["n"]}. {item["kind"]} "{item["label"]}"' for item in items[:MAX_LINES]
+    shown = items[:MAX_LINES]
+    text = "\n".join(
+        f'{item["n"]}. {item["kind"]} "{item["label"]}"' for item in shown
     )
+    return text, len(shown), len(items)
 
 
 def click(page: Page, n: int) -> None:

@@ -172,3 +172,11 @@ def test_other_start_failure_returns_err(monkeypatch):
     out = check(tools.back())
     assert out.startswith("ERR local")
     assert "browser failed to start" in out
+
+
+def test_elements_reports_truncation(btools, session, site):
+    btools.goto(site.url("hello.html"))
+    links = "".join(f'<a href="/x{i}">Headline number {i}</a>\n' for i in range(45))
+    session.page.set_content(f"<html><body>{links}</body></html>")
+    out = check(btools.elements())
+    assert out.splitlines()[0].endswith("40 of 45 elements")
