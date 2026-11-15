@@ -101,18 +101,49 @@ def _browser_tool(fn):
     return wrapper
 
 
+WEB_SCHEMES = ("http", "https")
+
+# Scheme prefixes that must never reach the browser, with or without "//".
+BLOCKED_SCHEMES = (
+    "about",
+    "blob",
+    "chrome",
+    "chrome-extension",
+    "data",
+    "file",
+    "ftp",
+    "javascript",
+    "mailto",
+    "view-source",
+)
+
+
 def _normalize_url(url: str) -> str:
+    """Accept only web URLs; a page cannot lure the model into local files."""
     url = url.strip()
-    if "://" in url or url.startswith(("about:", "data:", "file:")):
+    if not url:
+        raise ValueError("empty URL")
+    if "://" in url:
+        scheme = url.split("://", 1)[0].lower()
+        if scheme not in WEB_SCHEMES:
+            raise ValueError(f"unsupported URL scheme: {scheme}")
         return url
+    if url.startswith("//"):
+        return f"https:{url}"
+    prefix = url.split(":", 1)[0].lower()
+    if prefix in BLOCKED_SCHEMES:
+        raise ValueError(f"unsupported URL scheme: {prefix}")
     return f"https://{url}"
 
 
 @_browser_tool
 def goto(url: str) -> str:
     """Open a URL; return status line, title and the first page of text."""
+    try:
+        target = _normalize_url(url)
+    except ValueError as exc:
+        return _cap(f"ERR local | {exc}", hint="[end]")
     page = _page()
-    target = _normalize_url(url)
     try:
         response = page.goto(target, wait_until="domcontentloaded", timeout=20000)
     except Exception as exc:
