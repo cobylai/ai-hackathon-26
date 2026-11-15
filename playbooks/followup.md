@@ -79,5 +79,5 @@ No model step.
 | What's on my calendar tomorrow? | calendar | calendar |
 | and Friday? | calendar | calendar; Fri Nov 20 |
 | and next week? | calendar | calendar; next week |
-| What is the capital of Peru? | offline | offline |
-| the first one | not_found | didn't look it up |
+| What is the capital of Peru? | general | Lima; From general knowledge |
+| the first one | general | From general knowledge |

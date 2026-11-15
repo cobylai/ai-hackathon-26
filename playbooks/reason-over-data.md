@@ -13,7 +13,7 @@ Questions about the user's own things that no code route takes and that need jud
 - domain: `deadlines?|due|emails?|mail|inbox|class(?:es)?|courses?|meetings?|exams?|homework|assignments?|quiz(?:zes)?|labs?|professor|prof|grades?|syllabus|schedule|calendar|lecture|section|office hours`
 - domain: `owe|owed|owes|pay|paid|bills?|money|rent|share|deposit|fees?|(?:do|did|have|am|was) i (?:owe|need|have|pay|miss|forget|agree|promise|sign)`
 - money: `owe|owed|owes|pay|paid|bills?|money|rent|share|deposit|fees?|cost|costs|spend|spent|how much`
-- planning: `should i|shall i|what do i (?:do|need)|work on|prioriti[sz]e|priority|focus on|plan (?:my|for|out)|first|busy|free time|catch up on|fall behind|behind on`
+- planning: `should i|shall i|what do i (?:do|need)|work on|prioriti[sz]e|priority|focus on|plan (?:my|for|out)|busy|free time|catch up on|fall behind|behind on`
 
 About the user (checked in code before any model call) when any of these hold: `personal`, or "me" outside `not_me`; `domain` or `planning`; a word that is a sender's name; a course code (CS 3110); or a saved entry whose subject or sender has a 4+ letter word of the question (`bank.query.subject_hits`). A plain "I" alone doesn't count ("How do I cook rice?" is general).
 

@@ -114,12 +114,20 @@ FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
    - Each entry's suggestions come together, best first, so "What's due tomorrow?" offers the soonest item's page and reminder.
    - `Answer.suggestions`; nothing runs until a click. A dismissed, drafted or opened one doesn't come back in that chat. The chat loop prints them as lines.
 
-3. **Everything else.**
-   - **Web gate (RULES.md rule 9).** If the bank can't answer, only a clear factual question goes to the web: it starts with a question word (after "Flux," or "please") or ends with "?", and has no "my"/"mine". Otherwise it answers `not_found` with "I don't have that in your notes or mail." (a "my" question) or "I'm not sure what you're asking, so I didn't look it up." Nothing is sent to a search engine.
+3. **Everything else (brief Y: `reason/think.py`, `playbooks/general.md`, `playbooks/reason-over-data.md`).** No code route took it, so code sorts it before any model call.
+   - **About the user → `reason`:**
+     1. The bank route first.
+     2. Else code-gathered facts go to Bonsai with thinking on. Code checks every date, weekday, time, amount, course code and mid-sentence name in the answer against those facts, retries once, and otherwise lists the facts instead.
+     3. Nothing found: "I have nothing saved about that."
+   - **General → `general`:**
+     1. The bank first (explanations and small talk skip it).
+     2. The web for a clear factual lookup when online.
+     3. Else Bonsai's own knowledge, thinking on, labelled "From general knowledge, not from your mail or the web."
+   - The web gate below still decides what may reach the web. The two old not_found replies became general and reason answers.
+   - **Web gate (RULES.md rule 9).** If the bank can't answer, only a clear factual question goes to the web: it starts with a question word (after "Flux," or "please") or ends with "?", and has no "my"/"mine".
    - `bank.search(question, limit=5)`. The entries are written as numbered note blocks and passed to `sufficiency.judge` once. If it's enough, the route is `bank`, and the source is the block that holds the judge's quote.
    - If it's not enough and the network is up (one TCP connect to www.bing.com:443, 2 s timeout), the route is `web`. That runs `gather(question, sufficiency.websearch.search, harness.search.tools.open_page, max_seconds=60)`. websearch tries the partner's `engine.search` first, then Bing. On success the answer is filed with `bank.ingest(..., source=url, kind="page")`. harness is imported only here, so offline answers never load Playwright.
-   - If it's not enough and the network is down, the route is `offline`: "I don't have that saved, and the Mac is offline, so I can't look it up."
-   - If gather finds nothing, the route is `not_found`, with gather's message.
+   - If it's not enough and the network is down, or gather finds nothing, the general route answers from Bonsai's own knowledge, labelled (brief Y; before, these were the `offline` message and `not_found`).
 
 **What the web route files (a change from the plan).** The plan said to ingest the page itself. But the bank keeps a one or two sentence summary, not the page. cornell.edu's summary came out as a news item, so asking the same question offline got the offline message. The route now files a short text with the question, the answer and the quoted line, with `subject="<question> <answer>"`. ingest's `subject=` keyword wins over the model. With that change, "When did the Berlin Wall fall?" answered from the bank offline (below). The source is still the page url.
 

@@ -208,7 +208,7 @@ answer(question, today=None, session=None) -> Answer
     #         rows (what a due / calendar / person answer listed, for follow-ups)
     # session: reason.session.Session() for follow-ups; None (the default) means none
     # route: "about" | "followup" | "discover" | "act" | "remember" | "forget" | "about_me" | "people" | "catchup" | "due" | "calendar" | "person"
-    #        | "chat" | "bank" | "web" | "offline" | "not_found"
+    #        | "chat" | "general" | "reason" | "bank" | "web" | "not_found"
 ```
 
 - **What's Flux and the tour** (`reason/tour.py`, `playbooks/about.md`; checked first, before follow-ups, unless something waits for a yes), code only, no model call. The whole question "what's Flux", "what can you do", "help" or "how do I use this" gives the overview: two sentences, seven things it can do, each with an example question as a button (`Answer.choices`, `[[label, words]]`, sent by `POST /ask` as `choices`). "Show me" starts an 8-step tour; "next", "back", "skip" and "stop" move it, typed or spoken, and the step is kept in the session (saved with the chat, so a reopened chat resumes). Each step runs real examples taken from the routes' own Examples tables, filled with the bank's newest sender with an ask and nearest coursework due item, on a scratch session, and clears anything they left waiting for a yes, so nothing is saved, opened or sent. A step without data says what to sync and moves on. Wording and the step list live in `about.md`.
@@ -234,12 +234,32 @@ answer(question, today=None, session=None) -> Answer
   - "What did everyone / anyone ask me": every sender's open asks (deadline not passed, or none), newest first, at most 12. Code only.
   - A misheard name ("Elena asked me", with an ask/say/send/want/need verb): a word that is no sender but close to exactly one (up to 2 extra letters at the start or end, or one letter off when both have 5+) lists that sender's asks under "(I heard "Elena" and took it as Lena Marsh.)". Close to two or more: "Did you mean …?".
   - A "what did <name> ..." question with no matching or close sender answers "I have nothing from <name>." and stops.
-- **Chat** (`reason/chat.py`, `playbooks/chat.md`): greetings, mic checks and thanks with almost nothing else said get a fixed reply. Never the web or the model.
+- **Chat** (`reason/chat.py`, `playbooks/chat.md`): "who are you" gets a fixed reply. Other small talk (greetings, mic checks, thanks) goes to the general route in a sentence or two, thinking off. Never the web.
 - **Due rows** carry each entry's summary, so amounts come along. On Sat/Sun, "this week" means today through Sunday.
-- **Else:** `bank.search` then `sufficiency.judge`.
-  - **Web gate** (`playbooks/RULES.md` rule 9): only a clear factual question goes on: one that starts with a question word or ends with "?" and has no "my". Otherwise the route is `not_found` with "I don't have that in your notes or mail." ("my") or "I'm not sure what you're asking, so I didn't look it up.", and nothing is sent to a search engine.
-  - If that isn't enough and the Mac is online, `gather` runs with `sufficiency.websearch.search` (partner search, then Bing) and `tools.open_page`, and the answer is filed with `bank.ingest(kind="page", source=url)`.
-  - If offline, the answer says plainly that it isn't saved and the Mac is offline.
+- **Else** (brief Y, `reason/think.py`). Code sorts the question before any model call:
+  - **About the user → route `reason`** (`playbooks/reason-over-data.md`). It counts as about the user if any of these hold:
+    - "my", "mine", or "me" outside "tell me / show me / help me".
+    - A deadline, class, money or planning word, or "do I owe / did I miss …".
+    - A sender's name, or a course code.
+    - A saved entry whose subject or sender has a 4+ letter word of the question (`bank.query.subject_hits`).
+
+    Then:
+    1. The bank route first (search + judge + quote check; route `bank` if it answers).
+    2. Code gathers the facts:
+       - `bank.search` (top 8)
+       - for money, every entry naming an amount
+       - for planning or deadline questions, the earliest 12 due items in the next 6 days
+       - for planning, the calendar too (skipped if Calendar takes over 6 s)
+    3. Nothing found: "I have nothing saved about that." (no model call).
+    4. Otherwise Bonsai, with thinking on, answers in JSON `{"answer", "used"}`. Code then checks every date, weekday, time, amount, course code and mid-sentence name against the facts. A failure retries once with thinking off; a second failure lists the facts after "I couldn't give an answer I could check…". The answer ends with `Source:` for the entries used, and `sources` holds their paths.
+  - **General → route `general`** (`playbooks/general.md`):
+    1. Small talk and explanations / how-to / writing / maths go straight to the model.
+    2. A lookup tries the bank, then, when online and a clear factual question (`web_ok`, RULES rule 9), the web with the quote check (route `web`).
+    3. Else, and always offline: Bonsai's own knowledge, thinking on, with the last 3 turns (600 tokens) of the chat as context.
+    4. It always ends "From general knowledge, not from your mail or the web."
+    5. News, prices, weather and "latest" questions offline start "I can't check that right now, so this may be out of date."
+  - **Time cap:** 1,500 thinking tokens (about 30 s). If it runs out inside the thinking, one quick call without thinking gets the notes so far and gives the final answer, then "(I was cut short, so this is brief.)".
+  - Route `offline` is gone: offline, general questions get a general answer.
 - **Chat loop:** `python -m reason [--today YYYY-MM-DD] [--speak]`. An empty line records voice (and stops a spoken answer); the next Enter stops it.
 - **Chat window:** `python -m reason.web [--today] [--port 8765]` serves one local page from the standard library, with no remote assets. It has a type box, hold-to-talk, a source line under each answer, and an "online/offline · N items in bank" label. Clicking the label lists the bank (`GET /bank`).
 - **Bank to use:** set `FLUX_BANK_DIR`. The demo uses `~/flux-demo-bank` (sample mail, see `docs/integration.md`).
