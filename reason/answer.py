@@ -2,6 +2,7 @@
 
 Routes, picked in code (reason/route.py), in this order:
   due     -> bank.due over a date range, list written in code, no model call
+  calendar-> Apple Calendar events over a date range (applecal), written in code, no model call
   person  -> bank.by_person, Bonsai answers from those entries only
   else    -> bank.search + sufficiency.judge; if not enough: gather on the web when
              online (and ingest the page), or the plain offline message
@@ -11,7 +12,7 @@ from __future__ import annotations
 import socket
 import time
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import bank
@@ -40,7 +41,7 @@ PERSON_HINT = '{"answer": "your answer", "used": [1]}'
 @dataclass
 class Answer:
     text: str
-    route: str                      # due | person | bank | web | offline | not_found
+    route: str                      # due | calendar | person | bank | web | offline | not_found
     sources: list[str] = field(default_factory=list)  # bank entry paths, or one url
     seconds: float = 0.0
 
@@ -117,6 +118,46 @@ def _due(question: str, today: date, root) -> Answer:
             lines.append(f"    {summary}")
     paths = list(dict.fromkeys(r["entry"]["path"] for r in rows))
     return Answer("\n".join(lines), "due", paths)
+
+
+NEXT_EVENT_DAYS = 60
+
+
+def _event_line(e: dict, with_day: bool) -> str:
+    day = route._day(e["start"].date()) if with_day else ""
+    if e.get("all_day"):
+        when = "all day"
+    else:
+        when = _time(f"{e['start']:%H:%M}")
+        if e.get("end") and e["end"] > e["start"]:
+            when += "\u2013" + _time(f"{e['end']:%H:%M}")
+    where = f" ({e['location']})" if e.get("location") else ""
+    return f"- {' '.join(x for x in (day, when) if x)}  {e.get('title') or '(no title)'}{where}"
+
+
+def _calendar(question: str, today: date, now: datetime, events_fn) -> Answer:
+    """Apple Calendar events, listed by code. No model call."""
+    import applecal
+    events_fn = events_fn or applecal.events
+    src = f"Source: Apple Calendar ({applecal.calendar_name()})"
+    try:
+        if route.is_next_event(question):
+            evs = [e for e in events_fn(today, today + timedelta(days=NEXT_EVENT_DAYS))
+                   if (e["start"] >= now if not e.get("all_day") else e["start"].date() >= now.date())]
+            if not evs:
+                return Answer(f"Nothing coming up on your calendar in the next {NEXT_EVENT_DAYS} days.\n{src}",
+                              "calendar")
+            return Answer(f"Your next event:\n{_event_line(evs[0], True)}\n{src}", "calendar")
+        start, end, label = route.due_range(question, today)
+        evs = events_fn(start, end)
+    except applecal.CalendarError as e:
+        return Answer(f"I couldn't read Apple Calendar ({e}).", "calendar")
+    if not evs:
+        return Answer(f"Nothing on your calendar {label}.\n{src}", "calendar")
+    head = (f"On your calendar {label}" if start == end else
+            f"On your calendar {label} ({_short_date(start.isoformat())} to {_short_date(end.isoformat())})")
+    lines = [head + ":"] + [_event_line(e, start != end) for e in evs]
+    return Answer("\n".join(lines) + "\n" + src, "calendar")
 
 
 def _senders(root) -> set[str]:
@@ -240,7 +281,8 @@ def saved_page(question: str, ans: str, quote: str, url: str) -> str:
 # ---- entry point ------------------------------------------------------------
 
 def answer(question: str, today: date | str | None = None, *, root: Path | None = None,
-           _online=None, _web_fns: dict | None = None) -> Answer:
+           _online=None, _web_fns: dict | None = None, _events=None,
+           _now: datetime | None = None) -> Answer:
     """Answer one question. today defaults to date.today(); root defaults to the bank dir."""
     t0 = time.monotonic()
     if isinstance(today, str):
@@ -252,6 +294,9 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
 
     if route.is_due(q):
         a = _due(q, today, root)
+    elif route.is_calendar(q):
+        now = _now or (datetime.now() if today == date.today() else datetime.combine(today, datetime.min.time()))
+        a = _calendar(q, today, now, _events)
     elif (who := route.person_in(q, _senders(root))):
         a = _person(q, who, today, root)
     elif (name := route.asked_name(q)):

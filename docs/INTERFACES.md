@@ -176,10 +176,11 @@ One entry point for typed and spoken questions. Code picks the route, never the 
 from reason import answer
 answer(question, today=None) -> Answer
     # Answer: text (ends with "Source: sender, Nov 12" or the url), route, sources, seconds
-    # route: "due" | "person" | "bank" | "web" | "offline" | "not_found"
+    # route: "due" | "calendar" | "person" | "bank" | "web" | "offline" | "not_found"
 ```
 
 - **Due:** the question says due/deadline. Code picks the date range, calls `bank.due` and writes the list. No model call.
+- **Calendar:** checked after due. Triggers on "calendar", "schedule", "my/next meeting/event/appointment", "what do I have", "am I free". `applecal.events(start, end)` reads one Calendar.app calendar with osascript (`MUSE_CALENDAR`, default "Muse demo"), over the due route's date ranges or the next upcoming event. Code writes the list. No model call, no network. Details are in `docs/calendar.md`.
 - **Person:** a question word is a sender's name.
   - "What did <name> ask / want / need": code lists that sender's newest 8 entries as date, subject and ask (or "no ask" and the summary). No model call.
   - Other person questions: `bank.by_person`, then Bonsai answers from those entries only.
