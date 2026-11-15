@@ -107,3 +107,17 @@ def test_read_refuses_a_row_without_a_thread_id(wired, monkeypatch):
     out = wired.read(1)
     assert out.startswith("ERR")
     assert "thread id" in out
+
+
+def test_render_keeps_the_email_tag_parseable():
+    """A display name with a quote must not break the tag the model parses."""
+    from harness.email.read import Message, render
+
+    out = render(
+        [Message('Ann "A" Smith <a@b.c>', "Nov 14, 2026,\n9:00 AM", "hi", ("report.pdf",))]
+    )
+    assert out == (
+        '<email from="Ann \'A\' Smith <a@b.c>" date="Nov 14, 2026, 9:00 AM" '
+        'attachments="report.pdf">\nhi\n</email>'
+    )
+    assert out.count('"') == 6

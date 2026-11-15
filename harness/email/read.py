@@ -183,13 +183,19 @@ def read_messages(page: Page) -> list[Message]:
     return found
 
 
+def _attr(value: str) -> str:
+    """One attribute value: no quotes, no newlines, no doubled spaces."""
+    return " ".join(str(value or "").split()).replace('"', "'")
+
+
 def render(messages: list[Message]) -> str:
     blocks = []
     for message in messages:
-        attrs = f'from="{message.sender}" date="{message.date}"'
+        attrs = f'from="{_attr(message.sender)}" date="{_attr(message.date)}"'
         if message.attachments:
-            names = "; ".join(name.replace('"', "'") for name in message.attachments)
-            attrs += f' attachments="{names}"'
+            names = "; ".join(filter(None, (_attr(name) for name in message.attachments)))
+            if names:
+                attrs += f' attachments="{names}"'
         blocks.append(f"<email {attrs}>\n{message.body}\n</email>")
     return "\n".join(blocks)
 
