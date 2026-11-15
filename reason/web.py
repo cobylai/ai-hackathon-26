@@ -14,7 +14,13 @@ stay on one thread.
                   pending: an action is held for a yes; the page shows Yes / Cancel
                   choices: [[label, word]] when a discovery question is held; the page shows
                   those buttons instead (Yes / No / Skip / Stop), each reply as a new turn
+                  suggestions: [{"id", "line", "button", "kind"}], at most 2 (playbooks/suggest.md)
+                  draft: {"id", "to", "to_name", "subject", "body", "used", "kind"} for the draft box
     POST /speak/stop  stop reading aloud (the Speak switch turned off)
+    POST /suggest/<id>          a Suggested button: {"draft"} for a reply, {"text"} after opening a page
+    POST /suggest/<id>/dismiss  it won't be suggested again in this chat
+    POST /draft/<id>/write      {"gist"} -> {"draft"} with a new body (Bonsai)
+    POST /draft/open            {"to", "subject", "body"} -> {"text"}: `open mailto:...`, never sends
 The Discover button in the bar sends "discover" to /ask (playbooks/discover.md).
 Follow-ups ("and tomorrow?", "the first one", "open it") lean on the last answer of the
 open chat: one current Session (reason/session.py) for the server, since the window serves
@@ -38,7 +44,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import discover
 from bank import store
 
-from . import act
+from . import act, compose, suggest
 from .answer import answer as _answer, online as _online
 from . import chats
 from .session import Session
@@ -164,6 +170,29 @@ PAGE = """<!doctype html>
   .btn { height: 24px; padding: 0 12px; border-radius: 6px; font-size: 13px; border: 1px solid var(--fieldline); background: var(--field); }
   .btn:hover { filter: brightness(.97); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* Suggested next steps and the draft box (brief W; playbooks/suggest.md, compose.md) */
+  .sugg { margin-top: 10px; }
+  .sugg .lbl { font-size: 11px; font-weight: 600; color: var(--text3); margin: 0 0 4px; }
+  .suggest { margin-top: 4px; padding: 5px 5px 5px 12px; border: 1px solid var(--line); border-radius: 8px; display: flex;
+             align-items: center; gap: 8px; font-size: 13px; }
+  .suggest .what { flex: 1 1 auto; min-width: 0; }
+  .suggest .done { color: var(--text2); white-space: pre-wrap; }
+  .suggest .x { width: 22px; height: 22px; border-radius: 5px; color: var(--text3); display: grid; place-items: center; font-size: 14px; flex: none; }
+  .suggest .x:hover { background: var(--hover); color: var(--text2); }
+  .draft { margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; display: flex;
+           flex-direction: column; gap: 8px; font-size: 13px; }
+  .draft label { display: flex; align-items: center; gap: 8px; color: var(--text2); }
+  .draft label > span { width: 52px; flex: none; }
+  .draft input, .draft textarea { flex: 1; min-width: 0; width: 100%; font: inherit; font-size: 13px; color: var(--text);
+           background: var(--field); border: 1px solid var(--fieldline); border-radius: 6px; padding: 5px 8px; outline: 0; }
+  .draft textarea { resize: vertical; min-height: 9em; line-height: 1.45; }
+  .draft input:focus, .draft textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .draft input::placeholder { color: var(--text3); }
+  .draft .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .draft .note { flex: 1 1 160px; font-size: 12px; color: var(--text3); }
+  .draft .used { font-size: 12px; color: var(--text3); }
+  .draft.closed { padding: 8px 12px; color: var(--text2); }
 
   .empty { padding-top: 12vh; }
   .empty p { margin: 0 0 12px; color: var(--text2); font-size: 13px; }
@@ -377,8 +406,77 @@ function showAnswer(t, r) {
     const what = (kept.shift() || 'Muse is waiting for a yes.').trim();
     render(a, kept.join(NL)); if (!a.childNodes.length) a.remove();
     confirmRow(t, what);
+  } else if (r.draft) {
+    render(a, (kept[0] || '').trim());  // the head; the box holds To, Subject and body
+    draftBox(t, r.draft, null);
   } else render(a, kept.join(NL));
   foot(t, r, sourceLine);
+  if (r.suggestions && r.suggestions.length) suggestRows(t, r.suggestions);
+}
+
+// Suggested: at most two rows, one line + one button + a dismiss ×. Nothing runs until a click.
+function suggestRows(t, list) {
+  const box = el('div', 'sugg'); box.appendChild(el('div', 'lbl', 'Suggested'));
+  list.forEach((s, i) => {
+    const row = el('div', 'suggest'); row.id = 'suggest-' + i;
+    row.appendChild(el('span', 'what', s.line));
+    const go = el('button', 'btn', s.button), x = el('button', 'x', '×');
+    go.type = x.type = 'button'; x.title = 'Dismiss'; x.setAttribute('aria-label', 'Dismiss');
+    go.onclick = async () => {
+      if (busy) return;
+      row.textContent = ''; const w = el('div', 'working'); w.appendChild(el('span', 'spin'));
+      w.appendChild(el('span', '', s.kind === 'open' ? 'Opening…' : 'Writing…')); row.appendChild(w);
+      let r; try { r = await postJSON('/suggest/' + s.id, {}); } catch (e) { r = { text: "Couldn't reach Muse." }; }
+      if (r.draft) { const d = draftBox(box, r.draft, row); row.remove(); d.querySelector('textarea').focus(); }
+      else { row.textContent = ''; row.appendChild(el('span', 'what done', (r.text || '').trim())); }
+    };
+    x.onclick = async () => {
+      row.remove(); if (!box.querySelector('.suggest')) box.remove();
+      try { await post('/suggest/' + s.id + '/dismiss'); } catch (e) {}
+      q.focus();
+    };
+    row.appendChild(go); row.appendChild(x); box.appendChild(row);
+  });
+  t.appendChild(box);
+}
+
+// The draft box: editable To / Subject / body; Open in Mail hands a mailto: to macOS. Nothing is sent.
+function draftBox(parent, d, before) {
+  const c = el('div', 'draft');
+  const field = (label, value, ph) => { const l = el('label'); l.appendChild(el('span', '', label));
+    const i = el('input'); i.value = value || ''; if (ph) i.placeholder = ph; l.appendChild(i); c.appendChild(l); return i; };
+  const to = field('To', d.to, d.to ? '' : 'No address stored' + (d.to_name ? ' for ' + d.to_name : ''));
+  const subj = field('Subject', d.subject);
+  let gist = null;
+  if (d.kind !== 'new') {
+    const l = el('label'); l.appendChild(el('span', '', 'Say'));
+    gist = el('input'); gist.placeholder = 'What should it say? (optional)'; l.appendChild(gist);
+    const w = el('button', 'btn', 'Write'); w.type = 'button'; l.appendChild(w); c.appendChild(l);
+    const write = async () => {
+      if (!gist.value.trim()) { gist.focus(); return; }
+      w.disabled = true; note.textContent = 'Writing…';
+      let r; try { r = await postJSON('/draft/' + d.id + '/write', { gist: gist.value }); } catch (e) { r = {}; }
+      w.disabled = false;
+      if (r.draft) { body.value = r.draft.body; d.id = r.draft.id; note.textContent = 'Nothing is sent.'; }
+      else note.textContent = (r.text || "Couldn't write that.").trim();
+    };
+    w.onclick = write; gist.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); write(); } });
+  }
+  const body = el('textarea'); body.value = d.body || ''; body.rows = 8; c.appendChild(body);
+  if (d.used && d.used.length) c.appendChild(el('div', 'used', 'Used: ' + d.used.join('; ')));
+  const row = el('div', 'row'), note = el('span', 'note', 'Nothing is sent.');
+  const discard = el('button', 'btn', 'Discard'), open = el('button', 'btn primary', 'Open in Mail');
+  discard.type = open.type = 'button';
+  discard.onclick = () => { c.textContent = ''; c.className = 'draft closed'; c.appendChild(el('span', '', 'Discarded.')); q.focus(); };
+  open.onclick = async () => {
+    open.disabled = true;
+    let r; try { r = await postJSON('/draft/open', { to: to.value, subject: subj.value, body: body.value }); }
+    catch (e) { r = { text: "Couldn't reach Muse." }; }
+    open.disabled = false; note.textContent = (r.text || '').trim();
+  };
+  row.appendChild(note); row.appendChild(discard); row.appendChild(open); c.appendChild(row);
+  parent.insertBefore(c, before && before.parentNode === parent ? before : null);
+  return c;
 }
 
 // into: a confirm row; the yes / no and its result stay in that row instead of a new turn.
@@ -441,6 +539,7 @@ function talkState(s) {
   q.placeholder = s === 'listening' ? 'Listening — release to ask' : s === 'working' ? 'Writing down what you said…' : 'Ask about your mail, courses or calendar';
 }
 async function post(path) { return (await fetch(path, { method: 'POST' })).json(); }
+async function postJSON(path, obj) { return (await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) })).json(); }
 function voiceError(msg) {
   const t = el('section', 'turn'); t.appendChild(el('div', 'err', "Couldn't listen: " + msg + '. Type your question instead.'));
   const e = $('empty'); if (e) e.remove(); log.appendChild(t); bottom();
@@ -482,7 +581,8 @@ document.addEventListener('keydown', (ev) => {
     else if (pending) pending.cancel();
     ev.preventDefault(); return;
   }
-  if (!recording && document.activeElement !== q && ev.key.length === 1 && !ev.metaKey && !ev.ctrlKey) q.focus();
+  const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);  // the draft box's fields keep their keys
+  if (!recording && !typing && ev.key.length === 1 && !ev.metaKey && !ev.ctrlKey) q.focus();
 });
 document.addEventListener('keyup', (ev) => {
   if (ev.key !== 'Alt') return;
@@ -491,7 +591,7 @@ document.addEventListener('keyup', (ev) => {
 });
 window.addEventListener('focus', () => window.museFocus());
 document.addEventListener('pointerup', () => {
-  setTimeout(() => { if (!recording && window.getSelection().isCollapsed && document.activeElement.tagName !== 'INPUT') q.focus(); }, 0);
+  setTimeout(() => { if (!recording && window.getSelection().isCollapsed && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) q.focus(); }, 0);
 });
 
 /* ---------- the bank sidebar ---------- */
@@ -679,7 +779,8 @@ def bank_rows(entries) -> list[dict]:
 
 
 def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None,
-                 entries_fn=None, speaker=None, session=None, chats_root=None):
+                 entries_fn=None, speaker=None, session=None, chats_root=None, mail_fn=None, open_fn=None,
+                 draft_fn=None):
     entries_fn = entries_fn or store.all_entries
     cur = {"s": session or Session()}  # the open chat (single user); swapped on new / open
     answer_fn = answer_fn or (lambda q, today=None: _answer(q, today=today, session=cur["s"]))
@@ -687,6 +788,7 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
     def _switch(s):
         act.reset()       # a held yes/no belongs to the chat it was asked in
         discover.reset()
+        compose.reset()   # so does a held "Who is this to?"
         cur["s"] = s
     online_fn = online_fn or _online
     count_fn = count_fn or (lambda: len(store.all_entries()))
@@ -729,6 +831,8 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 return self._json({"ok": True})
             if self.path.startswith("/chats/"):
                 return self._chats_post(self.path.split("/")[2:])
+            if self.path.startswith(("/suggest/", "/draft/")):
+                return self._draft_post(self.path.split("/")[1:])
             if self.path in ("/listen/start", "/listen/stop"):
                 if talk is None:
                     return self._json({"error": f"voice is unavailable ({voice_why})"})
@@ -752,10 +856,44 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 held = a.route == "discover" and discover.waiting()
                 self._json({"text": a.text, "route": a.route, "sources": a.sources,
                             "seconds": a.seconds, "pending": held or (a.route == "act" and act.waiting()),
-                            "choices": DISCOVER_CHOICES if held else None})
+                            "choices": DISCOVER_CHOICES if held else None,
+                            "suggestions": suggest.public(a.suggestions), "draft": a.draft})
             except Exception as e:  # show it in the window; keep serving
                 self._json({"text": f"Error: {type(e).__name__}: {e}", "route": "error",
                             "sources": [], "seconds": 0.0})
+
+        def _body(self) -> dict:
+            n = int(self.headers.get("Content-Length") or 0)
+            try:
+                got = json.loads(self.rfile.read(n) or b"{}")
+            except ValueError:
+                return {}
+            return got if isinstance(got, dict) else {}
+
+        def _draft_post(self, parts):
+            """Suggested buttons and the draft box (playbooks/suggest.md, compose.md). Never sends."""
+            from .playbook import say
+            body = self._body()
+            try:
+                if parts[0] == "suggest" and len(parts) == 3 and parts[2] == "dismiss":
+                    return self._json({"ok": suggest.dismiss(parts[1]), "text": say("suggest", "dismissed")})
+                if parts[0] == "suggest" and len(parts) == 2:
+                    s = suggest.take(parts[1])
+                    if s is None:
+                        return self._json({"text": say("suggest", "gone")})
+                    if s["kind"] == "open":
+                        return self._json({"text": (open_fn or act.open_page)(s["url"])})
+                    return self._json({"draft": (draft_fn or compose.reply_draft)(s["entry"])})
+                if parts == ["draft", "open"]:
+                    return self._json({"text": compose.open_in_mail(
+                        str(body.get("to") or ""), str(body.get("subject") or ""), str(body.get("body") or ""),
+                        runner=mail_fn)})
+                if parts[0] == "draft" and len(parts) == 3 and parts[2] == "write":
+                    d = compose.rewrite(parts[1], str(body.get("gist") or ""))
+                    return self._json({"draft": d} if d else {"text": say("suggest", "gone")})
+            except Exception as e:  # model down, calendar slow, ...: say it in the box
+                return self._json({"text": say("compose", "cannot_write", why=f"{type(e).__name__}: {e}")})
+            return self._send(404, "not found", "text/plain")
 
         def _chats_post(self, parts):
             if parts == ["new"]:

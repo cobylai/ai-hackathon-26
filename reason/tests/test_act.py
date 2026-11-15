@@ -215,9 +215,12 @@ class Act(unittest.TestCase):
 
     # ---- wiring and safety
     def test_answer_routes_actions_first(self):
-        with mock.patch("reason.act._default_online", return_value=False):
+        # A typed "draft a reply to X" now opens the offline draft box (playbooks/compose.md,
+        # brief W); it still comes before the person route, which would match "Felix".
+        with mock.patch("reason.compose.write_reply", return_value="Hi Felix,\nYes."):
             a = answer("draft a reply to Felix saying yes", root=self.root)
-        self.assertEqual((a.route, a.text), ("act", say("act", "needs_net")))
+        self.assertEqual(a.route, "compose")
+        self.assertEqual(a.draft["to"], "felix.wu@example.com")
 
     def test_never_sends(self):
         src = Path(act.__file__).read_text()

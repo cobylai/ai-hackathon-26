@@ -100,6 +100,18 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
 
 2c. **Chat** (`reason/chat.py`, `playbooks/chat.md`). A greeting, mic check or thanks, with almost nothing else said (at most 2 words left after the chat and filler phrases, and no question word), gets a fixed reply: "I can hear you. …", "Hi. …" or "You're welcome." So "Hey, can you hear me okay?" no longer runs 3 web searches. "Hey, what's due tomorrow?" is still a due question.
 
+-0.5. **Compose** (`reason/compose.py`, `playbooks/compose.md`, brief W), checked just before act. "Draft a reply to Greta", "write a reply to Milo saying yes", "write an email (to Felix) (about the cabin)" give a draft box: editable To, Subject and body, then **Open in Mail**, which hands a plain-text `mailto:` to macOS (`open`), so nothing is sent and it works offline. "… in Gmail" stays with act.
+   - A reply goes to the person's newest meeting ask, else their newest email with an ask. A meeting ask with a readable day and time uses a code template: yes when free, or no naming the clash with the next free half hour that day. Other bodies come from Bonsai, from that email's summary and ask plus what you said.
+   - A new email is written only from bank entries on the topic (that person's first), their person page and your notes. The box lists the entries used.
+   - It asks at most two questions: "Who is this to?" (no name, or an unknown one), "Which Nina? …" and "I don't have anything about <topic>. Tell me a little more: what should it say?". An unknown address leaves To empty.
+   - It's signed with your first name from a "my name is …" note, and without a sign-off when there's no such note.
+
+**Suggestions** (`reason/suggest.py`, `playbooks/suggest.md`, brief W). After a due, catchup, person, bank or followup answer, code offers at most two next steps from that answer's own entries. No model call.
+   - A meeting ask whose day and time were read, with that day of Apple Calendar read: "You're free Thursday, Nov 19 at 7pm. Draft a yes to Milo?" or "You have Lab then (…). Draft a reply proposing another time?".
+   - An email with an ask: "Draft a reply to Ivy: Garden plot". If the time or the calendar can't be read, this is what shows, and free/busy isn't mentioned.
+   - A Canvas item: "Open the assignment page: Homework 9".
+   - `Answer.suggestions`; nothing runs until a click. A dismissed, drafted or opened one doesn't come back in that chat. The chat loop prints them as lines.
+
 3. **Everything else.**
    - **Web gate (RULES.md rule 9).** If the bank can't answer, only a clear factual question goes to the web: it starts with a question word (after "Muse," or "please") or ends with "?", and has no "my"/"mine". Otherwise it answers `not_found` with "I don't have that in your notes or mail." (a "my" question) or "I'm not sure what you're asking, so I didn't look it up." Nothing is sent to a search engine.
    - `bank.search(question, limit=5)`. The entries are written as numbered note blocks and passed to `sufficiency.judge` once. If it's enough, the route is `bank`, and the source is the block that holds the judge's quote.

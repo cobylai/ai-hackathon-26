@@ -34,7 +34,7 @@ GATHER_SECONDS = 60
 
 # Wording and prompts come from playbooks/<route>.md. STEPS is how many numbered steps
 # each playbook lists; the code below runs them in that order (a test checks the count).
-STEPS = {"followup": 5, "discover": 6, "act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 6, "bank": 4, "web": 6, "chat": 3, "open": 4, "schedule": 5, "setup": 5}
+STEPS = {"followup": 5, "discover": 6, "act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 6, "bank": 4, "web": 6, "chat": 3, "open": 4, "schedule": 5, "setup": 5, "suggest": 5, "compose": 5}
 PERSON_SYSTEM = playbook.prompt("person", "person_system")
 PERSON_PROMPT = playbook.prompt("person", "person_prompt")
 PERSON_HINT = playbook.prompt("person", "person_hint")
@@ -49,6 +49,10 @@ class Answer:
     # What the answer listed, for follow-ups ("the first one", "who sent that?"):
     # {"kind": "entry", "entry": dict, "date", "time", "line"} or {"kind": "event", "event": dict, "line"}
     rows: list[dict] = field(default_factory=list)
+    # Suggested next steps under the answer (reason/suggest.py, at most 2) and a draft box
+    # (reason/compose.py): {"id", "to", "to_name", "subject", "body", "used", "kind"}.
+    suggestions: list[dict] = field(default_factory=list)
+    draft: dict | None = None
 
 
 # ---- formatting -------------------------------------------------------------
@@ -349,9 +353,9 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
         return Answer(say("RULES", "empty_question"), "none", [], 0.0)
 
     import discover  # a held discovery question takes its yes / no / skip first
-    from . import act, catchup, chat, me  # actions first: "draft a reply to Felix" names a sender
+    from . import act, catchup, chat, compose, me, suggest  # drafts and actions first: they name senders
     follow, asked = None, q  # asked: as the user said it, for the saved turn
-    if session is not None and not discover.waiting() and not act.waiting():
+    if session is not None and not discover.waiting() and not act.waiting() and not compose.waiting():
         from .session import resolve  # playbooks/followup.md: code only, no model call
         follow = resolve(q, session, today, root)
         if follow and follow[0] == "question":
@@ -365,6 +369,8 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
         a = _calendar(follow[1], today, now, _events)
     elif (got := discover.handle(q, today, root)) is not None:
         a = got
+    elif (got := compose.handle(q, today, root, session=session, events_fn=_events)) is not None:
+        a = got  # playbooks/compose.md: a draft box, never sent ("... in Gmail" goes to act)
     elif (got := act.handle(q, today, root, session=session)) is not None:
         a = got
     elif (got := me.handle(q, today, root)) is not None:  # remember / forget / about_me / people
@@ -399,6 +405,10 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
                 a = _web(q, today, root, **(_web_fns or {}))
             else:
                 a = Answer(OFFLINE_TEXT, "offline")
+    try:
+        a.suggestions = suggest.for_answer(a, session, today, root, _events)  # playbooks/suggest.md
+    except Exception:  # a suggestion never breaks the answer
+        a.suggestions = []
     a.seconds = round(time.monotonic() - t0, 2)
     if session is not None:
         session.record(q, a, root, asked=asked)

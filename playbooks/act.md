@@ -6,13 +6,13 @@ Requests to do something: open an app, open a saved page, or draft a reply. "Ope
 
 ## Triggers
 
-- draft: `^(?:please\s+|can you\s+|could you\s+)?(?:(?:draft|write)\s+(?:a\s+|an\s+)?(?:quick\s+|short\s+)?(?:reply|response|answer|email)(?:\s+back)?|reply)\s+to\s+([A-Za-z][A-Za-z'\-]*)(?:'s\s+(?:email|message|mail))?(?:[\s,]+(?:saying|that says|to say|telling (?:him|her|them)|that)\s+(.+?))?$`
+- draft: `^(?:please\s+|can you\s+|could you\s+)?(?:(?:draft|write)\s+(?:a\s+|an\s+)?(?:quick\s+|short\s+)?(?:reply|response|answer|email)(?:\s+back)?|reply)\s+to\s+([A-Za-z][A-Za-z'\-]*)(?:'s\s+(?:email|message|mail))?(?:[\s,]+(?:saying|that says|to say|telling (?:him|her|them)|that)\s+(.+?))?(?:\s+(?:in gmail|as a gmail draft))?$`
 - open: `^(?:please\s+|can you\s+|could you\s+|muse,?\s+)?(?:open|launch|pull up|bring up)\s+(?:up\s+)?(?:my\s+|the\s+)?(.+?)(?:\s+app)?(?:\s+please)?$`
 - page: `page|link|site|website|assignment|canvas|syllabus|url`
 - yes: `^(?:yes|yeah|yep|yup|sure|ok|okay|do it|go ahead|confirm|yes please|please do|yes do it|go for it)$`
 - no: `^(?:no|nope|cancel|stop|dont|don't|no thanks|never mind|nevermind|cancel it|no dont|no don't)$`
 
-`draft` and `open` are tried on the question with its end punctuation removed. Group 1 is the name (draft) or the thing to open; group 2 is what the reply should say. `yes` and `no` are tried on the question lowercased, with punctuation removed. The apps Muse offers are in code (`APPS` in `reason/act.py`): Calendar, Notes, Finder, TextEdit, Preview, Calculator.
+A plain "draft a reply to …" goes to the compose route (`compose.md`, Open in Mail); `draft` here takes only "… in Gmail" / "… as a Gmail draft", for a draft saved in the test account's Gmail. `draft` and `open` are tried on the question with its end punctuation removed. Group 1 is the name (draft) or the thing to open; group 2 is what the reply should say. `yes` and `no` are tried on the question lowercased, with punctuation removed. The apps Muse offers are in code (`APPS` in `reason/act.py`): Calendar, Notes, Finder, TextEdit, Preview, Calculator.
 
 ## Steps
 
@@ -101,7 +101,7 @@ The checker blocks the network, so draft examples check the offline reply. No ex
 |---|---|---|
 | Open my calendar | act | I'll open Calendar; say or type yes |
 | open Terminal | act | I can only open |
-| Draft a reply to Felix saying yes | act | needs a connection; Nothing was drafted |
+| Draft a reply to Felix saying yes in Gmail | act | needs a connection; Nothing was drafted |
 | yes | act | nothing waiting |
 | open the assignment page | act | |
 | What did Felix ask me? | person | Felix |
