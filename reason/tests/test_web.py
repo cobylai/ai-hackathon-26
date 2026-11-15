@@ -25,6 +25,7 @@ class Web(unittest.TestCase):
 
         cls.srv = HTTPServer(("127.0.0.1", 0), make_handler(
             today="2026-11-14", answer_fn=fake_answer, online_fn=lambda: False, count_fn=lambda: 17,
+            model_fn=lambda: True,
             entries_fn=lambda: [
                 {"sent_date": "2026-11-12", "sender_name": "Ann Old", "subject": "old", "body": "older one"},
                 {"sent_date": "2026-11-14", "sender_name": "Bo New", "folder": "person", "id": "abc123def456", "subject": "Phone bill", "body": "Bill $42.18.",
@@ -49,7 +50,12 @@ class Web(unittest.TestCase):
 
     def test_status(self):
         self.assertEqual(json.loads(self.get("/status")),
-                         {"online": False, "items": 17, "voice": False, "voice_why": None})
+                         {"online": False, "items": 17, "voice": False, "voice_why": None,
+                          "model": True})
+
+    def test_status_line_says_when_the_model_is_down(self):
+        self.assertIn("model down", PAGE)
+        self.assertIn("r.model !== false", PAGE)
 
     def test_bank_list(self):
         rows = json.loads(self.get("/bank"))

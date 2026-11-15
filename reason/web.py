@@ -7,7 +7,7 @@ Single-threaded on purpose: the web route drives one Playwright browser, which m
 stay on one thread.
 
     GET  /        the page
-    GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None}
+    GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None, "model": bool}
     GET  /bank    [{"date", "sender", "subject", "summary", "ask", "deadlines", "folder", "id"}], newest first
     POST /ask     {"question": str, "speak": bool} -> {"text", "route", "sources", "seconds", "pending"}
                   speak: read the answer aloud with the Mac's `say` (the Speak switch in the bar)
@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -519,9 +520,11 @@ $('f').addEventListener('submit', (ev) => { ev.preventDefault(); const v = q.val
 async function refresh() {
   try {
     const r = await (await fetch('/status')).json();
-    statusEl.className = r.online ? 'on' : '';
+    const modelOk = r.model !== false;  // Bonsai answers; online alone is just the internet
+    statusEl.className = r.online && modelOk ? 'on' : '';
     statusEl.innerHTML = '<span class="dot"></span>';
-    statusEl.appendChild(document.createTextNode((r.online ? 'Online' : 'Offline') + ' · ' + r.items + (r.items === 1 ? ' item' : ' items') + ' in the bank'));
+    statusEl.appendChild(document.createTextNode((r.online ? 'Online' : 'Offline') + ' · ' + r.items + (r.items === 1 ? ' item' : ' items') + ' in the bank' + (modelOk ? '' : ' · model down')));
+    statusEl.title = modelOk ? 'Show what is in the bank' : 'The Bonsai model server is not answering; start it with scripts/serve_bonsai.sh 4B';
     voiceOk = !!r.voice;
     if (!recording && !talk.classList.contains('working')) {
       talk.disabled = !voiceOk;
@@ -792,8 +795,20 @@ def bank_rows(entries) -> list[dict]:
     return rows
 
 
+_model_state = {"at": 0.0, "up": True}
+
+
+def _model_up(ttl: float = 5.0) -> bool:
+    """Does Bonsai answer on its port? Cached for a few seconds so /status stays cheap."""
+    now = time.monotonic()
+    if now - _model_state["at"] >= ttl:
+        from llm.client import server_up
+        _model_state.update(at=now, up=server_up())
+    return _model_state["up"]
+
+
 def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None,
-                 entries_fn=None, speaker=None, session=None, chats_root=None, mail_fn=None, open_fn=None,
+                 model_fn=None, entries_fn=None, speaker=None, session=None, chats_root=None, mail_fn=None, open_fn=None,
                  draft_fn=None, run_fn=None):
     entries_fn = entries_fn or store.all_entries
     cur = {"s": session or Session()}  # the open chat (single user); swapped on new / open
@@ -806,6 +821,7 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
         cur["s"] = s
     online_fn = online_fn or _online
     count_fn = count_fn or (lambda: len(store.all_entries()))
+    model_fn = model_fn or _model_up
 
     class Handler(BaseHTTPRequestHandler):
         def _send(self, code, body, ctype):
@@ -825,7 +841,7 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 self._send(200, PAGE, "text/html; charset=utf-8")
             elif self.path == "/status":
                 self._json({"online": online_fn(), "items": count_fn(), "voice": talk is not None,
-                            "voice_why": voice_why})
+                            "voice_why": voice_why, "model": model_fn()})
             elif self.path == "/bank":
                 self._json(bank_rows(entries_fn()))
             elif self.path == "/chats":

@@ -22,10 +22,19 @@ from . import config, tokens
 from .tokens import BudgetError  # re-exported for callers
 
 __all__ = ["complete", "complete_json", "chat", "Reply", "BonsaiError",
-           "ServerDown", "BudgetError", "loaded_model"]
+           "ServerDown", "BudgetError", "loaded_model", "server_up"]
 
 START_HINT = ("Start it with:  scripts/serve_bonsai.sh {size}   "
               "(or BONSAI_SIZE={size} scripts/serve_bonsai.sh)")
+
+
+def server_up(timeout: float = 0.6) -> bool:
+    """True when the Bonsai server answers /models. Used by the window's status line."""
+    try:
+        with urllib.request.urlopen(config.BASE_URL + "/models", timeout=timeout) as r:
+            return 200 <= getattr(r, "status", 200) < 300
+    except Exception:  # down, slow, wrong port: not up
+        return False
 
 
 class BonsaiError(RuntimeError):
