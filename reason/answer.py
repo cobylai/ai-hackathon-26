@@ -112,6 +112,9 @@ def _due(question: str, today: date, root) -> Answer:
         t = _time(r.get("time"))
         stamp = " ".join(x for x in (when, t) if x)
         lines.append(f"- {stamp + '  ' if stamp else ''}{what} ({source_label(e)})")
+        summary = (e.get("body") or "").strip()
+        if summary and summary.rstrip(".") != what:  # the summary carries amounts etc.
+            lines.append(f"    {summary}")
     paths = list(dict.fromkeys(r["entry"]["path"] for r in rows))
     return Answer("\n".join(lines), "due", paths)
 

@@ -31,7 +31,7 @@ Window check (2026-11-14, integration, process network blocked except localhost)
 
 ## Routes, checked in this order
 
-1. **Due.** The question contains the word `due`, `deadline` or `deadlines`. Code works out the date range, calls `bank.due`, and writes the list itself, with no model call. Each line carries its own source (sender, sent date).
+1. **Due.** The question contains the word `due`, `deadline` or `deadlines`. Code works out the date range, calls `bank.due`, and writes the list itself, with no model call. Each line carries its own source (sender, sent date), and the entry's one-line summary goes under it, indented, so details like a bill amount come along without a model call (thinker ruling).
 
    | Phrase | Range |
    |---|---|
@@ -39,7 +39,7 @@ Window check (2026-11-14, integration, process network blocked except localhost)
    | tomorrow | today + 1 |
    | Monday … Sunday | the next such day, or today if today is that day |
    | next Friday (etc.) | that day in next week (Mon–Sun) |
-   | this week | today to Sunday |
+   | this week | today to Sunday; on Sat/Sun, today to the coming Sunday (thinker ruling) |
    | this weekend | Saturday (or today, if later) to Sunday |
    | next week | next Monday to next Sunday |
    | Nov 20, November 20th, 11/20, 2026-11-20, on the 20th | that day (`bank.dates.resolve_date`) |
