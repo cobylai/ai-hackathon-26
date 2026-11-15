@@ -213,6 +213,44 @@ class Act(unittest.TestCase):
                     reply_out="ERR mail.google.com | draft did not save")
         self.assertIn("wasn't saved", act.save_draft("felix.wu@example.com", "s", "Hi"))
 
+    # ---- set me up (playbooks/setup.md): choosing which one, related mail
+    def _essay_bank(self):
+        for e in (
+            E("b00000000003", "course", "Canvas", None, "2026-11-10", "Essay 2 Draft",
+              "Draft of essay 2 for peer review.", kind="page", source="file:///tmp/essay2-draft.html"),
+            E("b00000000004", "course", "Canvas", None, "2026-11-12", "Essay 2 Final",
+              "Final essay 2 submission.", kind="page", source="file:///tmp/essay2-final.html"),
+            E("b00000000005", "person", "Ada Byron", "ada@example.edu", "2026-11-11",
+              "Essay 2 draft due", "Upload a full draft of essay 2 (1,200 words) for peer review.",
+              ask="Upload your essay 2 draft."),
+        ):
+            store.write_entry(dict(e), self.root)
+
+    def test_setup_asks_which_one(self):
+        self._essay_bank()
+        a = self.h("Set me up for essay 2")
+        self.assertIn("Which one do you mean", a.text)
+        self.assertIn("Essay 2 Draft", a.text)
+        self.assertIn("Essay 2 Final", a.text)
+
+    def test_setup_accepts_the_offered_title_then_lists_page_and_mail(self):
+        self._essay_bank()
+        self.h("Set me up for essay 2")
+        a = self.h("Essay 2 Draft")  # typing one of the offered titles carries on
+        self.assertIn("To set you up for Essay 2 Draft, I'll open:", a.text)
+        self.assertIn('the page "Essay 2 Draft"', a.text)
+        self.assertIn("Essay 2 draft due", a.text)
+
+    def test_setup_choice_does_not_swallow_the_next_question(self):
+        self._essay_bank()
+        self.h("Set me up for essay 2")
+        self.assertIsNone(self.h("What's due this week?"))
+
+    def test_no_cancels_the_which_one(self):
+        self._essay_bank()
+        self.h("Set me up for essay 2")
+        self.assertIn("Cancelled", self.h("no").text)
+
     # ---- wiring and safety
     def test_answer_routes_actions_first(self):
         # A typed "draft a reply to X" now opens the offline draft box (playbooks/compose.md,
