@@ -4,7 +4,16 @@ Tested 2026-11-14 on Coby's MacBook Pro (MacBookPro18,2, macOS 26.6.2) with SDK 
 
 ## Result in one paragraph
 
-The sample transcribes an audio file with the real key, unchanged. The model is on disk (615 MB). Each launch contacts Argmax's server (`api.argmaxinc.com`) and Hugging Face, even when warm. With all network blocked for the app, it **failed after 60 s in the model downloader**, not in the license check. The cause is that the downloader only uses its on-disk copy when macOS reports no network link at all. Blocking connections doesn't do that, but turning Wi-Fi off does. So a Wi-Fi-off run should work, but that still has to be proven by Coby's run below.
+**Argmax runs with no network, once the model is on disk and loaded from its folder.**
+
+- The sample transcribed an audio file with the real key, unchanged.
+- Each launch contacts Argmax's server (`api.argmaxinc.com`) and Hugging Face, even when warm.
+- **The license:** a failed check doesn't stop the app. With the model loaded from its folder (`ARGMAX_MODEL_FOLDER`, i.e. `modelFolder:` and `download: false`), the transcription worked with all network denied (run F).
+- **The downloader:** without that folder setting, the Hugging Face downloader hangs for 60 s when connections are blocked, because macOS still reports a network.
+- **The app:** Muse's voice program (`argmax-voice`, `docs/voice-input.md`) always loads from the folder. It was proven by voice with the network denied in both the chat loop and the window.
+- **Still unproven:** one real Wi-Fi-off run of the whole app (`docs/PARTNER-TESTING.md`).
+
+**New tester or Mac:** you need your own `ax_` key (one per application, from Argmax at the event; don't use Coby's), plus the registry login below. The first run must be online to activate the license and download the model.
 
 ## How to run it
 
@@ -82,56 +91,13 @@ Model: `large-v3-v20240930_626MB` (Whisper large-v3 turbo, the sample default). 
 - Live microphone mode (not tested; it needs a mic-permission prompt).
 - C/D/D2 only show what happens when connections fail. They can't show offline mode.
 
-## Coby's Wi-Fi-off run
+## Wi-Fi-off run
 
-Do steps 1–2 **while still online**.
+The sample-only Wi-Fi-off run and the microphone step that used to be here are replaced:
+- The microphone is granted and voice is proven through `argmax-voice` (`docs/voice-input.md`).
+- The one remaining Wi-Fi-off run covers the whole app. Load the key while online, start Bonsai and the window, turn Wi-Fi off, then ask the demo questions. Steps are in `docs/PARTNER-TESTING.md`.
 
-1. Unlock the vault and load the key into this terminal:
-   ```bash
-   export BW_SESSION="$(bw unlock --raw)"
-   ```
-   ```bash
-   export ARGMAX_API_KEY="$(bw get password 'Argmax API key - ai-hackathon-26')"
-   ```
-2. Make the clip and do one online run to be sure everything is cached:
-   ```bash
-   cd ~/code/ai-hackathon-26/.claude/worktrees/argmax-runtime-test-743dfa/samples/argmax-pro-sdk/native
-   ```
-   ```bash
-   say -o /tmp/clip.wav --data-format=LEI16@16000 "Muse, remind me to buy oat milk tomorrow at nine."
-   ```
-   ```bash
-   .build/release/meeting-scribe file /tmp/clip.wav --no-speakers --out /tmp/transcripts
-   ```
-3. Turn Wi-Fi off from the menu bar. Also quit any VPN (Tailscale etc.) and unplug Ethernet. If macOS still thinks a network exists, the downloader won't switch to offline mode.
-4. Run the same command again, timed:
-   ```bash
-   time .build/release/meeting-scribe file /tmp/clip.wav --no-speakers --out /tmp/transcripts
-   ```
-   Also run it with the local model folder, which is the setup Muse should use:
-   ```bash
-   ARGMAX_MODEL_FOLDER=~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-large-v3-v20240930_626MB .build/release/meeting-scribe file /tmp/clip.wav --no-speakers --out /tmp/transcripts
-   ```
-5. Paste the whole output into the chat. A transcript means offline works. A license error or the 60 s "Model not found" error means it doesn't, and the error text says which part failed.
-6. Turn Wi-Fi back on.
+## For Muse (done)
 
-## Coby: microphone permission (required before the demo)
-
-Live mode uses the same model as file mode, so there's nothing extra to download. But macOS has to allow the microphone for the terminal app that will run it, and only you can click that prompt.
-
-1. In the terminal app you'll demo from, with `ARGMAX_API_KEY` set as in step 1 above:
-   ```bash
-   cd ~/code/ai-hackathon-26/.claude/worktrees/argmax-runtime-test-743dfa/samples/argmax-pro-sdk/native
-   ```
-   ```bash
-   .build/release/meeting-scribe live
-   ```
-2. Click **Allow** on the microphone prompt. If no prompt appears and nothing is transcribed, go to System Settings → Privacy & Security → Microphone and turn your terminal app on.
-3. Say a sentence. You should see the words appear. Press Ctrl+C to stop.
-4. If you'll demo from a different app (a Muse app instead of the terminal), that app needs its own permission. Grant it the same way before the demo.
-
-## For Muse
-
-- How text gets to Python, proposed in `docs/INTERFACES.md` section 6: a long-running Swift process writes one line of text per utterance to stdout, and Python reads it.
-- The Swift program should pass the local model folder (`modelFolder:` with `download: false`, as `ARGMAX_MODEL_FOLDER` does) so it never tries to download. Run F shows this works with no network.
-- Keep the 133 MB compile cache. The Swift program should use a fixed bundle or executable name, because the cache folder is named after it (`~/Library/Caches/meeting-scribe/`). A new name means a ~4-minute recompile on its first launch, so do that first launch before the demo.
+- `voice/` is built and on main. `argmax-voice` stays running, loads from the model folder with downloads off, and does push to talk over stdin/stdout. See `docs/voice-input.md`.
+- Its compile cache is `~/Library/Caches/argmax-voice/`; meeting-scribe's own cache is `~/Library/Caches/meeting-scribe/`. Each is named after its executable, so a rename means a ~4-minute recompile.
