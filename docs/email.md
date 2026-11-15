@@ -78,11 +78,23 @@ uv run python scripts/eval_email.py --text "lab safety" --days 14 --draft-to you
 Live results, the asks speedup, and the safety findings:
 [docs/plan/notes-email-eval.md](plan/notes-email-eval.md).
 
+## Daily digest
+
+```bash
+uv run python scripts/daily_digest.py --days 1 --limit 8
+```
+
+Read-only: searches the last N days, opens the newest threads the fast way, and
+prints questions and dated lines grouped by thread. It reuses the same `scan()`
+as `email_asks`, so it inherits the login check and the 1500-character cap.
+Nothing is drafted or sent.
+
 ## Known gaps
 
 - **Attachments** are not listed or read; `email_read` returns message text only.
 - **Outlook web** is not implemented (the plan's fallback if Google refuses sign-in).
-- **No digest job** yet; `email_asks` is the piece it would be built from.
+- A digest script exists (`scripts/daily_digest.py`), but nothing schedules it
+  and it is not yet wired into the teammate's automation template.
 - A reply is addressed to whoever the thread says (usually the other
   participant). The result names that address, but the tool will not stop a
   reply to a stranger.

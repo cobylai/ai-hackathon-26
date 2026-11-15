@@ -116,37 +116,45 @@ def _back_to_results(page) -> None:
     search.wait_results(page, timeout_ms=8000)
 
 
-def email_asks(sender: str | None = None, days: int | None = None) -> str:
-    """Search, read the top three threads, and list their questions and dates."""
+def scan(
+    sender: str | None = None,
+    days: int | None = None,
+    threads: int = TOP_THREADS,
+) -> tuple[str, list[tuple[search.Row, list[str]]]]:
+    """Search, then return ``(status, [(row, sentences)])`` for the top threads.
+
+    Shared by ``email_asks`` and the digest: one place that opens threads the
+    fast way and extracts the lines worth showing.
+    """
     page = get_session().start().page
-    label = query.build(sender=sender, days=days) or "inbox"
     result = search.search(sender=sender, days=days)
     if not result.startswith("OK"):
-        return result
+        return result, []
 
-    rows = [row for row in search.last_rows() if not _is_draft(row)][:TOP_THREADS]
-    lines: list[str] = []
-    seen: set[str] = set()
+    rows = [row for row in search.last_rows() if not _is_draft(row)][:threads]
+    entries: list[tuple[search.Row, list[str]]] = []
     for position, row in enumerate(rows):
         if not _open_row(page, row):
             continue
-        for _who, _date, body in read.read_messages(page):
-            for sentence in extract(body):
-                key = sentence.lower()
-                if key in seen:
-                    continue
-                seen.add(key)
-                lines.append(f"{row.n}. {sentence}")
+        sentences = [
+            sentence
+            for _who, _date, body in read.read_messages(page)
+            for sentence in extract(body)
+        ]
+        entries.append((row, sentences))
         if position < len(rows) - 1:
             _back_to_results(page)
+    return result, entries
 
-    head = f"OK {len(lines)} asks | {label}"
+
+def cap_lines(head: str, lines: list[str], hint: str = HINT) -> str:
+    """Join ``head`` and ``lines`` under the 1500-character cap."""
     if not lines:
         return head
     text = "\n".join([head, *lines])
     if len(text) <= config.MAX_CHARS:
         return text
-    room = config.MAX_CHARS - len(HINT) - 1
+    room = config.MAX_CHARS - len(hint) - 1
     kept = [head]
     used = len(head)
     for line in lines:
@@ -154,4 +162,23 @@ def email_asks(sender: str | None = None, days: int | None = None) -> str:
             break
         kept.append(line)
         used += 1 + len(line)
-    return "\n".join(kept) + "\n" + HINT
+    return "\n".join(kept) + "\n" + hint
+
+
+def email_asks(sender: str | None = None, days: int | None = None) -> str:
+    """Search, read the top three threads, and list their questions and dates."""
+    label = query.build(sender=sender, days=days) or "inbox"
+    result, entries = scan(sender=sender, days=days)
+    if not result.startswith("OK"):
+        return result
+
+    lines: list[str] = []
+    seen: set[str] = set()
+    for row, sentences in entries:
+        for sentence in sentences:
+            key = sentence.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            lines.append(f"{row.n}. {sentence}")
+    return cap_lines(f"OK {len(lines)} asks | {label}", lines)
