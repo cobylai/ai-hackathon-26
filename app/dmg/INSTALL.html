@@ -75,13 +75,8 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m bank.load ~/muse-demo-mail --kin
 
   <li><b>Open Muse.</b> Copy <code>Muse.app</code> to Applications. If the code isn't in <code>~/ai-hackathon-26</code>, tell Muse where it is:
     <pre>defaults write local.ai-hackathon-26.muse MuseRepo /path/to/ai-hackathon-26</pre>
-    <b>First open:</b> Muse is ad-hoc signed and not notarized, so macOS blocks a double-click. Right-click Muse.app &gt; Open &gt; Open. Or run <code>xattr -dr com.apple.quarantine /Applications/Muse.app</code>.
-    <p>At first launch:</p>
-    <ul>
-      <li>Paste your <code>ax_</code> key. Muse keeps it in your login Keychain as "Muse Argmax key".</li>
-      <li>Allow the <b>microphone</b>, <b>Calendar</b>, and <b>Accessibility</b> (System Settings opens; turn Muse on). Accessibility is for the Fn-Space hotkey.</li>
-      <li>Muse starts Bonsai and its window server, then lists anything still missing, each with its fix.</li>
-    </ul>
+    Muse is signed with a Developer ID and notarized by Apple, so it opens with a double-click.
+    <p>At first launch, "Set Up Muse" walks you through one step per screen: privacy, your <code>ax_</code> key (kept in your login Keychain), <b>Accessibility</b> (for Fn-Space), the <b>microphone</b>, then <b>Calendar</b>, <b>Reminders</b> and <b>Mail</b>. Then Muse starts Bonsai and its window server and lists anything still missing, each with its fix.</p>
     <p><b>Use it:</b> tap Fn-Space (the Globe key and Space) to show or hide the panel; hold it to talk and let go to ask. Waveform icon in the menu bar: Open, Sync mail, Discover, Check setup, Quit.</p></li>
 </ol>
 </body></html>
