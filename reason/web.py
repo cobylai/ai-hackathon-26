@@ -3,8 +3,10 @@
 One local page served by the standard library; nothing is loaded from the internet,
 so it opens with Wi-Fi off. It calls the same answer() as the typed chat loop.
 Hold to talk: POST /listen/start, then POST /listen/stop -> {"text"} (or {"error"}).
-Single-threaded on purpose: the web route drives one Playwright browser, which must
-stay on one thread.
+Questions are handled one at a time (a lock around every POST): the web route drives
+one Playwright browser and one shared session, and both must stay on one thread.
+Reads (the page, /status, /bank, /chats) are served in parallel, so a slow web search
+does not freeze the window. See finding 18 in docs/test-results/antranig-full.md.
 
     GET  /        the page
     GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None, "model": bool}
@@ -39,9 +41,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import threading
 import time
 import webbrowser
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import discover
 from bank import store
@@ -796,6 +799,7 @@ def bank_rows(entries) -> list[dict]:
 
 
 _model_state = {"at": 0.0, "up": True}
+_POST_LOCK = threading.Lock()  # one question at a time; the session and the browser are single-threaded
 
 
 def _model_up(ttl: float = 5.0) -> bool:
@@ -855,6 +859,10 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 self._send(404, "not found", "text/plain")
 
         def do_POST(self):
+            with _POST_LOCK:  # a slow web search must not freeze the page or /status (finding 18)
+                self._do_post()
+
+        def _do_post(self):
             if speaker is not None and self.path in ("/ask", "/listen/start", "/speak/stop"):
                 speaker.stop()  # talking, a new question or the switch cuts off the spoken answer
             if self.path == "/speak/stop":
@@ -951,6 +959,11 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
     return Handler
 
 
+def make_server(handler, port: int = 8765) -> ThreadingHTTPServer:
+    """The window server: questions one at a time, reads (page, /status, /bank, /chats) in parallel."""
+    return ThreadingHTTPServer(("127.0.0.1", port), handler)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m reason.web")
     ap.add_argument("--port", type=int, default=8765)
@@ -960,8 +973,9 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     voice, why = (None, "turned off") if args.no_voice else start_voice()
     print("Voice: ready" if voice else f"Voice is unavailable ({why}); typing only.", flush=True)
-    srv = HTTPServer(("127.0.0.1", args.port), make_handler(
-        today=args.today, talk=HoldToTalk(voice) if voice else None, voice_why=why, speaker=Speaker()))
+    srv = make_server(make_handler(
+        today=args.today, talk=HoldToTalk(voice) if voice else None, voice_why=why, speaker=Speaker()),
+        args.port)
     url = f"http://localhost:{args.port}/"
     print(f"Flux window at {url}  (Ctrl-C to stop)", flush=True)
     if not args.no_open:

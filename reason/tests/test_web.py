@@ -164,5 +164,41 @@ class Talk(unittest.TestCase):
         self.assertIn("Voice is unavailable (no key)", out.getvalue())
 
 
+class SlowQuestion(unittest.TestCase):
+    """The page and /status stay responsive while a slow question runs (finding 18)."""
+
+    def test_status_answers_during_a_slow_question(self):
+        import time
+        from reason.web import make_server
+
+        def slow(q, today=None):
+            time.sleep(1.2)
+            return Answer("ok", "due")
+
+        srv = make_server(make_handler(
+            answer_fn=slow, online_fn=lambda: True, count_fn=lambda: 3,
+            model_fn=lambda: True, entries_fn=lambda: []), 0)
+        base = f"http://127.0.0.1:{srv.server_address[1]}"
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            def ask():
+                try:
+                    urllib.request.urlopen(urllib.request.Request(
+                        base + "/ask", data=b'{"question": "catch me up"}', method="POST"),
+                        timeout=5).read()
+                except Exception:
+                    pass
+            threading.Thread(target=ask, daemon=True).start()
+            time.sleep(0.25)  # the question is now sleeping inside its handler
+            t0 = time.monotonic()
+            with urllib.request.urlopen(base + "/status", timeout=3) as r:
+                got = json.loads(r.read())
+            took = time.monotonic() - t0
+            self.assertEqual(got["items"], 3)
+            self.assertLess(took, 0.6, f"/status waited {took:.2f}s behind the question")
+        finally:
+            srv.shutdown()
+
+
 if __name__ == "__main__":
     unittest.main()
