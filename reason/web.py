@@ -11,6 +11,9 @@ stay on one thread.
     GET  /bank    [{"date", "sender", "subject", "summary", "ask", "deadlines", "folder", "id"}], newest first
     POST /ask     {"question": str} -> {"text", "route", "sources", "seconds", "pending"}
                   pending: an action is held for a yes; the page shows Yes / Cancel
+                  choices: [[label, word]] when a discovery question is held; the page shows
+                  those buttons instead (Yes / No / Skip / Stop), each reply as a new turn
+The Discover button in the bar sends "discover" to /ask (playbooks/discover.md).
 """
 from __future__ import annotations
 
@@ -19,11 +22,14 @@ import json
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+import discover
 from bank import store
 
 from . import act
 from .answer import answer as _answer, online as _online
 from .speech import HoldToTalk, start_voice
+
+DISCOVER_CHOICES = [["Yes", "yes"], ["No", "no"], ["Skip", "skip"], ["Stop", "stop"]]
 
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -163,6 +169,7 @@ PAGE = """<!doctype html>
   <div class="bar">
     <button class="iconbtn" type="button" id="sidebtn" title="Show or hide the bank"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
     <h1>Muse</h1>
+    <button type="button" class="btn" id="discover" title="Let Muse ask you a few questions about yourself">Discover</button>
     <button type="button" id="status" title="Show what's in the bank"><span class="dot"></span>Checking…</button>
   </div>
   <div id="log" aria-live="polite"></div>
@@ -275,6 +282,18 @@ function confirmRow(t, what) {
   pending = { cancel: () => no.click() };
 }
 
+// Discovery: one button per answer; the reply (and the next question) is a new turn.
+function choiceRow(t, choices) {
+  const c = el('div', 'confirm');
+  const choose = (word) => { if (busy) return; pending = null; c.remove(); ask(word, false); };
+  choices.forEach(([label, word], i) => {
+    const b = el('button', i === 0 ? 'btn primary' : 'btn', label); b.type = 'button';
+    b.onclick = () => choose(word); c.appendChild(b);
+  });
+  t.appendChild(c);
+  pending = { cancel: () => choose('stop'), row: c };
+}
+
 function showAnswer(t, r) {
   const a = t.querySelector('.a');
   let text = r.text || '', sourceLine = '';
@@ -285,7 +304,10 @@ function showAnswer(t, r) {
     else kept.push(line);
   }
   if (r.route === 'error') { a.textContent = ''; a.appendChild(el('div', 'err', "Something went wrong answering that (" + text.replace(/^Error:\\s*/, '') + "). Try asking again.")); return; }
-  if (r.pending) {
+  if (r.choices) {
+    render(a, kept.join(NL));
+    choiceRow(t, r.choices);
+  } else if (r.pending) {
     const what = (kept.shift() || 'Muse is waiting for a yes.').trim();
     render(a, kept.join(NL)); if (!a.childNodes.length) a.remove();
     confirmRow(t, what);
@@ -296,6 +318,7 @@ function showAnswer(t, r) {
 // into: a confirm row; the yes / no and its result stay in that row instead of a new turn.
 async function ask(question, spoken, into) {
   question = (question || '').trim(); if (!question || busy) return;
+  if (pending && pending.row) { pending.row.remove(); pending = null; }  // a typed or spoken discovery reply
   if (pending && !/^(yes|no)$/i.test(question)) { pending = null; }  // any other question drops the held action
   busy = true; send.disabled = true;
   let t;
@@ -318,6 +341,7 @@ async function ask(question, spoken, into) {
   refresh(); loadBank();
 }
 
+$('discover').addEventListener('click', () => ask('discover', false));
 $('f').addEventListener('submit', (ev) => { ev.preventDefault(); const v = q.value; q.value = ''; ask(v, false); });
 
 /* ---------- status line ---------- */
@@ -536,8 +560,10 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 n = int(self.headers.get("Content-Length") or 0)
                 question = str(json.loads(self.rfile.read(n) or b"{}").get("question") or "")
                 a = answer_fn(question, today=today)
+                held = a.route == "discover" and discover.waiting()
                 self._json({"text": a.text, "route": a.route, "sources": a.sources,
-                            "seconds": a.seconds, "pending": a.route == "act" and act.waiting()})
+                            "seconds": a.seconds, "pending": held or (a.route == "act" and act.waiting()),
+                            "choices": DISCOVER_CHOICES if held else None})
             except Exception as e:  # show it in the window; keep serving
                 self._json({"text": f"Error: {type(e).__name__}: {e}", "route": "error",
                             "sources": [], "seconds": 0.0})

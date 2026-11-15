@@ -52,6 +52,7 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
 
 ## Routes, checked in this order
 
+-1. **Discover** (`discover/`, `playbooks/discover.md`), checked before everything: "discover" starts a run of at most 10 yes/no questions about the user, built by code from the bank and Apple Calendar (Bonsai only guesses a relation). While a question is held, yes / no / skip / stop answer it; any other input ends the run. Only a yes writes (me store or person page). "What have you learned" and "unlearn N" review. The window has a Discover button and Yes / No / Skip / Stop buttons.
 0. **Remember, forget, about_me, people** (`reason/me.py`, `playbooks/remember.md`, `playbooks/people.md`). Code only, no model call, checked before due, so "remember the essay is due Monday" becomes a note.
    - **remember:** the sentence starts with "remember (that)", "note that" or "don't forget (that)". A leading dash from voice, "Muse," and "please" are dropped first. A sentence ending in "?" doesn't count, and neither does "do you remember …". The rest is filed in the user's words (`bank.remember`: kind "me", folder `me/`).
    - **forget:** starts with "forget (that/about)". It deletes the note sharing the most words; "forget that" or "forget it" alone deletes the newest. On a tie it deletes nothing and lists the tied notes; with no shared word it says "I don't have a note like that."

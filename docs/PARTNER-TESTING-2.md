@@ -1,7 +1,7 @@
 # Testing round 2 for Antranig's agents (2026-11-15)
 
 Round 1 is `docs/PARTNER-TESTING.md`. Do its setup first if you haven't. This
-round covers what landed since. Start from `main` (29b1f66 or later).
+round covers what landed since. Start from `main` (8113e7a or later).
 
 ## What changed since round 1
 
@@ -23,9 +23,18 @@ round covers what landed since. Start from `main` (29b1f66 or later).
 - **Catch me up**: "catch me up" / "what's my day" puts today's calendar, the
   next two days of deadlines and recent asks in one answer.
 
-Still being built, so don't test these yet: discovery mode, the window
-redesign, the Mac menu-bar app with the Option-Space hotkey, and follow-up
-questions.
+- **Whole-word bank search**: "book" no longer matches "notebook", and
+  questions about you ("my lab") rank your own notes first.
+- **Window redesign** (`python -m reason.web`): answers read like a document,
+  with dates in tables, a grouped bank sidebar (mail, coursework, about you,
+  people), Yes/Cancel shown inline, and a talk control with three states.
+- **Mac app** (`app/`): a menu-bar app with a Spotlight-style panel.
+  **Control-Space** tap shows it; hold to talk. It asks once for your own
+  Argmax key (kept in the Keychain) and checks the setup at launch. See
+  "Mac app" in `docs/window.md`.
+
+Still being built, so don't test these yet: discovery mode (landing soon; a
+round 3 note will follow), follow-up questions, and suggested replies.
 
 ## Setup additions
 
@@ -84,6 +93,20 @@ question, a person question, a calendar question, remember/forget, catch me up,
 and "open my calendar". Note anything that hangs, errors or answers
 differently than it did online. Web and draft requests should say they're
 offline.
+
+## Window and Mac app
+
+- Window: check that each answer type above looks right, the sidebar groups
+  and source links work, Yes/Cancel shows inline, and Escape cancels. Try a
+  narrow window and full screen.
+- Mac app: `app/build.sh`, then open `app/build/Muse.app`. On first launch,
+  enter your own Argmax key and allow the mic and Calendar prompts. "Check
+  setup" in the menu should list no problems. Then, from another app: tap
+  Control-Space, type a question, press Escape; hold Control-Space, say
+  "what's due this week", and let go. Quit Muse should leave no stray
+  servers (`lsof -iTCP:8765 -sTCP:LISTEN`). The app runs the servers from the
+  checkout named in `MUSE_REPO` (default `~/code/ai-hackathon-26`), so point it
+  at yours.
 
 ## Report back
 
