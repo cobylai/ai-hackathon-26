@@ -52,7 +52,7 @@ Then add three or four real events you're happy to show (this week, with times a
 The 9 emails cover a plain ask (ramen recommendation, chem lab notes, potluck dessert), deadlines (HIST 2290 essay Mon 11:59pm, housing form Fri noon, robotics parts order Wed 5pm) and a bill. Two gaps:
 
 - **No email proposes a meeting time,** so the "You're free … Draft a yes?" suggestion can't show.
-- **The bill email doesn't carry its amount into the bank,** so "How much is my bill?" misses.
+- **Bill amounts:** the bank's summary of a bill drops the amount, so "How much is my bill?" misses. **Bill amounts are not in the live run.** A bill email can still be sent; it shows up as plain mail in catch me up and due.
 
 Send these to the test account, then Sync mail again:
 
@@ -64,6 +64,8 @@ Send these to the test account, then Sync mail again:
 **Names by voice:** the senders are "Coby Lai" and "Antranig Baghdassarian". Whisper has heard "Coby" as "Kobe", and "Antranig" hasn't been tried. Type the person questions in the live run, or try each name by voice once before.
 
 ## Questions (from what's really in the live bank, 2026-11-15)
+
+**Not in the live run:** bill amounts and coursework (no live Canvas path). Every row below uses only mail, the calendar and notes.
 
 | Capability | Ask | Expect |
 |---|---|---|
@@ -78,7 +80,6 @@ Send these to the test account, then Sync mail again:
 | Memory | "Remember that my lab is Tuesdays at 2." → "What do you know about me?" → "When is my lab?" → "Forget that" | saved, listed, answered from the note, removed |
 | Drafts | "Draft a reply to Antranig" → Open in Mail (close it unsent) | a draft from his newest ask |
 | Suggestion (after the study-session email) | "What did Antranig ask me?" | "You're free Thursday … Draft a yes to Antranig?" |
-| Bill (after the bill email) | "How much is my phone bill?" | $42.18 |
 | Add to calendar | "Add the housing renewal form to my calendar" → yes | an event in Flux live |
 | Remind me | "Remind me about the housing renewal form" → yes | a reminder in your default Reminders list |
 | Set me up | "Set me up for the essay" → yes | the essay email opens |
