@@ -38,11 +38,14 @@ class CountingAsk:
     def __init__(self) -> None:
         self.chars = 0
         self.calls = 0
+        self.prompt_tokens = 0
 
     def __call__(self, prompt: str, choices=None, max_tokens: int = 64) -> str:
         self.calls += 1
         self.chars += len(llm.SYSTEM) + len(prompt)
-        return llm.ask(prompt, choices=choices, max_tokens=max_tokens)
+        reply = llm.ask(prompt, choices=choices, max_tokens=max_tokens)
+        self.prompt_tokens += llm.last_usage.get("prompt_tokens", 0)
+        return reply
 
 
 def load_questions(path: Path, limit: int | None = None) -> list[dict]:
@@ -83,6 +86,7 @@ def run_one(item: dict) -> dict:
         "notes": len(outcome.notes),
         "model_calls": ask.calls,
         "chars": ask.chars,
+        "prompt_tokens": ask.prompt_tokens,
         "seconds": round(seconds, 1),
         "answer": answer[:300],
     }
@@ -90,14 +94,14 @@ def run_one(item: dict) -> dict:
 
 def markdown(rows: list[dict]) -> str:
     lines = [
-        "| # | kind | pass | rounds | pages | blocked | model calls | input chars | seconds |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| # | kind | pass | rounds | pages | blocked | model calls | input chars | prompt tokens | seconds |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for row in rows:
         lines.append(
             f"| {row['id']} | {row['kind']} | {'yes' if row['pass'] else 'NO'} | "
             f"{row['rounds']} | {row['pages']} | {row['blocked']} | {row['model_calls']} | "
-            f"{row['chars']} | {row['seconds']} |"
+            f"{row['chars']} | {row['prompt_tokens']} | {row['seconds']} |"
         )
     return "\n".join(lines)
 
@@ -136,11 +140,12 @@ def main(argv: list[str] | None = None) -> int:
     passes = sum(1 for row in rows if row["pass"])
     seconds = statistics.median(row["seconds"] for row in rows)
     chars = statistics.median(row["chars"] for row in rows)
+    tokens = statistics.median(row["prompt_tokens"] for row in rows)
     blocked = sum(row["blocked"] for row in rows)
     print(markdown(rows))
     print()
     print(f"pass {passes}/{len(rows)}  median {seconds:.1f} s  median {chars:.0f} chars  "
-          f"blocked pages {blocked}")
+          f"median {tokens:.0f} prompt tokens  blocked pages {blocked}")
     print(f"target 9/12, <20 s, <8000 chars: "
           f"{'met' if passes >= 9 and seconds < 20 and chars < 8000 else 'missed'}")
 

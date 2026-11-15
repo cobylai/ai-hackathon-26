@@ -20,3 +20,4 @@
 - S8 fix 2: `engine.search` only remembers DuckDuckGo for the ten-minute window when it actually returned results, and clears the window when both engines fail (or when a remembered fallback stops answering), so a walled fallback can no longer pin every later query.
 - S8 fix 3: `rank.top_chunks` with k>=2 always keeps the page's opening chunk and lets BM25 fill the remaining slot, so definitions and dates in the first paragraph are read even when the question words are spread over a long page; k=1 still returns the single best chunk.
 - S8 fix 4: the loop opens at most 2 pages per round (was 3); the third page rarely changed an answer in Run 1 and dominated the model input (q05: 14 calls, 15.6k chars).
+- S8 fix 5: `llm.ask` leaves the server's exact `prompt_tokens`/`completion_tokens` in `llm.last_usage` (empty on failure, additive to the shared seam), and `scripts/eval_search.py` now prints a real prompt-token column instead of estimating chars/4.

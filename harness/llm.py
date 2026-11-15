@@ -19,6 +19,9 @@ TIMEOUT_SECONDS = 120.0
 
 SYSTEM = "You are a small, careful assistant. Answer only what is asked, briefly."
 
+# Token counts reported by the server for the most recent successful call.
+last_usage: dict[str, int] = {}
+
 
 def base_url() -> str:
     return os.environ.get("LLM_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
@@ -54,7 +57,12 @@ def _coerce(reply: str, choices: list[str] | None) -> str:
 
 
 def ask(prompt: str, choices: list[str] | None = None, max_tokens: int = 64) -> str:
-    """Send one user turn; return the reply, mapped onto ``choices`` if given."""
+    """Send one user turn; return the reply, mapped onto ``choices`` if given.
+
+    Exact token counts for the call are left in ``last_usage`` (empty on failure).
+    """
+    global last_usage
+    last_usage = {}
     payload: dict = {
         "model": model(),
         "messages": [
@@ -88,10 +96,17 @@ def ask(prompt: str, choices: list[str] | None = None, max_tokens: int = 64) -> 
             f"{base_url()}/chat/completions", json=payload, timeout=TIMEOUT_SECONDS
         )
         response.raise_for_status()
-        content = response.json()["choices"][0]["message"]["content"]
+        data = response.json()
+        content = data["choices"][0]["message"]["content"]
+        usage = data.get("usage") or {}
     except Exception:
         # The caller decides what an empty answer means; a dead model must not crash a tool.
         return ""
+    if usage:
+        last_usage = {
+            "prompt_tokens": int(usage.get("prompt_tokens") or 0),
+            "completion_tokens": int(usage.get("completion_tokens") or 0),
+        }
     return _coerce(str(content or ""), choices)
 
 

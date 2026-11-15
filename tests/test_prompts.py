@@ -125,16 +125,20 @@ def test_rewrite_falls_back_to_the_old_query():
 
 
 class FakeResponse:
-    def __init__(self, content: str, status: int = 200) -> None:
+    def __init__(self, content: str, status: int = 200, usage: dict | None = None) -> None:
         self.content = content
         self.status = status
+        self.usage = usage
 
     def raise_for_status(self) -> None:
         if self.status >= 400:
             raise RuntimeError(f"http {self.status}")
 
     def json(self):
-        return {"choices": [{"message": {"content": self.content}}]}
+        body = {"choices": [{"message": {"content": self.content}}]}
+        if self.usage is not None:
+            body["usage"] = self.usage
+        return body
 
 
 def patch_post(monkeypatch, result) -> dict:
@@ -191,6 +195,26 @@ def test_ask_can_turn_off_reasoning(monkeypatch):
     seen = patch_post(monkeypatch, FakeResponse("Ready"))
     assert llm.ask("hi") == "Ready"
     assert seen["payload"]["reasoning_effort"] == "none"
+
+
+def test_ask_records_real_token_usage(monkeypatch):
+    patch_post(
+        monkeypatch,
+        FakeResponse("Ready", usage={"prompt_tokens": 41, "completion_tokens": 5}),
+    )
+    assert llm.ask("hi", max_tokens=16) == "Ready"
+    assert llm.last_usage == {"prompt_tokens": 41, "completion_tokens": 5}
+
+
+def test_ask_clears_usage_on_failure(monkeypatch):
+    patch_post(
+        monkeypatch,
+        FakeResponse("Ready", usage={"prompt_tokens": 41, "completion_tokens": 5}),
+    )
+    llm.ask("hi")
+    patch_post(monkeypatch, llm.httpx.ConnectError("down"))
+    assert llm.ask("hi") == ""
+    assert llm.last_usage == {}
 
 
 def test_ask_without_choices_returns_plain_text(monkeypatch):
