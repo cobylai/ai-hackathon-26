@@ -5,7 +5,7 @@
 | Say | What Muse does after your yes | Needs a connection |
 |---|---|---|
 | "open my calendar" (also notes, finder, textedit, preview, calculator) | `harness.computer.tools.app_open` | no |
-| "open the assignment page" | opens the newest bank entry whose `source` is a link and matches the words, in the default browser | the page might |
+| "open the assignment page" | opens a bank link in the default browser: the best match for any named words ("open the map essay assignment"), otherwise the Canvas assignment due soonest (worker 13: `kind="canvas"`, `source` a file:// page, opens offline) | the page might |
 | "draft a reply to Felix saying yes" | `harness.email.search` by sender, then `harness.email.draft.reply` | yes |
 
 ## The rule: show it, wait for a yes

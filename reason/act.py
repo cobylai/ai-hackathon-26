@@ -197,7 +197,30 @@ def _hold(what: str, run: Callable[[], str], preview: str):
     return Answer(f"{preview}\n{ASK_YES}", "act")
 
 
-def _plan_open(target: str, root, deps: dict):
+def _next_due(e: dict, today: date) -> str:
+    """Soonest deadline on or after today ("9999" when none), for picking "the assignment"."""
+    days = [str(d.get("date")) for d in e.get("deadlines") or [] if d.get("date")]
+    return min((d for d in days if d >= today.isoformat()), default="9999")
+
+
+def _pick_page(words: str, today: date, root):
+    """The bank entry with a link to open. Named words: best match, newest first.
+    "the assignment page" alone: the Canvas assignment due soonest (else the newest link)."""
+    from bank import store
+    if words:
+        hits = [e for e in bank.search(words, limit=20, root=root)
+                if URL_RE.match(str(e.get("source") or ""))]
+        return hits[0] if hits else None
+    links = [e for e in store.all_entries(root) if URL_RE.match(str(e.get("source") or ""))]
+    if not links:
+        return None
+    canvas = [e for e in links if e.get("kind") == "canvas"]
+    if canvas:
+        return min(canvas, key=lambda e: (_next_due(e, today), e.get("sent_date") or ""))
+    return max(links, key=lambda e: e.get("sent_date") or "")
+
+
+def _plan_open(target: str, today: date, root, deps: dict):
     from .answer import Answer
     t = target.lower().strip()
     app = APPS.get(t) or APPS.get(re.sub(r"^(?:apple\s+|mac\s+)", "", t))
@@ -205,13 +228,12 @@ def _plan_open(target: str, root, deps: dict):
         return _hold("open_app", lambda: deps["open_app"](app), f"I'll open {app}.")
     if not PAGE_WORDS.search(t):
         return Answer(f"I can only open {APP_LIST}, or a page saved in the bank.", "act")
-    words = " ".join(w for w in re.findall(r"[a-z0-9]+", t)
-                     if w not in ("page", "link", "site", "website", "url", "the", "my", "for", "on", "canvas"))
-    hits = [e for e in bank.search(words or "assignment", limit=20, root=root)
-            if URL_RE.match(str(e.get("source") or ""))]
-    if not hits:
+    generic = ("page", "link", "site", "website", "url", "the", "my", "for", "on", "canvas",
+               "assignment", "assignments", "homework", "next")
+    words = " ".join(w for w in re.findall(r"[a-z0-9]+", t) if w not in generic)
+    e = _pick_page(words, today, root)
+    if e is None:
         return Answer(f"I don't have a saved link for {target}.", "act")
-    e = max(hits, key=lambda x: x.get("sent_date") or "")
     url = str(e["source"])
     return _hold("open_page", lambda: deps["open_page"](url),
                  f"I'll open this page in your browser:\n{e.get('subject') or url}\n{url}")
@@ -266,5 +288,5 @@ def handle(question: str, today: date | None = None, root: Path | None = None, *
     if req is None:
         return None
     if req["kind"] == "open":
-        return _plan_open(req["target"], root, d)
+        return _plan_open(req["target"], today or date.today(), root, d)
     return _plan_draft(req["name"], req["gist"], root, d)

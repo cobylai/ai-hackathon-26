@@ -7,6 +7,7 @@ from __future__ import annotations
 import re
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -119,6 +120,22 @@ class Act(unittest.TestCase):
         self.assertIn(PAGE["source"], a.text)
         self.h("yes")
         self.assertEqual(self.calls, [("open_page", PAGE["source"])])
+
+    def test_open_page_picks_canvas_due_soonest(self):
+        def C(i, title, due):
+            return E(f"c0000000000{i}", "course", "HIST 2140 Maps and Empires", None, "2026-11-10",
+                     title, f"{title} for HIST 2140.", kind="canvas",
+                     source=f"file:///tmp/canvas/hist2140/{i}.html",
+                     deadlines=[{"phrase": due, "date": due, "time": "23:59"}])
+        for e in (C(1, "Map essay", "2026-11-20"), C(2, "Reading response", "2026-11-17"),
+                  C(3, "Old quiz", "2026-11-01")):
+            store.write_entry(dict(e), self.root)
+        a = act.handle("open the assignment page", today=date(2026, 11, 14), root=self.root, deps=self.deps)
+        self.assertIn("Reading response", a.text)
+        self.assertIn("file:///tmp/canvas/hist2140/2.html", a.text)
+        a = act.handle("open the map essay assignment", today=date(2026, 11, 14), root=self.root,
+                       deps=self.deps)
+        self.assertIn("1.html", a.text)
 
     def test_open_page_none_saved(self):
         self.assertIn("don't have a saved link", self.h("open the syllabus page").text)
