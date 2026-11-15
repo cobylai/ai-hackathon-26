@@ -55,6 +55,10 @@ class Problem8(unittest.TestCase):
             self.assertEqual(a.route, "chat", q)
             self.assertTrue(a.text.startswith(want), q)
 
+    def test_a_question_about_my_week_is_a_catch_up_not_a_web_search(self):
+        for q in ("What does this week look like?", "how does my week look", "What's my week?", "what does tomorrow look like"):
+            self.assertEqual(self.ask(q).route, "catchup", q)
+
     def test_questions_about_the_user_never_reach_the_web(self):
         for q in ("What am I?", "Who am I?"):
             a = self.ask(q)
