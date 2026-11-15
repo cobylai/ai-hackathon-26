@@ -80,7 +80,7 @@ Bank: a copy of `~/flux-bank` after a real Sync mail from the test Gmail account
 
 ## What doesn't work live (not fixed)
 
-- **No live Canvas sync.** Coursework in the demo comes from saved Canvas pages rewritten into sample assignments (`scripts/demo/`). A real Canvas page can be saved (`scripts/save_canvas_pages.py`, Duo sign-in) and `canvas/read.py` reads it, but nothing files real pages into `~/flux-bank` yet.
+- **No live Canvas sync.** Coursework in the demo comes from saved Canvas pages rewritten into sample assignments (`scripts/demo/`). A real Canvas page can be saved (`scripts/demo/save_canvas_pages.py`, Duo sign-in) and `canvas/read.py` reads it, but nothing files real pages into `~/flux-bank` yet.
 - **One mail account.** Opening an email in Mail and Gmail drafts work only in the account `FLUX_ACCOUNT` names (default the test account).
 - **Mail sync** reads the last 7 days, at most 10 threads per sync.
 - **Calendar:** one calendar; repeating events show only at their first date.

@@ -9,7 +9,8 @@ Reads (the page, /status, /bank, /chats) are served in parallel, so a slow web s
 does not freeze the window. See finding 18 in docs/test-results/antranig-full.md.
 
     GET  /        the page
-    GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None, "model": bool}
+    GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None, "model": bool,
+                   "mode": "demo" | "live", "mode_label": "Demo data" | "Your data"}
     GET  /bank    [{"date", "sender", "subject", "summary", "ask", "deadlines", "folder", "id"}], newest first
     POST /ask     {"question": str, "speak": bool} -> {"text", "route", "sources", "seconds", "pending"}
                   speak: read the answer aloud with the Mac's `say` (the Speak switch in the bar)
@@ -40,6 +41,7 @@ Any /ask and /listen/start stop the spoken answer first, so talking cuts it off.
 """
 from __future__ import annotations
 
+from bank import mode as _mode
 import argparse
 import json
 import threading
@@ -529,7 +531,7 @@ async function refresh() {
     const modelOk = r.model !== false;  // Bonsai answers; online alone is just the internet
     statusEl.className = r.online && modelOk ? 'on' : '';
     statusEl.innerHTML = '<span class="dot"></span>';
-    statusEl.appendChild(document.createTextNode((r.online ? 'Online' : 'Offline') + ' · ' + r.items + (r.items === 1 ? ' item' : ' items') + ' in the bank' + (modelOk ? '' : ' · model down')));
+    statusEl.appendChild(document.createTextNode((r.mode_label ? r.mode_label + ' · ' : '') + (r.online ? 'Online' : 'Offline') + ' · ' + r.items + (r.items === 1 ? ' item' : ' items') + ' in the bank' + (modelOk ? '' : ' · model down')));
     statusEl.title = modelOk ? 'Show what is in the bank' : 'The Bonsai model server is not answering; start it with scripts/serve_bonsai.sh 4B';
     voiceOk = !!r.voice;
     if (!recording && !talk.classList.contains('working')) {
@@ -848,7 +850,8 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 self._send(200, PAGE, "text/html; charset=utf-8")
             elif self.path == "/status":
                 self._json({"online": online_fn(), "items": count_fn(), "voice": talk is not None,
-                            "voice_why": voice_why, "model": model_fn()})
+                            "voice_why": voice_why, "model": model_fn(),
+                            "mode": _mode.current(), "mode_label": _mode.label()})
             elif self.path == "/bank":
                 self._json(bank_rows(entries_fn()))
             elif self.path == "/chats":
