@@ -153,7 +153,9 @@ ingest(text, source, kind, *, sender_name=None, sender_address=None, sent_date=N
     # With none of them and no header lines: model sender + first "Name <addr>" + first dated line;
     # no date found -> ingest date, sent_date_guessed=True.
     # -> {"status": "added" | "duplicate", "path": str, "entry": dict, "raw": [model replies]}
-search(query, limit=10)          # -> [entry]; keyword score, subject/sender hits count double, ties newest first
+search(query, limit=10)          # -> [entry]; keyword score over whole words (plain plurals count: lab ~ labs),
+                                 #    subject/sender hits count double, ties newest first; a question about
+                                 #    the user ("my", "I", "me") ranks their notes (kind "me") first
 by_person(name)                  # -> [entry]; part-word match on sender name or address, newest first
 due(start_date, end_date)        # -> [{"date", "time", "phrase", "entry"}]; inclusive, sorted by date then time
 rebuild_index()                  # -> path of data/bank/index.md (every ingest also rebuilds it)
