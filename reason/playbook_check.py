@@ -1,7 +1,7 @@
 """Run every playbook's examples: python -m reason.playbook_check [--today YYYY-MM-DD] [--only NAME]
 
 Each example in playbooks/<route>.md ("## Examples": question | route | answer contains)
-goes through answer() on a temporary copy of $MUSE_BANK_DIR, with the network blocked
+goes through answer() (one Session per file, so follow-ups lean on the rows above) on a temporary copy of $MUSE_BANK_DIR, with the network blocked
 (localhost stays open for Bonsai), so examples that save or forget things never change
 the real bank. Prints RIGHT/WRONG per example and the total. Exit code 1 if any is wrong.
 Keep rule (playbooks/RULES.md): keep a playbook or prompt change only if this still passes.
@@ -20,6 +20,7 @@ from . import playbook
 def run(today: date, only: str | None = None) -> tuple[int, int]:
     from bank import store
     from .answer import answer
+    from .session import Session
 
     src = store.bank_dir()
     with tempfile.TemporaryDirectory(prefix="muse-check-") as tmp:
@@ -32,10 +33,11 @@ def run(today: date, only: str | None = None) -> tuple[int, int]:
         for name in playbook.names():
             if only and name != only:
                 continue
+            session = Session()  # each file's examples are one conversation (follow-ups)
             for ex in playbook.load(name).examples:
                 total += 1
                 try:
-                    a = answer(ex["question"], today=today, root=root)
+                    a = answer(ex["question"], today=today, root=root, session=session)
                     route, text = a.route, a.text
                 except Exception as e:
                     route, text = "error", f"{type(e).__name__}: {e}"

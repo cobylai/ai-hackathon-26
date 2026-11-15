@@ -3,6 +3,9 @@
 Type a question and press Enter. Press Enter on an empty line to start talking, and
 Enter again to stop; the words heard are shown and answered like a typed question.
 Ctrl-D (or "quit") exits. If voice can't start, typing still works.
+--speak reads each answer aloud with the Mac's `say` (no Source line); talking or a new
+question stops it. Follow-ups ("and tomorrow?", "the first one") lean on this run's last
+answer only (reason/session.py); nothing is kept after quitting.
 A thin wrapper: answer() does the work.
 """
 from __future__ import annotations
@@ -10,23 +13,35 @@ from __future__ import annotations
 import argparse
 
 from . import answer
+from .session import Session
+from .speak import Speaker
 from .speech import start_voice
+
+SESSION = Session()   # this run's conversation, for follow-ups
+SPEAKER = None        # a Speaker when --speak
 
 
 def ask(q: str, today) -> None:
+    if SPEAKER:
+        SPEAKER.stop()
     try:
-        a = answer(q, today=today)
+        a = answer(q, today=today, session=SESSION)
     except Exception as e:  # keep the loop alive; show what broke
         print(f"muse> Error: {type(e).__name__}: {e}\n")
         return
     print(f"muse> {a.text}\n[{a.route}, {a.seconds:.1f}s]\n")
+    if SPEAKER:
+        SPEAKER.speak(a.text)
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m reason")
     ap.add_argument("--today", help="pretend today is this date (YYYY-MM-DD)")
     ap.add_argument("--no-voice", action="store_true", help="typing only")
+    ap.add_argument("--speak", action="store_true", help="read answers aloud with the Mac's say")
     args = ap.parse_args(argv)
+    global SPEAKER
+    SPEAKER = Speaker() if args.speak else None
 
     voice, why = (None, "turned off") if args.no_voice else start_voice()
     if voice:
@@ -45,6 +60,8 @@ def main(argv=None) -> int:
             if not q:
                 if not voice:
                     continue
+                if SPEAKER:
+                    SPEAKER.stop()  # talking stops the spoken answer
                 try:
                     q = voice.listen(wait_for_stop=lambda: input("  (recording… Enter to stop) ")).strip()
                 except Exception as e:
@@ -55,6 +72,8 @@ def main(argv=None) -> int:
                     continue
             ask(q, args.today)
     finally:
+        if SPEAKER:
+            SPEAKER.stop()
         if voice:
             voice.close()
 
