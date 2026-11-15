@@ -69,6 +69,16 @@ class TestIngest(StoreCase):
         self.assertEqual(r["status"], "added")
         self.assertEqual(len(store.all_entries(self.root)), 2)
 
+    def test_sync_keywords_win(self):
+        body = "can you push your part to the shared doc? i want to start tomorrow morning."
+        r = bank.ingest(body, "thread:77", "email", sender_name="Marcus Bell",
+                        sender_address="mb771@univ.example.edu", sent_date="2026-11-12",
+                        subject="re: lab 6", root=self.root)
+        e = r["entry"]
+        self.assertEqual((e["sender_address"], e["sent_date"], e["subject"], e["folder"]),
+                         ("mb771@univ.example.edu", "2026-11-12", "re: lab 6", "person"))
+        self.assertEqual(e["deadlines"][0]["date"], "2026-11-13")
+
     def test_bad_kind(self):
         with self.assertRaises(ValueError):
             bank.ingest(EMAIL, "x", "tweet", root=self.root)

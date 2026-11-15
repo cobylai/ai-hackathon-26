@@ -19,14 +19,25 @@ from .store import bank_dir
 __all__ = ["ingest", "search", "by_person", "due", "rebuild_index", "bank_dir"]
 
 
-def ingest(text: str, source: str, kind: str, *, today: date | None = None,
+def ingest(text: str, source: str, kind: str, *, sender_name: str | None = None,
+           sender_address: str | None = None, sent_date: date | str | None = None,
+           subject: str | None = None, today: date | None = None,
            root: Path | None = None) -> dict:
     """Extract facts with Bonsai and file one entry.
 
+    The optional sender/date/subject keywords are for callers (the email sync)
+    that already have them split out; they win over anything in the text.
     Returns {"status": "added" | "duplicate", "path": str, "entry": dict, "raw": [model replies]}.
     """
     if kind not in ("email", "page"):
         raise ValueError(f"kind must be 'email' or 'page', got {kind!r}")
+    if any((sender_name, sender_address, sent_date, subject)):
+        frm = (f"{sender_name} <{sender_address}>" if sender_name and sender_address
+               else sender_address or sender_name)
+        sd = sent_date.isoformat() if isinstance(sent_date, date) else sent_date
+        head = [f"From: {frm}" if frm else None, f"Date: {sd}" if sd else None,
+                f"Subject: {subject}" if subject else None]
+        text = "\n".join(h for h in head if h) + "\n\n" + text.lstrip()
     root = root or store.bank_dir()
     cid = store.content_id(text)
     dup = store.find_duplicate(cid, source, root)
