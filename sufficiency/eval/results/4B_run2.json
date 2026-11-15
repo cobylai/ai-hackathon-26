@@ -5,8 +5,11 @@
   "summary": {
     "orig": 8,
     "new": 7,
-    "median_s_per_judge": 0.81,
-    "median_s_per_model_call": 0.81
+    "s09": [
+      true
+    ],
+    "median_s_per_judge": 1.12,
+    "median_s_per_model_call": 1.12
   },
   "rows": [
     {
@@ -20,7 +23,7 @@
       "evidence": "Saturday: Rain likely after 1pm, 80% chance of precipitation, high 47F.",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.94
+      "seconds": 1.57
     },
     {
       "id": "p02_course_due_yes",
@@ -33,7 +36,7 @@
       "evidence": "- Due: Problem Set 5 (Wed Nov 11, 11:59pm)\n- Due: Lab 12 checkoff (Fri Nov 13, in section)",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 1.63
+      "seconds": 4.01
     },
     {
       "id": "p03_ads_no",
@@ -46,7 +49,7 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.75
+      "seconds": 0.83
     },
     {
       "id": "p04_unrelated_no",
@@ -59,7 +62,7 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.51
+      "seconds": 0.82
     },
     {
       "id": "p05_login_no",
@@ -72,7 +75,7 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.51
+      "seconds": 0.82
     },
     {
       "id": "p06_hours_yes",
@@ -85,7 +88,7 @@
       "evidence": "Thu Nov 26 (Thanksgiving): CLOSED",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.71
+      "seconds": 1.13
     },
     {
       "id": "p07_partial_no",
@@ -98,7 +101,7 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.57
+      "seconds": 0.87
     },
     {
       "id": "p08_recipe_yes",
@@ -111,7 +114,7 @@
       "evidence": "Bake 55 to 65 minutes, until a toothpick comes out clean.",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.98
+      "seconds": 1.21
     },
     {
       "id": "s01_paraphrase_yes",
@@ -124,7 +127,7 @@
       "evidence": "Evening meal service ends at 8:30 PM (opens 5:00 PM).",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.91
+      "seconds": 1.03
     },
     {
       "id": "s02_paraphrase_yes",
@@ -137,7 +140,7 @@
       "evidence": "Vehicles left in campus lots between 2am and 6am must display a valid overnight pass, available from the Transportation Office for $5 per night.",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.95
+      "seconds": 1.12
     },
     {
       "id": "s03_elsewhere_no",
@@ -150,7 +153,7 @@
       "evidence": "Meeting times are posted on our Instagram, @chessclub_example.",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.87
+      "seconds": 1.03
     },
     {
       "id": "s04_elsewhere_no",
@@ -163,7 +166,7 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.57
+      "seconds": 0.65
     },
     {
       "id": "s05_long_end_yes",
@@ -176,7 +179,7 @@
       "evidence": "Each resident receives 12 overnight guest passes per semester; unused passes do not carry over.",
       "chunk": 1,
       "chunks": 2,
-      "seconds": 12.57
+      "seconds": 16.06
     },
     {
       "id": "s06_long_end_yes",
@@ -189,7 +192,7 @@
       "evidence": "May I bring a calculator?\nA: A basic four-function calculator is allowed; graphing and scientific calculators are not.",
       "chunk": 0,
       "chunks": 1,
-      "seconds": 1.63
+      "seconds": 2.33
     },
     {
       "id": "s07_similar_no",
@@ -202,7 +205,7 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.61
+      "seconds": 0.84
     },
     {
       "id": "s08_similar_no",
@@ -215,7 +218,20 @@
       "evidence": null,
       "chunk": 0,
       "chunks": 1,
-      "seconds": 0.63
+      "seconds": 1.95
+    },
+    {
+      "id": "s09_two_items_yes",
+      "group": "new",
+      "correct": true,
+      "expected": "enough",
+      "enough": true,
+      "reason": "answered",
+      "answer": "Cornell student ID; pencil",
+      "evidence": "Bring your Cornell student ID; we will check it at the door.\nYou will also need a pencil; exams written in pen will not be regraded.",
+      "chunk": 0,
+      "chunks": 1,
+      "seconds": 2.05
     }
   ]
 }

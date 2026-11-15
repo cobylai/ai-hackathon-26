@@ -69,6 +69,14 @@ class Judge(unittest.TestCase):
         self.assertEqual(v.reason, "quote_not_in_page")
         self.assertIsNone(v.evidence)
 
+    def test_list_of_quotes(self):
+        with stub_json({"answer": "Wed 6am-6pm, Thu closed",
+                        "quote": ["Wed Nov 25: 6am-6pm", "Thu Nov 26 (Thanksgiving): CLOSED"]}):
+            v = J.judge("Gym hours Wed and Thu?", PAGE)
+        self.assertTrue(v.enough)
+        with stub_json({"answer": "x", "quote": ["Wed Nov 25: 6am-6pm", "Sat Nov 28: open all night"]}):
+            self.assertEqual(J.judge("q", PAGE).reason, "quote_not_in_page")
+
     def test_null(self):
         with stub_json({"answer": None, "quote": None}):
             v = J.judge("q", PAGE)

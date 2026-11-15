@@ -41,6 +41,9 @@ def score(f, v) -> bool:
         return not v.enough
     if not v.enough:
         return False
+    if f.get("expect_answer"):   # every item must be named in the answer
+        ans = (v.answer or "").lower()
+        return all(e.lower() in ans for e in f["expect_answer"])
     ev = (v.evidence or "").lower()
     return any(e.lower() in ev for e in f.get("expect_evidence") or [""])
 
@@ -59,7 +62,9 @@ def run_once(n: int, orig, new) -> dict:
                   f"{v.seconds:5.2f}s  {(v.answer or '')[:50]}", file=sys.stderr)
     per_call = [r["seconds"] / max(1, r["chunk"] + 1) for r in rows]
     summary = dict(orig=sum(r["correct"] for r in rows if r["group"] == "orig"),
-                   new=sum(r["correct"] for r in rows if r["group"] == "new"),
+                   new=sum(r["correct"] for r in rows if r["group"] == "new"
+                           and r["id"] <= "s08~"),
+                   s09=[r["correct"] for r in rows if r["id"].startswith("s09")],
                    median_s_per_judge=round(statistics.median(r["seconds"] for r in rows), 2),
                    median_s_per_model_call=round(statistics.median(per_call), 2))
     return {"run": n, "size": config.BONSAI_SIZE, "model": client.loaded_model(),

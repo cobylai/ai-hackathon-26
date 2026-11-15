@@ -88,19 +88,30 @@ trim_to_budget(text, budget_tokens) -> str
 
 If the browser side needs a model call (for example, choosing which link to click), use this client. Never call a cloud model from the app.
 
-## 4. Sufficiency check — **planned** (`sufficiency/`, branch `sufficiency-check`)
+## 4. Sufficiency check — **built** (`sufficiency/`, branch `sufficiency-check`)
 
-Decides whether a page answers the question, and if not, searches again with a reworded query. This is the main consumer of the browser contract.
+Decides whether a page answers the question, and if not, searches again with a reworded query. This is the main consumer of the browser contract (§2). Details and numbers are in `docs/sufficiency-check.md` on that branch.
 
 ```python
-judge(question, page_text, url=None, today=None) -> Verdict
-    # enough, answer, evidence (a quote checked to appear in the page), reason, url, chunk, chunks, seconds
-rephrase(question, tried_queries, today=None) -> str | None
-gather(question, search_fn, open_fn, max_results=10, max_rephrases=2, today=None) -> GatherResult
-    # found, answer, evidence, source (title/url/snippet), queries, opened, verdicts, message
+from sufficiency import judge, rephrase, gather
+
+judge(question: str, page_text: str, url: str | None = None, today: date | str | None = None) -> Verdict
+    # Verdict: enough: bool, answer: str | None, evidence: str | None (quote checked to be in the page),
+    #          reason: "answered" | "no_answer" | "quote_not_in_page" | "bad_json",
+    #          url: str | None, chunk: int, chunks: int, seconds: float
+rephrase(question: str, tried_queries: list[str], today=None) -> str | None   # None after two repeats
+gather(question: str, search_fn, open_fn, max_results: int = 10, max_rephrases: int = 2,
+       today=None) -> GatherResult
+    # GatherResult: found: bool, answer: str | None, evidence: str | None,
+    #               source: Hit(title, url, snippet) | None, queries: list[str],
+    #               opened: list[str] (urls), verdicts: list[Verdict], message: str
 ```
 
-`gather` searches, reads titles and snippets, opens hits in order, and stops at the first page that's enough. If none is, it rephrases (at most 2 times, so at most 30 pages) and then gives up with a "not found" message. Full plan: `docs/plans/sufficiency-check.md` on that branch.
+- **Judge.** The model answers from the page and quotes the lines it used. Code sets `enough` only if the quote is found in the page, ignoring case, whitespace, quote and dash styles, and punctuation at the ends of the quote.
+- **Long pages.** Pages over 6,000 tokens are judged chunk by chunk.
+- **Sampling.** Judging runs at temperature 0.2, using the new `sampling=` argument in `llm/client.py`.
+- **Gather.** It searches with the question itself, keeps the first 10 hits, and moves hits whose title or snippet shares no word with the question to the end. It opens each URL once and stops at the first page that's enough. If none is, it rephrases at most 2 times, so at most 3 searches and 30 pages. Then it returns `found=False` with every query and URL it tried.
+- **Failed pages.** If `open_fn` raises or returns empty `text`, that URL is skipped.
 
 ## 5. Context store — **planned** (`bank/`, branch `context-store`)
 

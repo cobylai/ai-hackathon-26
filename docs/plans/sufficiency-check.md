@@ -59,5 +59,5 @@ A fixture marked "enough" passes only if `evidence` also contains the fixture's 
 ## Open questions
 
 1. A quote joined with "..." passes if each piece of 8 or more characters is in the page and there is at least one such piece. **Default: yes.**
-2. For p02 ("what's due this week"), quoting one of the two due items counts as enough, even if the answer misses the other. **Default: yes.**
+2. ~~For p02, quoting one item counts as enough.~~ Replaced after review: one quoted item is still enough, but the answer should list every item. Checked by fixture s09. The original prompt already does this; see docs/sufficiency-check.md.
 3. All fixtures use Friday 13 November 2026 as "today", the date the original check used. **Default: yes.**
