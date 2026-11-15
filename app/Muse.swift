@@ -26,6 +26,8 @@ let keychainAccount = "ARGMAX_API_KEY"
 let env = ProcessInfo.processInfo.environment
 let repo: String = env["MUSE_REPO"] ?? (Bundle.main.object(forInfoDictionaryKey: "MuseRepo") as? String) ?? ""
 let bankDir: String = env["MUSE_BANK_DIR"] ?? (NSHomeDirectory() + "/muse-demo-bank")
+// Sync mail writes real Gmail here, never into the demo bank.
+let syncBankDir: String = env["MUSE_SYNC_BANK_DIR"] ?? (NSHomeDirectory() + "/muse-bank")
 let calendarName: String = env["MUSE_CALENDAR"] ?? "Muse demo"
 let modelFolder: String = env["ARGMAX_MODEL_FOLDER"].flatMap { $0.isEmpty ? nil : $0 } ?? (NSHomeDirectory() +
     "/Documents/huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-large-v3-v20240930_626MB")
@@ -495,7 +497,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         syncItem.isEnabled = false; syncItem.title = "Syncing mail…"
         syncInfo.isHidden = true
         DispatchQueue.global().async {
-            let (_, out) = run("/bin/zsh", ["-l", "-c", "cd \"$MUSE_REPO_DIR\" && MUSE_BANK_DIR=\"$MUSE_BANK\" exec uv run python scripts/sync_email.py 7"], timeout: 900, env: ["MUSE_REPO_DIR": repo, "MUSE_BANK": bankDir])
+            let (_, out) = run("/bin/zsh", ["-l", "-c", "cd \"$MUSE_REPO_DIR\" && MUSE_BANK_DIR=\"$MUSE_BANK\" exec uv run python scripts/sync_email.py 7"], timeout: 900, env: ["MUSE_REPO_DIR": repo, "MUSE_BANK": syncBankDir])
             let last = out.split(separator: "\n").last.map(String.init) ?? "done"
             DispatchQueue.main.async {
                 self.syncItem.isEnabled = true; self.syncItem.title = "Sync mail"
