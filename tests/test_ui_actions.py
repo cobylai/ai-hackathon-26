@@ -22,6 +22,7 @@ def controls(monkeypatch):
         {"kind": "menuitem", "label": "Delete", "element": fake_elements[1]},
         {"kind": "textarea", "label": "(empty text area)", "element": fake_elements[2]},
     ])
+    monkeypatch.setattr(ui, "_last_pid", 1234)
     monkeypatch.setattr(permissions, "AXIsProcessTrusted", lambda: True)
     monkeypatch.setattr(ui, "_front_app", lambda: (1234, "TextEdit"))
     monkeypatch.setattr(ui, "_press", lambda el: calls["press"].append(el) or (True, ""))
@@ -56,6 +57,14 @@ def test_click_confirm_word_needs_confirmation(home, controls):
     assert result.startswith("CONFIRM click 'Delete' on 'TextEdit'")
     assert "call again with token=" in result
     assert controls["press"] == []
+
+
+def test_click_refuses_after_front_app_change(home, controls, monkeypatch):
+    monkeypatch.setattr(ui, "_front_app", lambda: (9999, "Notes"))
+    assert ui.ui_click(1) == "ERR front app changed since the ui listing; call ui again"
+    assert ui.ui_type(3, "hello") == "ERR front app changed since the ui listing; call ui again"
+    assert controls["press"] == []
+    assert controls["set_value"] == []
 
 
 def test_click_denied_app(home, controls, monkeypatch):
