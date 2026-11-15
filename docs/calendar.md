@@ -47,6 +47,26 @@ Source: Apple Calendar (Muse demo)
 
 For a single day the day is left off each line. If there are no events, it says "Nothing on your calendar <range>." If Calendar can't be read (no such calendar, no permission, a 20 s timeout), it says "I couldn't read Apple Calendar (<reason>)."
 
+## Speed
+
+Calendar.app's scripting is slow: about 3 s to read one calendar, and 5–6 s for the first read after launch. A `whose` date filter costs about 1.5 s for each property it fetches, so `applecal` fetches every event of the calendar in one bulk call and filters the dates in Python. It keeps the result for 60 s (`MUSE_CALENDAR_CACHE=<seconds>`), so only the first calendar question in a minute waits. An event you add in Calendar shows up within 60 s.
+
+## Live run (2026-11-14 23:46, Sat; network blocked in the process, localhost allowed)
+
+The demo calendar holds 7 made-up events. The network block is `reason.live_check.block_network()` in the Python process. **Not `sandbox-exec`**: under it, Calendar refuses Apple events (-10004).
+
+| Front end | Question | Answer | Seconds |
+|---|---|---|---|
+| `python -m reason` | what's on my calendar tomorrow | Sun Nov 15: 9am–10am Demo practice run (Duffield Atrium); noon–1:30pm Hackathon judging (Duffield Atrium) | 5.9 |
+| `python -m reason` | when is my next meeting | Sun Nov 15 9am–10am Demo practice run (the 6pm dinner had passed) | 0.0 |
+| `python -m reason` | what do I have this week | 6 events, Sat Nov 14 to Thu Nov 19 (Nov 14 to Nov 22) | 0.0 |
+| `python -m reason` | am I free Monday | Mon Nov 16: 9:30am–10am Team standup (Rhodes 402) | 0.0 |
+| `python -m reason` | what's due this week | the bank's due list, unchanged (route due) | 0.0 |
+| `reason.web` `/ask` | What's on my calendar tomorrow? | same 2 events | 5.19 |
+| `reason.web` `/ask` | When is my next meeting? | Demo practice run, Sun 9am | 0.0 |
+| `reason.web` `/ask` | What do I have this week? | same 6 events | 0.0 |
+| `reason.web` `/ask` | Am I free Monday? | Team standup 9:30am | 0.0 |
+
 ## Tests
 
 ```bash
@@ -58,5 +78,8 @@ uv run python -m unittest discover reason/tests     # events source mocked (test
 
 - **Repeating events:** Calendar's AppleScript `whose start date` doesn't expand them, so a weekly event shows only on its first date. Use one-off events in the demo calendar.
 - **Only one calendar** is read.
-- **Calendar.app opens** in the background on the first question if it isn't running. The first answer can take a few seconds.
+- **Calendar.app opens** in the background on the first question if it isn't running. The first answer takes about 5 s.
+- **`sandbox-exec` breaks it** (-10004). Use the per-process block, or really turn Wi-Fi off.
+- **Wi-Fi was not actually turned off** in the live run.
+- **Voice** wasn't tried. Calendar questions have no names in them, so they should come through Whisper fine.
 - Calendar events aren't folded into "what's due" answers. The due route is unchanged.

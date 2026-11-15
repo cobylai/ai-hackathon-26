@@ -12,7 +12,7 @@ from unittest import mock
 import applecal
 
 US, RS = "\x1f", "\x1e"
-OUT = (f"Standup{US}2026-11-16T09:30{US}2026-11-16T10:00{US}Room 204{US}false{RS}"
+OUT = (f"3{RS}Standup{US}2026-11-16T09:30{US}2026-11-16T10:00{US}Room 204{US}false{RS}"
        f"Demo day{US}2026-11-15T00:00{US}2026-11-16T00:00{US}{US}true{RS}\n")
 
 
@@ -36,18 +36,44 @@ class Parse(unittest.TestCase):
 
 
 class Events(unittest.TestCase):
+    def setUp(self):
+        applecal._INDEX.clear()
+        applecal._CACHE.clear()
+        env = mock.patch.dict("os.environ", {"MUSE_CALENDAR_CACHE": "0"})
+        env.start()
+        self.addCleanup(env.stop)
+
     def test_args_end_is_exclusive_next_day(self):
         with _run(OUT) as run:
             evs = applecal.events(date(2026, 11, 15), date(2026, 11, 30), calendar="X")
         argv = run.call_args.args[0]
         self.assertEqual(argv[:2], ["osascript", "-"])
-        self.assertEqual(argv[2:], ["X", "2026", "11", "15", "2026", "12", "1"])
+        self.assertEqual(argv[2:], ["X", "0"])
         self.assertEqual(len(evs), 2)
+        with _run(OUT) as run:  # the index Calendar reported is passed back as a hint
+            applecal.events(date(2026, 11, 15), date(2026, 11, 15), calendar="X")
+        self.assertEqual(run.call_args.args[0][-1], "3")
+
+    def test_range_filtered_in_python(self):
+        with _run(OUT):
+            self.assertEqual([e["title"] for e in applecal.events(date(2026, 11, 15), date(2026, 11, 15))],
+                             ["Demo day"])
+        with _run(OUT):
+            self.assertEqual([e["title"] for e in applecal.events(date(2026, 11, 16), date(2026, 11, 16))],
+                             ["Standup"])
+        with _run(OUT):
+            self.assertEqual(applecal.events(date(2026, 11, 17), date(2026, 11, 20)), [])
+
+    def test_cache(self):
+        with mock.patch.dict("os.environ", {"MUSE_CALENDAR_CACHE": "60"}), _run(OUT) as run:
+            applecal.events(date(2026, 11, 15), date(2026, 11, 15))
+            self.assertEqual(len(applecal.events(date(2026, 11, 16), date(2026, 11, 16))), 1)
+        self.assertEqual(run.call_count, 1)
 
     def test_calendar_name_env(self):
         with mock.patch.dict("os.environ", {"MUSE_CALENDAR": "Hearth"}):
             self.assertEqual(applecal.calendar_name(), "Hearth")
-        with mock.patch.dict("os.environ", {}, clear=True):
+        with mock.patch.dict("os.environ", {"MUSE_CALENDAR": ""}):
             self.assertEqual(applecal.calendar_name(), "Muse demo")
 
     def test_missing_calendar(self):
