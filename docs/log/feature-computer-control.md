@@ -56,3 +56,7 @@
 ## CLI (2026-11-15)
 - harness/__main__.py now exposes all six computer tools (app_open/file_find/file_open/ui/ui_click/ui_type, --token where relevant); exit 0 on OK, 1 otherwise.
 - 10 offline CLI tests (arg mapping, exit codes, parser coverage); live smoke: file_find OK, app_open Terminal correctly denied. Landed on main as a1e5323.
+
+## Browser session teardown (2026-11-15, landed on main as ddd18cb)
+- session.py: atexit.register(self.stop) on start; conftest.py: session-scoped finalizer stops the shared get_session browser.
+- 41 browser tests pass with the change. Leak counts could not be verified: 3+ teammate pytest runs were live concurrently, contaminating before/after process snapshots.
