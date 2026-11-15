@@ -60,3 +60,8 @@
 ## Browser session teardown (2026-11-15, landed on main as ddd18cb)
 - session.py: atexit.register(self.stop) on start; conftest.py: session-scoped finalizer stops the shared get_session browser.
 - 41 browser tests pass with the change. Leak counts could not be verified: 3+ teammate pytest runs were live concurrently, contaminating before/after process snapshots.
+
+## Teardown verification (2026-11-15)
+- Controlled experiment (unique HOME profile dirs, teammate-proof): WITH the atexit fix 0 surviving Chromium processes; WITHOUT it also 0.
+- Conclusion: Playwright cleans up on normal interpreter exit via the driver pipe; the fix is harmless insurance, not a bug fix.
+- The earlier "leaks"/hangs trace to SIGKILLed runs (my 5-min tool timeout) and misattributed teammate processes, not to missing teardown.
