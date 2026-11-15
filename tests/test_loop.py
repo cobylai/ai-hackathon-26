@@ -126,11 +126,20 @@ def test_never_exceeds_round_and_page_caps():
         "anything", ask=GreedyModel(), search=site.search, open_page=site.open_page
     )
     assert outcome.rounds == loop.MAX_ROUNDS == 3
+    assert loop.MAX_PAGES_PER_ROUND == 2
     assert len(site.queries) == 3
-    assert len(site.opened) == 9  # three pages per round, never more
-    assert len(set(site.opened)) == 9
+    assert len(site.opened) == 6  # two pages per round, never more
+    assert len(set(site.opened)) == 6
     assert outcome.notes == []
     assert "No useful results were found" in outcome.answer
+
+
+def test_at_most_two_picks_are_opened_in_a_round():
+    fake = llm.FakeLLM(["1 2 3 4 5", "A useful note.", "YES", "Answer [1]."])
+    site = Script()
+    outcome = loop.research("q", ask=fake.ask, search=site.search, open_page=site.open_page)
+    assert outcome.rounds == 1
+    assert len(site.opened) == 2
 
 
 def test_survives_a_blocked_page():

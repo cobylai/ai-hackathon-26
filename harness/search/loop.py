@@ -16,7 +16,9 @@ from harness.search import engine, prompts
 from harness.search.rank import top_chunks
 
 MAX_ROUNDS = 3
-MAX_PAGES_PER_ROUND = 3
+# Two pages per round: the third page rarely changed the answer in the S8 run and
+# it dominated the model input (q05 spent 14 calls and 15.6k chars on one answer).
+MAX_PAGES_PER_ROUND = 2
 MAX_RESULTS = 10
 MAX_CHUNKS = 2
 MAX_ANSWER_WORDS = 120
