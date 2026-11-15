@@ -69,14 +69,14 @@ the repo, with "today" set to the day you test (dates are offsets from it):
 ```bash
 DAY=$(date +%F)   # today
 rm -rf ~/flux-demo-mail ~/flux-demo-bank
-uv run python scripts/make_test_mail.py write ~/flux-demo-mail --today $DAY
+uv run python scripts/demo/make_test_mail.py write ~/flux-demo-mail --today $DAY
 FLUX_BANK_DIR=~/flux-demo-bank uv run python -m bank.load ~/flux-demo-mail --kind email
-FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/make_test_mail.py check ~/flux-demo-mail --today $DAY --offline
+FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/demo/make_test_mail.py check ~/flux-demo-mail --today $DAY --offline
 ```
 
 The check scores 38 questions. Ours: **37/38** (the one miss is listed below).
 
-(Coby's demo bank went through Gmail pages instead: `scripts/make_test_threads.py`
+(Coby's demo bank went through Gmail pages instead: `scripts/demo/make_test_threads.py`
 and `sync_test_threads.py`, which need a saved Gmail thread page as a template.
 See "Demo bank" in `docs/integration.md`. Same emails, same score.)
 

@@ -49,9 +49,14 @@ class Web(unittest.TestCase):
         self.assertNotIn("@import", PAGE)
 
     def test_status(self):
-        self.assertEqual(json.loads(self.get("/status")),
-                         {"online": False, "items": 17, "voice": False, "voice_why": None,
-                          "model": True})
+        with mock.patch.dict("os.environ", {"FLUX_MODE": "live"}):
+            live = json.loads(self.get("/status"))
+        with mock.patch.dict("os.environ", {"FLUX_MODE": "demo"}):
+            demo = json.loads(self.get("/status"))
+        self.assertEqual(live, {"online": False, "items": 17, "voice": False, "voice_why": None,
+                                "model": True, "mode": "live", "mode_label": "Your data"})
+        self.assertEqual((demo["mode"], demo["mode_label"]), ("demo", "Demo data"))
+        self.assertIn("r.mode_label", PAGE)  # the status line names the state
 
     def test_status_line_says_when_the_model_is_down(self):
         self.assertIn("model down", PAGE)

@@ -139,3 +139,30 @@ Person questions about Coby's four emails (1, 3, 5, 7) are not used in the video
 | 8 | Do I need to do anything about the garden newsletter? | No. It's news only (garlic planted, beds covered, photos posted), with no ask | 6 |
 | 9 | What's the housing renewal deadline and what does the form need? | Friday, November 20 by noon; preferred building and roommate, if any | 3 |
 | 10 | Is there anything due on Tuesday? | No. Nothing is due Tuesday 11/17 (clean "not found") | none |
+
+---
+
+## Video demo data (brief DEMO): reset and regenerate
+
+The 2-minute video uses the sample-data bank `~/flux-demo-bank`, not the live sends above.
+One command resets everything for a take. The run sheet and checks are in `docs/demo-runsheet.md`.
+
+```bash
+uv run python scripts/demo/demo_reset.py --today 2026-11-15          # each take: notes, chats, calendar, reminders
+uv run python scripts/demo/demo_reset.py --today 2026-11-15 --full   # also back up + rebuild the bank (~6 min, Bonsai up)
+uv run python scripts/demo/demo_check.py --today 2026-11-15          # typed run-sheet check, network blocked
+```
+
+- **Mail:** `scripts/demo/make_test_mail.py` holds brief M's 23 emails (m01–m23, scored by `check`) and 7 optional demo emails (d01–d07, `optional: true` in truth.json, never scored).
+  - Felix: "Free Thursday at 3?"
+  - Nina Valdez: Tuesday 2:30 seminar practice
+  - Jonah (TA): Lab Report 3 template
+  - Ivy: garden photos
+  - Northway Mobile: $48.20 bill
+  - Campus Rec: newsletter, no ask
+  - Sam: return the calculator
+- **Coursework:** `scripts/demo/make_test_canvas.py` builds 25 assignments across 4 courses (`docs/canvas.md`). Lab Report 3 is the 25th.
+- **Calendar:** `scripts/demo/demo_calendar.py` holds the week of events on the "Flux demo" calendar (`show` prints it).
+
+Everything is made up with example.edu/.com addresses, built with fixed seeds and keyed to `--today`.
+The reset refuses `~/flux-bank`, and any calendar or Reminders list not named "Flux demo".

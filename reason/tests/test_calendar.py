@@ -73,6 +73,7 @@ class Answers(unittest.TestCase):
                    _online=lambda: self.fail("no network check"))
         return a, cal
 
+    @mock.patch.dict("os.environ", {"FLUX_MODE": "demo", "FLUX_CALENDAR": ""})
     def test_tomorrow(self):
         a, cal = self.ask("what's on my calendar tomorrow")
         self.assertEqual(a.route, "calendar")

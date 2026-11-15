@@ -39,7 +39,7 @@ class Events(unittest.TestCase):
     def setUp(self):
         applecal._INDEX.clear()
         applecal._CACHE.clear()
-        env = mock.patch.dict("os.environ", {"FLUX_CALENDAR_CACHE": "0"})
+        env = mock.patch.dict("os.environ", {"FLUX_CALENDAR_CACHE": "0", "FLUX_MODE": "demo"})  # mocked "Flux demo"
         env.start()
         self.addCleanup(env.stop)
 
@@ -82,8 +82,13 @@ class Events(unittest.TestCase):
     def test_calendar_name_env(self):
         with mock.patch.dict("os.environ", {"FLUX_CALENDAR": "Hearth"}):
             self.assertEqual(applecal.calendar_name(), "Hearth")
-        with mock.patch.dict("os.environ", {"FLUX_CALENDAR": ""}):
+        with mock.patch.dict("os.environ", {"FLUX_CALENDAR": "", "FLUX_MODE": "demo"}):
             self.assertEqual(applecal.calendar_name(), "Flux demo")
+        with mock.patch.dict("os.environ", {"FLUX_CALENDAR": "", "FLUX_MODE": "live"}):
+            with mock.patch.dict("os.environ", {"FLUX_MODE_FILE": "/nonexistent/mode"}):
+                self.assertEqual(applecal.calendar_key(), "")
+                with self.assertRaisesRegex(applecal.CalendarError, "flux-mode live --calendar"):
+                    applecal.events(date(2026, 11, 15), date(2026, 11, 15))
 
     def test_missing_calendar(self):
         with _run(stderr="execution error: no calendar named Flux demo (4040)", code=1):

@@ -2,7 +2,7 @@
 
 ## For
 
-Greetings, mic checks, thanks and questions about Flux itself, so they get a short reply instead of a web search. "Hey, can you hear me okay?", "Hi", "Thanks!", "Is this working?", "How are you?", "Who are you?", "What can you do?"
+Greetings, mic checks, thanks and questions about Flux itself, so they get a short reply instead of a web search. "Hey, can you hear me okay?", "Hi", "Thanks!", "Is this working?", "How are you?", "Who are you?", "What are you?" ("What can you do?" on its own is the overview, `about.md`)
 
 ## Triggers
 
@@ -52,5 +52,5 @@ No model step.
 | Hi | general | From general knowledge |
 | Thanks so much! | general | From general knowledge |
 | Who are you? | chat | I'm Flux |
-| What can you do? | chat | I'm Flux |
+| What are you? | chat | I'm Flux |
 | Hey, what's due tomorrow? | due | Due Mon Nov 16 |

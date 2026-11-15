@@ -70,6 +70,7 @@ class Answers(unittest.TestCase):
         return answer(q, SUN, root=self.root, _events=cal, _now=datetime(2026, 11, 15, 8, 0),
                       _online=lambda: self.fail("no network check"))
 
+    @mock.patch.dict("os.environ", {"FLUX_MODE": "demo", "FLUX_CALENDAR": ""})
     def test_three_sections_in_order(self):
         a = self.ask("Catch me up")
         self.assertEqual(a.route, "catchup")

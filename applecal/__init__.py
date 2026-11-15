@@ -4,7 +4,8 @@
     events(date(2026, 11, 15), date(2026, 11, 21))   # start and end days, both included
     -> [{"title", "start": datetime, "end": datetime, "location", "all_day"}], sorted by start
 
-Only one calendar is read: FLUX_CALENDAR, default "Flux demo" (docs/calendar.md).
+Which calendar: FLUX_CALENDAR if set, else the mode's default (bank/mode.py): "Flux demo" in
+demo mode, the calendar you named in live mode (docs/calendar.md).
 Not named `calendar`, which would shadow Python's own `calendar` module.
 """
 from __future__ import annotations
@@ -15,7 +16,9 @@ import threading
 import time as _time
 from datetime import date, datetime, time, timedelta
 
-DEFAULT_CALENDAR = "Flux demo"
+DEFAULT_CALENDAR = "Flux demo"  # the demo mode's calendar (bank/mode.py)
+NO_CALENDAR = ('no calendar chosen for live mode; name yours with '
+               'scripts/flux-mode live --calendar "<name>"')
 TIMEOUT = 45  # a cold read is 5-6 s, slower when the Mac is busy
 
 
@@ -23,8 +26,18 @@ class CalendarError(RuntimeError):
     """Calendar.app could not be read (no access, no such calendar, timeout)."""
 
 
+def calendar_key() -> str:
+    """The calendar to read: FLUX_CALENDAR, else the mode's ("" when live mode has none yet)."""
+    env = os.environ.get("FLUX_CALENDAR") or os.environ.get("MUSE_CALENDAR")
+    if env:
+        return env
+    from bank import mode
+    return mode.calendar()
+
+
 def calendar_name() -> str:
-    return (os.environ.get("FLUX_CALENDAR") or os.environ.get("MUSE_CALENDAR")) or DEFAULT_CALENDAR
+    """For answers' source lines: the calendar's name."""
+    return calendar_key() or "none chosen"
 
 
 # Dates come back as numbers (iso()), so the Mac's date format doesn't matter.
@@ -103,7 +116,7 @@ def warm(calendar: str | None = None) -> threading.Thread:
     doesn't wait for the cold read. Errors are ignored here; the question reports them."""
     def run():
         try:
-            _fetch(calendar or calendar_name())
+            _fetch(calendar if calendar is not None else calendar_key())
         except CalendarError:
             pass
     t = threading.Thread(target=run, name="applecal-warm", daemon=True)
@@ -112,6 +125,8 @@ def warm(calendar: str | None = None) -> threading.Thread:
 
 
 def _fetch(name: str) -> list[dict]:
+    if not name:
+        raise CalendarError(NO_CALENDAR)
     with _LOCK:
         return _fetch_locked(name)
 
@@ -150,5 +165,5 @@ def events(start: date, end: date, calendar: str | None = None) -> list[dict]:
     """Events overlapping the days start..end (both included). Raises CalendarError."""
     lo = datetime.combine(start, time.min)
     hi = datetime.combine(end + timedelta(days=1), time.min)
-    return [e for e in _fetch(calendar or calendar_name())
+    return [e for e in _fetch(calendar if calendar is not None else calendar_key())
             if e["start"] < hi and (e["end"] > lo or (e["end"] == e["start"] and e["start"] >= lo))]

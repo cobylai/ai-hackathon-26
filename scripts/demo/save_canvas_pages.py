@@ -1,6 +1,6 @@
 """Save three Canvas pages from a visible sign-in, as templates for make_test_canvas.py.
 
-    uv run python scripts/save_canvas_pages.py https://<canvas host>/ [--out data/canvas-templates]
+    uv run python scripts/demo/save_canvas_pages.py https://<canvas host>/ [--out data/canvas-templates]
                                                [--course ID] [--assignment ID]
 
 It opens a visible Chromium (Playwright, scratch profile data/canvas-profile),
@@ -19,7 +19,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 
@@ -32,7 +32,7 @@ def _settle(page, ms: int = 4000) -> None:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="scripts/save_canvas_pages.py")
+    ap = argparse.ArgumentParser(prog="scripts/demo/save_canvas_pages.py")
     ap.add_argument("url")
     ap.add_argument("--out", type=Path, default=ROOT / "data" / "canvas-templates")
     ap.add_argument("--course", help="course id to use (default: first course with assignments)")

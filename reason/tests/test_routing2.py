@@ -30,6 +30,7 @@ def no_web(*a, **k):
 @mock.patch("llm.client.complete", no_model)
 @mock.patch("llm.client.chat", no_model)
 @mock.patch("reason.answer._web", no_web)
+@mock.patch("applecal.events", lambda *a, **k: [])  # never this Mac's real calendars
 class Problem8(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -61,10 +62,11 @@ class Problem8(unittest.TestCase):
                 self.assertEqual(a.route, "general", q)
                 self.assertTrue(a.text.endswith("From general knowledge, not from your mail or the web."), q)
         self.assertTrue(all(not t and "one or two sentences" in c for t, _, c in calls))
-        for q in ("Who are you?", "What can you do?", "who made you"):
+        for q in ("Who are you?", "What are you?", "who made you"):
             a = self.ask(q)
             self.assertEqual(a.route, "chat", q)
             self.assertTrue(a.text.startswith("I'm Flux"), q)
+        self.assertEqual(self.ask("What can you do?").route, "about")  # the overview (playbooks/about.md)
 
     def test_a_question_about_my_week_is_a_catch_up_not_a_web_search(self):
         for q in ("What does this week look like?", "how does my week look", "What's my week?", "what does tomorrow look like"):

@@ -31,10 +31,21 @@ let bonsaiURL = URL(string: setting("BONSAI_URL") ?? "http://localhost:8080/v1/m
 var repo: String = [UserDefaults.standard.string(forKey: "FluxRepo"), UserDefaults.standard.string(forKey: "MuseRepo"), setting("REPO"),
                     Bundle.main.object(forInfoDictionaryKey: "FluxRepo") as? String]
     .compactMap { $0 }.first { !$0.isEmpty } ?? (NSHomeDirectory() + "/ai-hackathon-26")
-let bankDir: String = setting("BANK_DIR") ?? (NSHomeDirectory() + "/flux-demo-bank")
-// Sync mail writes real Gmail here, never into the demo bank.
+/// Demo or live (bank/mode.py): FLUX_MODE, else the file ~/.flux/mode ("demo" | "live"), else live.
+/// `scripts/flux-mode demo|live` switches it; relaunch Flux after. Python reads the same setting.
+let demoMode: Bool = {
+    if let m = env["FLUX_MODE"]?.lowercased(), m == "demo" || m == "live" { return m == "demo" }
+    let file = env["FLUX_MODE_FILE"] ?? (NSHomeDirectory() + "/.flux/mode")
+    let word = (try? String(contentsOfFile: file, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    return word == "demo"
+}()
+let bankDir: String = setting("BANK_DIR") ?? (NSHomeDirectory() + (demoMode ? "/flux-demo-bank" : "/flux-bank"))
+// Sync mail writes real Gmail here (the live bank), never into the demo bank.
 let syncBankDir: String = setting("SYNC_BANK_DIR") ?? (NSHomeDirectory() + "/flux-bank")
-let calendarName: String = setting("CALENDAR") ?? "Flux demo"
+// Live mode: the one calendar named in ~/.flux/calendar (scripts/flux-mode live --calendar "<name>").
+let calendarName: String = setting("CALENDAR") ?? (demoMode ? "Flux demo" :
+    ((try? String(contentsOfFile: NSHomeDirectory() + "/.flux/calendar", encoding: .utf8))?
+        .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""))
 let modelFolder: String = env["ARGMAX_MODEL_FOLDER"].flatMap { $0.isEmpty ? nil : $0 } ?? (NSHomeDirectory() +
     "/Documents/huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-large-v3-v20240930_626MB")
 var voiceBin: String { setting("VOICE_BIN") ?? (repo + "/voice/swift/.build/release/argmax-voice") }
@@ -115,7 +126,7 @@ final class Server {
         p.arguments = ["-l", "-c", "exec " + command]
         p.currentDirectoryURL = URL(fileURLWithPath: repo)
         var e = env
-        e["FLUX_BANK_DIR"] = bankDir
+        if let b = setting("BANK_DIR") { e["FLUX_BANK_DIR"] = b }   // else Python picks it from the mode
         for (k, v) in extraEnv { e[k] = v }
         p.environment = e
         let fh = FileHandle(forWritingAtPath: log)
@@ -197,6 +208,10 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         item.button?.image = img
         let m = NSMenu()
         m.autoenablesItems = false
+        let modeItem = m.addItem(withTitle: (demoMode ? "Demo data · " : "Your data · ") + (bankDir as NSString).abbreviatingWithTildeInPath,
+                                 action: nil, keyEquivalent: "")
+        modeItem.isEnabled = false   // scripts/flux-mode demo|live switches it (relaunch after)
+        m.addItem(.separator())
         m.addItem(withTitle: "Open", action: #selector(openPanel), keyEquivalent: "")
         syncItem = m.addItem(withTitle: "Sync mail", action: #selector(syncMail), keyEquivalent: "")
         syncInfo = m.addItem(withTitle: "", action: nil, keyEquivalent: "")
@@ -397,6 +412,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         let (code, out) = run("/usr/bin/osascript", ["-e", "tell application \"Calendar\" to get name of calendars"], timeout: 120)
         if code == 0 {
             let names = out.components(separatedBy: ", ")
+            if calendarName.isEmpty { return "Calendar: live mode has no calendar chosen. Run scripts/flux-mode live --calendar \"<name>\"." }
             return names.contains(calendarName) ? nil
                 : "Calendar: no calendar named \"\(calendarName)\" (docs/calendar.md)."
         }
