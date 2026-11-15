@@ -155,6 +155,22 @@ class Chunking(unittest.TestCase):
         self.assertLess(v.chunk + 1, n)
         self.assertIn("six guest passes", calls[-1])
 
+    def test_deadline_stops_between_chunks(self):
+        import time
+        page = "\n\n".join(f"Section {i}\n" + "Filler sentence about nothing much. " * 40
+                           for i in range(6))
+        with mock.patch.object(J, "PAGE_BUDGET", 400):
+            calls = []
+            def f(prompt, **k):
+                calls.append(prompt)
+                return {"answer": None, "quote": None}
+            with mock.patch.object(client, "complete_json", side_effect=f):
+                v = J.judge("q", page, deadline=time.monotonic() - 1)
+        self.assertEqual(len(calls), 1)          # the first chunk runs, no later one starts
+        self.assertFalse(v.enough)
+        self.assertEqual(v.reason, "out_of_time")
+        self.assertGreater(v.chunks, 3)
+
     def test_short_page_one_chunk(self):
         with stub_json({"answer": None, "quote": None}) as m:
             v = J.judge("q", PAGE)

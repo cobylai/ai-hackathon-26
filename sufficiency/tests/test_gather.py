@@ -16,7 +16,7 @@ PAGES = {
 }
 
 
-def fake_judge(question, text, url=None, today=None):
+def fake_judge(question, text, url=None, today=None, deadline=None):
     ok = "CLOSED" in text
     return Verdict(ok, "Closed" if ok else None, "Thu Nov 26 (Thanksgiving): CLOSED" if ok else None,
                    "answered" if ok else "no_answer", url)
@@ -117,6 +117,19 @@ class Gather(unittest.TestCase):
         self.assertEqual(len(r.opened), 2)          # third page never opened
         rp.assert_not_called()
         self.assertTrue(r.message.startswith("Ran out of time (40s). Not found after 1 search(es)"))
+
+    def test_judge_out_of_time_ends_gather(self):
+        def slow_judge(question, text, url=None, today=None, deadline=None):
+            self.assertIsNotNone(deadline)
+            return Verdict(False, None, None, "out_of_time", url)
+        self.judge.side_effect = slow_judge
+        search = lambda q: [{"title": "Rec about", "url": "https://rec.example.edu/about"},
+                            {"title": "Rec hours", "url": "https://rec.example.edu/hours"}]
+        with mock.patch.object(G, "rephrase", side_effect=AssertionError("no rephrase")):
+            r = G.gather("Is the gym open on Thanksgiving?", search, self.opener, max_seconds=60)
+        self.assertFalse(r.found)
+        self.assertEqual(r.opened, ["https://rec.example.edu/about"])
+        self.assertIn("Ran out of time (60s)", r.message)
 
     def test_no_time_limit(self):
         search = lambda q: [{"title": "Rec hours", "url": "https://rec.example.edu/hours"}]

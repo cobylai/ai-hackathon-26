@@ -131,7 +131,9 @@ def gather(question: str, search_fn, open_fn, max_results: int = 10,
             if not page.text.strip() or blocked_page(page.text):
                 unreadable += 1  # empty, not OK (BLOCKED/LOGIN/ERR), or a bot-check page
                 continue
-            v = judge(question, page.text, url=h.url, today=today)
+            v = judge(question, page.text, url=h.url, today=today, deadline=deadline)
+            if v.reason == "out_of_time":
+                timed_out = True
             res.verdicts.append(v)
             if v.enough and looks_blocked(f"{v.answer or ''}\n{v.evidence or ''}"):
                 v.enough, v.reason = False, "blocked_page"

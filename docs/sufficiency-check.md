@@ -159,7 +159,7 @@ everyone ask me?" came back not found, and nothing was filed.
 
 - **Pointer pages.** A page that only says where the answer is ("Meeting times are posted on our Instagram") can be accepted as the answer. Its quote is real, so the quote check passes. This is s03 with the shipped prompt. Thinker 0 ruled no further prompt work. The A/B check call (`CHECK_ANSWER = True`) catches these pointers but rejects answers that need date reasoning, so it is off.
 - **Units.** The judge answers from the quote, so it may not convert units. "Speed of light in km per second" was answered as 299792458, which is the m/s figure.
-- **Deadline.** `max_seconds` is checked between pages, not between chunks, so one huge page can run past it.
+- **Deadline.** `max_seconds` is checked between pages and, since 2026-11-15, between judge chunks (`judge(..., deadline=)`, reason `out_of_time`). A chunk that has already started still finishes. "What did everyone ask me?" went from 110 s to 70.4 s; the rest is the bank lookup, the search and that last chunk.
 - **Short answers.** The `answer` text can be terse ("NO"). Show `evidence` with it.
 
 ## Not run

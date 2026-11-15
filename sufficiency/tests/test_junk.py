@@ -25,7 +25,7 @@ class Junk(unittest.TestCase):
 
 class GatherSkipsWalls(unittest.TestCase):
     def setUp(self):
-        def fake_judge(question, text, url=None, today=None):
+        def fake_judge(question, text, url=None, today=None, deadline=None):
             # the model "answers" with whatever the page's first line is
             first = text.strip().splitlines()[0]
             return Verdict(True, first, first, "answered", url)

@@ -27,7 +27,7 @@ class Verdict:
     enough: bool
     answer: str | None
     evidence: str | None    # the quote, only when it passed the check
-    reason: str             # answered | no_answer | quote_not_in_page | not_this_question | bad_json | blocked_page
+    reason: str             # answered | no_answer | quote_not_in_page | not_this_question | bad_json | blocked_page | out_of_time
     url: str | None = None
     chunk: int = 0          # index of the chunk that answered (or the last one judged)
     chunks: int = 1
@@ -99,8 +99,12 @@ def _judge_one(question: str, page: str, url: str | None, today: str) -> tuple[V
 
 
 def judge(question: str, page_text: str, url: str | None = None,
-          today: date | str | None = None) -> Verdict:
-    """Does page_text answer question? Long pages are judged chunk by chunk."""
+          today: date | str | None = None, deadline: float | None = None) -> Verdict:
+    """Does page_text answer question? Long pages are judged chunk by chunk.
+
+    deadline is a time.monotonic() value: no new chunk starts after it, and the
+    verdict so far is returned (reason "out_of_time" if no chunk answered).
+    """
     today_s = prompts.fmt_today(today)
     chunks = tokens.split_to_budget(page_text, PAGE_BUDGET) if page_text.strip() else [""]
     total = 0.0
@@ -108,6 +112,9 @@ def judge(question: str, page_text: str, url: str | None = None,
     for i, chunk in enumerate(chunks):
         if not chunk.strip():
             continue
+        if deadline is not None and i > 0 and time.monotonic() >= deadline:
+            v = Verdict(False, None, None, "out_of_time", url, i, len(chunks))
+            break
         v, dt = _judge_one(question, chunk, url, today_s)
         total += dt
         v.chunk, v.chunks = i, len(chunks)
