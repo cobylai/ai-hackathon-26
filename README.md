@@ -23,6 +23,18 @@ uv sync
 uv run playwright install chromium
 ```
 
+## Packaging
+
+```bash
+uv build                                            # dist/harness-0.1.0-py3-none-any.whl
+pip install dist/harness-0.1.0-py3-none-any.whl
+python -m harness --help
+```
+
+The wheel carries `harness/browser/elements.js`, which the browser tools read at import
+time; without it an installed package fails on `import harness`. `tests/test_packaging.py`
+guards the declaration, and builds a real wheel when `HARNESS_BUILD_TEST=1`.
+
 ## Use it from the command line
 
 ```bash
@@ -49,6 +61,8 @@ most three rounds, two pages per round), then answer in at most 120 words with a
 
 Point it at a local runtime (llama.cpp server, `mlx_lm.server`, LM Studio) or at a hosted
 model; swapping is a config change, not a code change.
+
+CI runs the suite on Python 3.12 (`uv sync`, then `uv run pytest -q`).
 
 ## Tests and the live evaluation
 
