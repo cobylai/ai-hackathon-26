@@ -36,6 +36,8 @@ KEEP_ROLES = {
 
 # Number -> control the model was shown. Elements hold the live AX ref.
 _last: list[dict] = []
+# Pid of the app the listing came from; actions refuse if the front app changed.
+_last_pid: int = 0
 
 
 def walk(tree, depth: int = 0, out: list | None = None) -> list[dict]:
@@ -152,21 +154,26 @@ def list_controls(filter: str = "") -> str:
     if policy.stopped():
         return policy.STOPPED_MESSAGE
 
+    global _last_pid
     if not permissions.accessibility_ok():
         _last = []
+        _last_pid = 0
         return permissions.NEEDED
 
     front = _front_app()
     if front is None:
         _last = []
+        _last_pid = 0
         return "ERR no front window found"
     pid, app_name = front
     verdict = policy.check(app_name, "ui", filter)
     if verdict == policy.DENY:
         _last = []
+        _last_pid = 0
         return f"ERR not allowed: ui on '{app_name}'"
     if verdict == policy.CONFIRM:
         _last = []
+        _last_pid = 0
         return f"CONFIRM list controls of '{app_name}'"
 
     import ApplicationServices as AX
@@ -175,6 +182,7 @@ def list_controls(filter: str = "") -> str:
     controls = walk(tree) if tree else []
     controls = apply_filter(controls, filter)
     _last = controls
+    _last_pid = pid
 
     if not controls:
         suffix = f" | filter '{filter}'" if filter.strip() else ""
@@ -246,6 +254,8 @@ def _action_target(n: int, verb: str, token: str = ""):
     if front is None:
         return "ERR no front window found"
     pid, app_name = front
+    if _last_pid and pid != _last_pid:
+        return "ERR front app changed since the ui listing; call ui again"
     control = _last[n - 1]
     what = f"{verb} '{control['label']}' on '{app_name}'"
     line = _authorize(app_name, verb, control["label"], token, what)

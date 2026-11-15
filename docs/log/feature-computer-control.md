@@ -91,3 +91,8 @@
 ## Act-route integration proposal (2026-11-15)
 - notes-computer-control.md gains a concrete proposal: find/click/type kinds in reason/act.py, built on ui_click/ui_type/file_find.
 - Verified zero file overlap between all five agent-* branches and harness/computer/*, so the tools side is ready whenever reason/ settles.
+
+## Stale-listing guard (2026-11-15)
+- ui.py: ui_click/ui_type now refuse with "front app changed; call ui again" when the frontmost pid differs from the listing's pid.
+- Closes a real hole: the policy check used the current front app, but the AX element belonged to the listed app, so a click could land on a background app.
+- New test test_click_refuses_after_front_app_change; full suite 312 passed / 4 skipped.
