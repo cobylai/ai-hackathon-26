@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from harness import config
 from harness.computer import permissions, policy
-from harness.computer.tools import _cap
+from harness.computer.tools import _authorize, _cap
 
 MAX_DEPTH = 8
 MAX_LINES = 40
@@ -233,7 +233,7 @@ def _element_window_title(el) -> str:
     return ""
 
 
-def _action_target(n: int, verb: str):
+def _action_target(n: int, verb: str, token: str = ""):
     """Resolve control N with all guards, or return the status line to send."""
     if policy.stopped():
         return policy.STOPPED_MESSAGE
@@ -247,18 +247,16 @@ def _action_target(n: int, verb: str):
         return "ERR no front window found"
     pid, app_name = front
     control = _last[n - 1]
-    verdict = policy.check(app_name, verb, control["label"])
     what = f"{verb} '{control['label']}' on '{app_name}'"
-    if verdict == policy.DENY:
-        return f"ERR not allowed: {what}"
-    if verdict == policy.CONFIRM:
-        return f"CONFIRM {what}"
+    line = _authorize(app_name, verb, control["label"], token, what)
+    if line is not None:
+        return line
     return control, pid, app_name
 
 
-def ui_click(n: int) -> str:
+def ui_click(n: int, token: str = "") -> str:
     """Press control N from the last ui listing; return the new window title."""
-    target = _action_target(n, "click")
+    target = _action_target(n, "click", token)
     if isinstance(target, str):
         return target
     control, pid, app_name = target
@@ -269,9 +267,9 @@ def ui_click(n: int) -> str:
     return _cap(f'OK clicked {n}. {control["kind"]} "{control["label"]}" | {title or app_name}')
 
 
-def ui_type(n: int, text: str) -> str:
+def ui_type(n: int, text: str, token: str = "") -> str:
     """Set control N's value; fall back to focused keystrokes. Return title."""
-    target = _action_target(n, "type")
+    target = _action_target(n, "type", token)
     if isinstance(target, str):
         return target
     control, pid, app_name = target

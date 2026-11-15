@@ -42,3 +42,8 @@
 - GROUPS["computer"] now exposes all six tools (ui, ui_click, ui_type added); desc budget 277 chars, well under the 400-token rule.
 - pyobjc-framework-ApplicationServices promoted from dev to a darwin-only runtime dependency.
 - Flaky browser tests: a timed-out pytest left orphaned Chromium processes holding the profile lock; after killing them the suite is green again (111 passed).
+
+## Confirm tokens (2026-11-15)
+- Implemented the C3 seam: CONFIRM now returns "call again with token=xxxxxx"; a one-time token (confirms.json) authorizes one exact replay, logged as CONFIRMED.
+- DENY is never overruled by a token; STOP still beats everything. token arg added to app_open/file_open/ui_click/ui_type (<=3 args each).
+- README stub replaced with a short tool-group + safety section.

@@ -117,7 +117,9 @@ def test_file_open_confirm_word_in_name(home, mock_run):
     mock_run.return_value = _mdfind_result("/Users/u/delete-me.txt")
     tools.file_find("delete")
     mock_run.reset_mock()
-    assert tools.file_open(1) == "CONFIRM open file '/Users/u/delete-me.txt'"
+    result = tools.file_open(1)
+    assert result.startswith("CONFIRM open file '/Users/u/delete-me.txt'")
+    assert "call again with token=" in result
     mock_run.assert_not_called()
 
 

@@ -65,7 +65,7 @@ COMPUTER_TOOLS: dict[str, Tool] = {
     "app_open": Tool(
         "app_open",
         "Open a Mac app by name.",
-        {"name": str},
+        {"name": str, "token": str},
         computer_tools.app_open,
     ),
     "file_find": Tool(
@@ -77,7 +77,7 @@ COMPUTER_TOOLS: dict[str, Tool] = {
     "file_open": Tool(
         "file_open",
         "Open file N from the last file_find list.",
-        {"n": int},
+        {"n": int, "token": str},
         computer_tools.file_open,
     ),
     "ui": Tool(
@@ -89,13 +89,13 @@ COMPUTER_TOOLS: dict[str, Tool] = {
     "ui_click": Tool(
         "ui_click",
         "Click control N from the last ui list.",
-        {"n": int},
+        {"n": int, "token": str},
         computer_ui.ui_click,
     ),
     "ui_type": Tool(
         "ui_type",
         "Type text into control N from the last ui list.",
-        {"n": int, "text": str},
+        {"n": int, "text": str, "token": str},
         computer_ui.ui_type,
     ),
 }
