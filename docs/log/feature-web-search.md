@@ -35,3 +35,4 @@
 - The eval judges the input budget in real prompt tokens now (2,300, the token equivalent of the plan's 8,000 chars at 3.5 chars/token) and reports pass/time/tokens/chars as separate checks, so one miss cannot hide the others.
 - README rewritten from a two-line stub: package layout, the CLI commands, the five environment variables, how to run the offline tests and the live evaluation, and the four ground rules the code follows.
 - The loop stops after one search when the engine reports BLOCKED or LOGIN: a wall is not a query problem, and Run 4 burned three searches per question proving it. Injected search functions keep the old retry behaviour.
+- The eval table shows the engine and `walled/total` searches per question, and the summary counts questions with no usable search, so a wall-limited run explains itself instead of looking like a broken tool.

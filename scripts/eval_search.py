@@ -88,10 +88,12 @@ def run_one(item: dict) -> dict:
     ask = CountingAsk()
     statuses: Counter = Counter()
     engines: list[str] = []
+    search_statuses: list[str] = []
 
     def search(query: str) -> list:
         results = engine.search(query)
         engines.append(engine.last_engine or "?")
+        search_statuses.append(engine.last_status)
         return results
 
     def open_page(url: str) -> tuple[str, str]:
@@ -117,6 +119,8 @@ def run_one(item: dict) -> dict:
         "rounds": outcome.rounds,
         "pages": outcome.pages,
         "engines": list(dict.fromkeys(engines)),
+        "searches": len(search_statuses),
+        "search_walls": sum(1 for status in search_statuses if status == "BLOCKED"),
         "blocked": statuses.get("BLOCKED", 0),
         "errors": statuses.get("ERR", 0) + statuses.get("LOGIN", 0),
         "notes": len(outcome.notes),
@@ -130,13 +134,14 @@ def run_one(item: dict) -> dict:
 
 def markdown(rows: list[dict]) -> str:
     lines = [
-        "| # | kind | pass | engine | rounds | pages | blocked | model calls | input chars | prompt tokens | seconds |",
-        "|---|---|---|---|---|---|---|---|---|---|---|",
+        "| # | kind | pass | engine | rounds | searches walled | pages | blocked | model calls | input chars | prompt tokens | seconds |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for row in rows:
         lines.append(
             f"| {row['id']} | {row['kind']} | {'yes' if row['pass'] else 'NO'} | "
-            f"{', '.join(row['engines'])} | {row['rounds']} | {row['pages']} | "
+            f"{', '.join(row['engines'])} | {row['rounds']} | "
+            f"{row.get('search_walls', 0)}/{row.get('searches', 0)} | {row['pages']} | "
             f"{row['blocked']} | {row['model_calls']} | "
             f"{row['chars']} | {row['prompt_tokens']} | {row['seconds']} |"
         )
@@ -218,12 +223,14 @@ def main(argv: list[str] | None = None) -> int:
     chars = statistics.median(row["chars"] for row in scored) if scored else 0.0
     tokens = statistics.median(row["prompt_tokens"] for row in scored) if scored else 0.0
     blocked = sum(row["blocked"] for row in rows)
+    walled = sum(1 for row in rows if row.get("search_walls") and not row["pages"])
     print(markdown(rows))
     print()
     print(
         f"pass {passes}/{len(rows)}  median {seconds:.1f} s  median {chars:.0f} chars "
         f"({chars / CHAR_TARGET:.0%} of {CHAR_TARGET})  median {tokens:.0f} prompt tokens "
-        f"({tokens / TOKEN_TARGET:.0%} of {TOKEN_TARGET})  blocked pages {blocked}"
+        f"({tokens / TOKEN_TARGET:.0%} of {TOKEN_TARGET})  blocked pages {blocked}  "
+        f"questions with no usable search {walled}/{len(rows)}"
     )
     checks = verdict(passes, seconds, chars, tokens)
     print(

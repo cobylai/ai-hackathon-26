@@ -45,6 +45,28 @@ def test_verdict_judges_each_budget_on_its_own():
     }
 
 
+def test_table_shows_engine_and_walled_searches():
+    module = load_script()
+    row = {
+        "id": "q01",
+        "kind": "fact",
+        "pass": True,
+        "engines": ["google"],
+        "rounds": 1,
+        "searches": 1,
+        "search_walls": 0,
+        "pages": 2,
+        "blocked": 0,
+        "model_calls": 3,
+        "chars": 100,
+        "prompt_tokens": 25,
+        "seconds": 1.0,
+    }
+    table = module.markdown([row])
+    assert "searches walled" in table
+    assert "| google | 1 | 0/1 | 2 |" in table
+
+
 def test_question_file_has_twelve_well_formed_rows():
     module = load_script()
     items = module.load_questions(module.QUESTIONS)
