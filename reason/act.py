@@ -183,6 +183,12 @@ def _hold(what: str, run: Callable[[], str], preview: str):
     return Answer(f"{preview}\n{say('act', 'ask_yes')}", "act")
 
 
+def hold_save(preview: str, run: Callable[[], str]) -> None:
+    """Ask before filing a web answer in the notes (finding 17b): a yes runs it, anything else drops it."""
+    global _held
+    _held = Held("save_note", run, time.monotonic())
+
+
 def _next_due(e: dict, today: date) -> str:
     """Soonest deadline on or after today ("9999" when none), for picking "the assignment"."""
     days = [str(d.get("date")) for d in e.get("deadlines") or [] if d.get("date")]
