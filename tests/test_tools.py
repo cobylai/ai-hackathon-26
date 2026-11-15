@@ -135,3 +135,12 @@ def test_registry_shape():
 def test_output_cap_on_long_text(btools):
     assert len(btools._cap("x" * 5000, "[more: call read(page=2)]")) <= 1500
     assert btools._cap("short") == "short"
+
+
+def test_click_after_navigation_is_refused(btools, site):
+    btools.goto(site.url("form.html"))
+    n = number_of(btools.elements(), "Submit")
+    btools.goto(site.url("hello.html"))
+    out = check(btools.click(n))
+    assert out.startswith("ERR")
+    assert "elements again" in out

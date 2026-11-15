@@ -48,3 +48,18 @@ def test_enter_submits(form):
     listing = list_elements(form)
     type_into(form, number_of(listing, "Search terms"), "lighthouse", enter=1)
     assert "Submitted: lighthouse" in form.inner_text("#result")
+
+
+def test_click_without_listing_fails(form):
+    with pytest.raises(RuntimeError, match="elements first"):
+        click(form, 1)
+
+
+def test_stale_numbers_after_navigation_fail(form, site):
+    listing = list_elements(form)
+    n = number_of(listing, "Help page")
+    form.goto(site.url("hello.html"))
+    with pytest.raises(RuntimeError, match="call elements again"):
+        click(form, n)
+    with pytest.raises(RuntimeError, match="call elements again"):
+        type_into(form, n, "x")
