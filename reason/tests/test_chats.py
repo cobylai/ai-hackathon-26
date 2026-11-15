@@ -66,12 +66,11 @@ class Store(unittest.TestCase):
                 chats.load(bad, self.root)
 
     def test_folder_is_outside_the_repo(self):
-        with mock.patch.dict(os.environ, {"FLUX_CHATS_DIR": "", "FLUX_BANK_DIR": "/tmp/somewhere/flux-demo-bank"}):
-            os.environ.pop("FLUX_CHATS_DIR")
+        clean = {k: v for k, v in os.environ.items() if k not in ("FLUX_CHATS_DIR", "MUSE_CHATS_DIR")}
+        with mock.patch.dict(os.environ, {**clean, "FLUX_BANK_DIR": "/tmp/somewhere/flux-demo-bank"}, clear=True):
             self.assertEqual(chats.folder(), Path("/tmp/somewhere").resolve() / "flux-demo-bank-chats")
-        with mock.patch.dict(os.environ, {"FLUX_BANK_DIR": str(chats.REPO / "data" / "bank")}):
-            os.environ.pop("FLUX_CHATS_DIR", None)
-            self.assertEqual(chats.folder(), Path.home() / "flux-chats")
+        with mock.patch.dict(os.environ, {**clean, "FLUX_BANK_DIR": str(chats.REPO / "data" / "bank")}, clear=True):
+            self.assertEqual(chats.folder(), Path.home() / "flux-chats")  # computed only, nothing written
         with mock.patch.dict(os.environ, {"FLUX_CHATS_DIR": "/tmp/x-chats"}):
             self.assertEqual(chats.folder(), Path("/tmp/x-chats"))
 
@@ -85,6 +84,33 @@ class Store(unittest.TestCase):
             answer("and Will?", SAT, root=tmp, session=s)
         self.assertEqual(s.turns[1]["question"], "and Will?")
         self.assertIn("Will", s.turns[1]["text"])
+
+
+class NeverHome(unittest.TestCase):
+    """reason/tests/__init__.py points the chats folder and the bank at a temp dir."""
+
+    def test_folders_are_temporary(self):
+        tmp = Path(tempfile.gettempdir()).resolve()
+        for p in (chats.folder(), store.bank_dir()):
+            p = p.resolve()
+            self.assertIn(tmp, p.parents, p)
+            self.assertNotIn(Path.home() / "flux-chats", [p, *p.parents])
+
+    def test_a_handler_without_chats_root_saves_in_the_temp_folder(self):
+        from reason.web import make_handler
+        s = Session()
+        srv = HTTPServer(("127.0.0.1", 0), make_handler(
+            answer_fn=lambda q, today=None: (s.record(q, Answer("ok", "due")), Answer("ok", "due"))[1],
+            online_fn=lambda: False, count_fn=lambda: 0, session=s))
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            urllib.request.urlopen(urllib.request.Request(
+                f"http://127.0.0.1:{srv.server_address[1]}/ask", data=b'{"question": "x"}', method="POST")).read()
+        finally:
+            srv.shutdown()
+            srv.server_close()
+        self.assertTrue((chats.folder() / f"{s.id}.json").exists())
+        chats.delete(s.id)
 
 
 class Window(unittest.TestCase):
