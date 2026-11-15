@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import sys
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -62,13 +63,21 @@ def _default_online() -> bool:
     return online()
 
 
-def _default_sync(root) -> int:
-    """The existing mail sync (scripts/sync_email.py), into this bank. Returns entries added."""
+def _default_sync(root) -> int | None:
+    """The existing mail sync (scripts/sync_email.py), into this bank. Returns entries added,
+    or None when skipped: live mail never goes into a demo/test bank (the sync's own
+    check_live_bank rule), so there discovery just uses what is already saved."""
     p = Path(__file__).resolve().parent.parent / "scripts" / "sync_email.py"
     spec = importlib.util.spec_from_file_location("muse_sync_email", p)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    rs = mod.sync(SYNC_DAYS, lambda *a, **k: bank.ingest(*a, root=root, **k))
+    target = Path(root) if root else store.bank_dir()
+    try:
+        mod.check_live_bank(target)
+    except SystemExit:
+        print(f"discover: mail sync skipped, {target} is a demo/test bank", file=sys.stderr, flush=True)
+        return None
+    rs = mod.sync(SYNC_DAYS, lambda *a, **k: bank.ingest(*a, root=root, **k), root=target)
     return sum(r.get("status") == "added" for r in rs)
 
 
@@ -130,8 +139,9 @@ def _start(today: date, root, deps: dict):
     if deps["online"]() and state.since_sync(root) >= SYNC_EVERY:
         try:
             n = deps["sync"](root)
-            state.stamp_sync(root)
-            notes.append(say("discover", "synced", count=n))
+            if n is not None:  # None: skipped (a demo/test bank), nothing to say
+                state.stamp_sync(root)
+                notes.append(say("discover", "synced", count=n))
         except BaseException as ex:  # SystemExit when Gmail isn't signed in
             if isinstance(ex, KeyboardInterrupt):
                 raise
