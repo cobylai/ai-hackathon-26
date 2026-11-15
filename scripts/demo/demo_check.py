@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT))
 # (beat, line said, route, must contain). Keep in step with docs/demo-runsheet.md.
 STEPS = [
     ("0:27 catch me up", "catch me up", "catchup",
-     ["Calendar", "Lab Report 3", "Felix", "You're free Thursday, Nov 19 at 3pm. Draft a yes to Felix?"]),
+     ["Calendar", "Due today through", "Felix", "You're free Thursday, Nov 19 at 3pm. Draft a yes to Felix?"]),
     ("1:05 due this week", "What's due this week?", "due",
      ["Due this week", "Lab Report 3", "CHEM 1583 Kitchen Chemistry", "$48.20"]),
     ("1:05 and tomorrow", "and tomorrow?", "due", ["Due Mon Nov 16"]),
@@ -40,7 +40,7 @@ STEPS = [
 # Data the brief asks for that no beat says out loud (checked the same way, separate chat).
 EXTRA = [
     ("data: Nina clash", "What did Nina Valdez ask me?", "person", ["You have CHEM 1583 Lab then"]),
-    ("data: newsletter", "What did Campus Rec ask me?", "person", ["Campus Rec"]),
+    ("data: newsletter", "When does the climbing wall reopen?", "bank", ["Monday", "Campus Rec"]),
 ]
 
 
@@ -91,7 +91,7 @@ def run(today: date) -> tuple[int, int]:
                 print(f"[{'RIGHT' if ok else 'WRONG'}] {beat:<22} {q}")
                 if not ok:
                     print("   " + "; ".join(problems))
-                print("   got: " + text.replace("\n", " | ")[:400], flush=True)
+                print("   got: " + text.replace("\n", " | ")[:1500], flush=True)
     return right, total
 
 

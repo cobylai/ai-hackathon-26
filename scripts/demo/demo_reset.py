@@ -9,8 +9,8 @@ Every take starts identical:
     and the "Flux demo" Reminders list emptied;
   - saved chats (<bank>-chats) deleted.
 With --full (or when the bank was built for another day, or doesn't exist) the bank is also
-backed up to <bank>.bak-<time> and rebuilt: brief M's 23 emails plus the 7 optional demo
-emails (make_test_threads --extra), then the mock Canvas (5 courses, 25 assignments). That
+rebuilt in <bank>.building, then swapped in (the old one kept as <bank>.bak-<time>): brief M's 23 emails plus the 7 optional demo
+emails (make_test_threads --extra), then the mock Canvas (4 courses, 25 assignments). That
 needs Bonsai on localhost and takes a few minutes; it works offline.
 
 It refuses a bank whose folder name lacks "demo" or that is ~/flux-bank, and any calendar
@@ -48,19 +48,23 @@ def check_bank(bank: Path) -> None:
 
 
 def rebuild(bank: Path, day: date) -> None:
-    if bank.exists():
-        bak = bank.with_name(f"{bank.name}.bak-{datetime.now():%Y%m%d-%H%M%S}")
-        shutil.copytree(bank, bak)
-        print(f"backed up {bank} -> {bak}")
-        shutil.rmtree(bank)
-    env = {**os.environ, "FLUX_BANK_DIR": str(bank)}
+    """Build into <bank>.building, then swap: the live bank is never half-built."""
+    tmp = bank.with_name(bank.name + ".building")
+    if tmp.exists():
+        shutil.rmtree(tmp)
+    env = {**os.environ, "FLUX_BANK_DIR": str(tmp)}
     d = day.isoformat()
     _sh("scripts/demo/make_test_threads.py", "99", "--extra", "--today", d,
         "--template", str(THREADS / "template.html"), "--out", str(THREADS))
     _sh("scripts/demo/sync_test_threads.py", str(THREADS), env=env)
     _sh("scripts/demo/make_test_canvas.py", "--today", d, "--templates", str(CANVAS_TEMPLATES), "--out", str(CANVAS))
     _sh("scripts/demo/sync_test_canvas.py", str(CANVAS), env=env)
-    (bank / MARK).write_text(d + "\n")
+    (tmp / MARK).write_text(d + "\n")
+    if bank.exists():
+        bak = bank.with_name(f"{bank.name}.bak-{datetime.now():%Y%m%d-%H%M%S}")
+        bank.rename(bak)
+        print(f"backed up {bank} -> {bak}")
+    tmp.rename(bank)
 
 
 def clear_state(bank: Path) -> None:

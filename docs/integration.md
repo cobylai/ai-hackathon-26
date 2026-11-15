@@ -56,7 +56,7 @@ video says it is sample mail.
 Regenerate for the recording day (one command; set DAY to that day; Bonsai up):
 
 ```bash
-DAY=2026-11-15; rm -rf ~/flux-demo-bank && uv run python scripts/demo/make_test_threads.py 20 --today $DAY --template ~/flux-demo-threads/template.html --out ~/flux-demo-threads && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/demo/sync_test_threads.py ~/flux-demo-threads && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/demo/make_test_mail.py check ~/flux-demo-threads --today $DAY --offline
+DAY=2026-11-15; rm -rf ~/flux-demo-bank && uv run python scripts/demo/make_test_threads.py 99 --extra --today $DAY --template ~/flux-demo-threads/template.html --out ~/flux-demo-threads && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/demo/sync_test_threads.py ~/flux-demo-threads && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/demo/make_test_mail.py check ~/flux-demo-threads --today $DAY --offline
 ```
 
 The chat window uses the real clock, so build the bank for the day you record.
