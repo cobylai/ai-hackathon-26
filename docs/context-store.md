@@ -1,6 +1,17 @@
 # Context store
 
-`bank/` keeps a record of everything Muse has read, one markdown file per email or page. Bonsai 4B pulls out the text fields when an item comes in. Code does everything that has to be exact: the headers, deadline dates, course code, folder, duplicates and the index. Reading from the store never calls the model or the network. Plan: `docs/plans/context-store.md`.
+`bank/` keeps a record of everything Muse has read, one markdown file per email or page. Bonsai 4B pulls out the text fields when an item comes in. Code does everything that has to be exact: the sender and date, deadline dates, course code, folder, duplicates and the index.
+
+**Where the sender, date and subject come from,** in this order:
+
+1. Values the caller passes to `ingest`. These win over everything.
+2. `From:`, `Date:` and `Subject:` header lines.
+3. For scraped webmail with no header lines:
+   - the model's sender and subject;
+   - the first `Name <addr>` in the first 15 lines when the model's address isn't in the text;
+   - the first full date with a year in the first 15 lines, such as `Nov 12, 2026, 3:14 PM (2 days ago)`.
+
+If no sent date is found, the ingest date is used and the entry gets `sent_date_guessed: true`. Every deadline in that entry hangs on the guessed date, and the index shows it as `~2026-11-14`. Reading from the store never calls the model or the network. Plan: `docs/plans/context-store.md`.
 
 ## Use
 
@@ -45,7 +56,7 @@ data/bank/
 
 - **`course/`** if a course code is found. The pattern is `\b[A-Z]{2,6} ?\d{4}\b`, searched in the subject, then the text, then the model's `course` field.
   - Months, seasons, ROOM, PIN, CODE, ZOOM, REF and ID are never course prefixes, so "FALL 2026" and "ROOM 1234" don't count.
-- **`person/`** otherwise, if the sender is a person. The model must say so, and neither the address nor the name may look automated. An address looks automated if it contains `noreply`, `news`, `office`, `bursar`, `dining`, `club`, `library` or a similar word. A name looks automated if it contains Office, Club, Library, Department or a similar word. An address on a `clubs.` domain also counts as automated.
+- **`person/`** otherwise, if the sender is a person. The model must say so, and neither the address nor the name may look automated. An address looks automated if the part before the @, split on `.`, `-`, `_` and `+`, has `noreply`, `news`, `info`, `office`, `bursar`, `dining`, `club`, `team`, `support`, `library` or a similar word as a whole word. `newsome@` and `steam42@` stay people. A name looks automated if it contains Office, Club, Library, Department or a similar word. An address on a `clubs.` domain also counts as automated.
 - **`other/`** for everything else. Pages are never filed under `person/`.
 
 ## Entry format
@@ -66,6 +77,7 @@ ask: "Please submit your final notebook and a one page reflection on the course 
 deadlines: [{"phrase": "Monday 11:59pm", "date": "2026-11-16", "time": "23:59"}]
 course: "ENGRD 2700"
 topic: "project extension"
+sent_date_guessed: false
 ingested_at: "2026-11-14T21:57:39"
 ---
 Due to a server outage, the ENGRD 2700 project deadline has been moved from Friday to Monday at 11:59pm.
@@ -100,7 +112,7 @@ The model copies each phrase exactly as written, and code resolves it against th
 |---|---|
 | today, tonight, this morning/afternoon/evening, end of day, EOD | S |
 | tomorrow (morning, night…) | S+1 |
-| Monday…Sunday, this / by / before Friday | first such day after S. The same weekday as S means a week later (a known ambiguity) |
+| Monday…Sunday, this / by / before Friday | first such day on or after S. The same weekday as S means S itself: "by Friday" sent on a Friday is that Friday (a known ambiguity) |
 | next Friday | Friday of the week after S's week (weeks run Mon–Sun) |
 | the Friday after | first Friday after the previous deadline in the same item |
 | end of (the) week | the Friday on or after S |
@@ -166,6 +178,9 @@ Results go to `bank/eval/results/4B_run{1,2,3}.json`.
   - n04: the course code only in the body, plus "next Monday".
   - n05: a course web page with no sender and "Fall 2026" in the title.
   - n06: a club email, "end of day Wednesday", with a Thursday event that is not a deadline.
+- **n07–n08:** scraped-webmail shape, with no header lines. They were committed (6f2776e) before any model run, and their first run is the one reported below, so these two are a clean holdout.
+  - n07: a friend, with a `Name <addr>` line, `Nov 12, 2026, 3:14 PM (2 days ago)` and "by Monday".
+  - n08: an automated `mailservices-noreply` sender, `Tue, Nov 10, 2026, 9:02 AM` and "by Nov 17".
 
 **Scoring:** an entry is right only if all of these hold:
 
@@ -175,12 +190,16 @@ Results go to `bank/eval/results/4B_run{1,2,3}.json`.
 - the folder and the course are exact
 - the summary is not empty
 
+**Current results,** final prompt, after the scraped-mail, same-day-weekday and whole-word changes (`bank/eval/results/4B_run{1,2,3}.json`):
+
 | Final prompt | Run 1 | Run 2 | Run 3 |
 |---|---|---|---|
 | Originals right (target ≥ 9/10) | **10/10** | **10/10** | **10/10** |
-| New right (target ≥ 5/6) | **6/6** | **6/6** | **6/6** |
-| Model's own `sender_address` right, before the header override | 16/16 | 16/16 | 16/16 |
-| Median seconds per item (shared server) | 7.96 | 3.58 | 6.62 |
+| New right, n01–n08 (target ≥ 5/6 on n01–n06) | **8/8** | **8/8** | **8/8** |
+| Model's own `sender_address` right, before any override | 18/18 | 18/18 | 18/18 |
+| Median seconds per item (shared server) | 3.00 | 2.88 | 2.43 |
+
+**Previous build** (before the scraped-mail changes), on n01–n06: 10/10 and 6/6 on each of 3 runs, at 3.6–8.0 s per item.
 
 **Before tuning,** the first prompt (the one in the plan) scored 9/10 originals and **2/6 new**. The misses were:
 
@@ -204,6 +223,7 @@ Results go to `bank/eval/results/4B_run{1,2,3}.json`.
 **Offline check:**
 
 - Ingest the 15 email fixtures into a scratch store with `bank.load`. A second load reported 15 duplicates and 0 added.
+- That check ran on the previous build. The readers didn't change after it, apart from the `sent_date_guessed` field.
 - In a new process with `socket.connect` blocked and `BONSAI_BASE_URL` pointing at a dead port, `due("2026-11-16", "2026-11-20")` returned the 8 expected rows. `search` and `by_person` worked too, and `llm` was never imported.
 - **The server was not actually stopped:** it was shared with worker 4. The network block is the stand-in.
 
@@ -213,12 +233,15 @@ Results go to `bank/eval/results/4B_run{1,2,3}.json`.
 python -m unittest discover -s bank/tests -t .
 ```
 
-42 pass.
+46 pass with the server down.
+
+**Correction:** in the previous build, the page test silently called the live server through the ask follow-up. It passed only because a server happened to be up. The follow-up is now stubbed, and the tests pass with nothing on port 8080.
 
 ## Not run / known gaps
 
 - Long-text splitting has no test on a real long page. The path exists, but no fixture is over 6,000 tokens.
 - `ingest`'s sync keywords (`sender_name=` and the others) have one live 4B smoke run: a headerless body was filed correctly, and the same `source` was then skipped as a duplicate. They have no scored fixtures.
 - There are no 9B numbers, and there is no thinking-mode run.
-- **Same-weekday ambiguity:** "by Friday" sent on a Friday resolves to the next Friday.
+- **Same-weekday ambiguity:** "by Friday" sent on a Friday resolves to that same day.
+- Scraped webmail that shows only a time for today's mail (`3:14 PM (10 minutes ago)`, no date) gets the ingest date with `sent_date_guessed: true`.
 - `11/20` is always read as month/day (US).

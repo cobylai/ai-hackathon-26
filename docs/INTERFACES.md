@@ -126,6 +126,8 @@ from bank import ingest, search, by_person, due, rebuild_index
 
 ingest(text, source, kind, *, sender_name=None, sender_address=None, sent_date=None, subject=None)
     # kind = "email" | "page". Needs the Bonsai server. The keywords win over anything in the text.
+    # With none of them and no header lines: model sender + first "Name <addr>" + first dated line;
+    # no date found -> ingest date, sent_date_guessed=True.
     # -> {"status": "added" | "duplicate", "path": str, "entry": dict, "raw": [model replies]}
 search(query, limit=10)          # -> [entry]; keyword score, subject/sender hits count double, ties newest first
 by_person(name)                  # -> [entry]; part-word match on sender name or address, newest first
@@ -135,7 +137,7 @@ rebuild_index()                  # -> path of data/bank/index.md (every ingest a
 
 - **Readers are offline:** `search`, `by_person` and `due` never call the model or the network, and never import `llm`.
 - **Entry:** one file at `data/bank/{course,person,other}/<sent_date>-<subject-slug>-<id12>.md`.
-  - The front matter, as JSON values, is `id`, `kind`, `folder`, `source`, `sender_name`, `sender_address`, `sent_date`, `subject`, `ask`, `deadlines`, `course`, `topic` and `ingested_at`.
+  - The front matter, as JSON values, is `id`, `kind`, `folder`, `source`, `sender_name`, `sender_address`, `sent_date`, `subject`, `ask`, `deadlines`, `course`, `topic`, `sent_date_guessed` and `ingested_at`.
   - `deadlines` is a list of `[{"phrase", "date", "time"}]`. `date` is `YYYY-MM-DD` or null, and `time` is `HH:MM` or null.
   - The body is a one or two sentence summary.
   - An `entry` dict holds those fields plus `body` and `path`.
