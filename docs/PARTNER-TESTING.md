@@ -26,6 +26,8 @@ uv sync
 uv run playwright install chromium            # chromium-1255, what the locked Playwright uses
 ```
 
+`.python-version` pins Python 3.12 for `uv`. Under 3.14 the Playwright tests hang. If an old `.venv` was made with 3.14, delete it and run `uv sync` again.
+
 **Bonsai 2 4B (every model call).** The models are not in git. Get
 `bonsai2-4b-mlx` into `samples/bonsai-models/mlx/models/` and make the venv,
 per `samples/bonsai-models/mlx/README.md` (Python 3.12+; mlx needs 3.10+). Then:
