@@ -54,6 +54,7 @@ class Held:
 
 _held: Held | None = None
 _drafts: dict[str, dict] = {}   # draft id -> {"draft", "entry"} for "What should it say?"
+_last: str | None = None         # the newest draft id, for "send it" (playbooks/send.md)
 
 
 def waiting() -> bool:
@@ -152,9 +153,26 @@ def _label(e: dict) -> str:
 # ---- drafts -----------------------------------------------------------------
 
 def _keep(draft: dict, entry: dict | None) -> dict:
+    global _last
     draft["id"] = uuid.uuid4().hex[:10]
     _drafts[draft["id"]] = {"draft": draft, "entry": entry}
+    _last = draft["id"]
     return draft
+
+
+def is_flux_draft(draft_id: str) -> bool:
+    """True only for a draft this process made (the send gate's "flux draft" check)."""
+    return isinstance(draft_id, str) and draft_id in _drafts
+
+
+def last_draft() -> dict | None:
+    return _drafts[_last]["draft"] if _last in _drafts else None
+
+
+def forget_last() -> None:
+    """A new or reopened chat: "send it" no longer points at the old chat's draft."""
+    global _last
+    _last = None
 
 
 def _subject(e: dict) -> str:
