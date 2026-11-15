@@ -25,15 +25,23 @@ class Session:
         if self._context is not None:
             return self
         self.profile_dir.mkdir(parents=True, exist_ok=True)
-        self._playwright = sync_playwright().start()
-        self._context = self._playwright.chromium.launch_persistent_context(
-            str(self.profile_dir),
-            # "chromium" (not the default headless shell) so the full build runs
-            # in new headless mode; extensions only load there too (B3b).
-            channel="chromium",
-            headless=True,
-            args=["--headless=new", *launch_args()],
-        )
+        playwright = sync_playwright().start()
+        try:
+            context = playwright.chromium.launch_persistent_context(
+                str(self.profile_dir),
+                # "chromium" (not the default headless shell) so the full build
+                # runs in new headless mode; extensions only load there too (B3b).
+                channel="chromium",
+                headless=True,
+                args=["--headless=new", *launch_args()],
+            )
+        except Exception:
+            # A failed launch must not leave a driver (and its event loop)
+            # behind: the next start() in this process would refuse to run.
+            playwright.stop()
+            raise
+        self._playwright = playwright
+        self._context = context
         pages = self._context.pages
         self._page = pages[0] if pages else self._context.new_page()
         # So a process that started a browser never leaves it running behind
