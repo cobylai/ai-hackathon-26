@@ -62,7 +62,8 @@ PAGE = """<!doctype html>
           display: flex; flex-direction: column; min-height: 0; }
   #side .head { display: flex; align-items: center; justify-content: space-between; min-height: 38px;
                 padding: 7px 12px 2px 16px; font-size: 11px; font-weight: 600; color: var(--text3); }
-  #sideclose { display: none; }
+  #sideclose { height: 22px; padding: 0 10px; font-size: 12px; font-weight: 400; color: var(--text); }
+  #sidebtn[aria-pressed="true"] { background: var(--hover); color: var(--text); }
   #groups { flex: 1; overflow-y: auto; padding: 0 8px 12px; }
   .group > button { width: 100%; display: flex; align-items: center; gap: 4px; padding: 6px 8px 4px;
                     font-size: 11px; font-weight: 600; color: var(--text2); text-align: left; }
@@ -159,7 +160,6 @@ PAGE = """<!doctype html>
     body { background: transparent; }
     #side { position: fixed; z-index: 3; inset: 0; width: auto; border-right: 0; }
     #side .head { border-bottom: 1px solid var(--line); font-size: 13px; color: var(--text); margin-bottom: 6px; }
-    #sideclose { display: block; }
     body:not(.sideopen) #side { display: none; }
     body.sideopen main { visibility: hidden; }
     .turn, .empty { padding-left: 18px; padding-right: 18px; }
@@ -174,12 +174,12 @@ PAGE = """<!doctype html>
 </style></head>
 <body>
 <aside id="side" aria-label="In the bank">
-  <div class="head"><span>In the bank</span><button type="button" class="btn" id="sideclose" title="Close (Escape)">Done</button></div>
+  <div class="head"><span>In the bank</span><button type="button" class="btn" id="sideclose" title="Hide the bank (⌘B)">Hide</button></div>
   <div id="groups"></div>
 </aside>
 <main>
   <div class="bar">
-    <button class="iconbtn" type="button" id="sidebtn" title="Show or hide the bank"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <button class="iconbtn" type="button" id="sidebtn" title="Show the bank (⌘B)" aria-pressed="false"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
     <h1>Muse</h1>
     <button type="button" class="btn" id="discover" title="Let Muse ask you a few questions about yourself">Discover</button>
     <button type="button" id="status" title="Show what's in the bank"><span class="dot"></span>Checking…</button>
@@ -337,7 +337,7 @@ async function ask(question, spoken, into) {
   if (pending && pending.row) { pending.row.remove(); pending = null; }  // a typed or spoken discovery reply
   if (pending && !/^(yes|no)$/i.test(question)) { pending = null; }  // any other question drops the held action
   busy = true; send.disabled = true;
-  document.body.classList.remove('sideopen');  // compact: show the answer, not the bank
+  if (document.body.classList.contains('sideopen')) toggleSide(false);  // compact: show the answer, not the bank
   let t;
   if (into) {
     into.textContent = ''; const w = el('div', 'working'); w.appendChild(el('span', 'spin'));
@@ -422,7 +422,7 @@ document.addEventListener('keydown', (ev) => {
   if (altTimer) { clearTimeout(altTimer); altTimer = null; }
   if (ev.key === 'Escape') {
     if (recording) { altTalk = false; stopTalk(true); }
-    else if (document.body.classList.contains('sideopen')) toggleSide(false);
+    else if (!isWide() && document.body.classList.contains('sideopen')) toggleSide(false);
     else if (pending) pending.cancel();
     ev.preventDefault(); return;
   }
@@ -445,15 +445,28 @@ const GROUPS = [
   ['me', 'Notes about you', (r) => r.folder === 'me'],
 ];
 function isWide() { return window.matchMedia('(min-width: 761px)').matches; }
+// Show / hide the bank: the bar's sidebar button, Hide in the sidebar, or ⌘B. The wide choice is remembered per
+// viewer; the compact panel always starts with it hidden (open, it covers the conversation).
+function sideShown() { return isWide() ? !document.body.classList.contains('noside') : document.body.classList.contains('sideopen'); }
+function syncSideBtn() {
+  const on = sideShown(), b = $('sidebtn');
+  b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.title = (on ? 'Hide' : 'Show') + ' the bank (⌘B)';
+}
 function toggleSide(show) {
-  const b = document.body;
-  if (isWide()) { const on = show ?? b.classList.contains('noside'); b.classList.toggle('noside', !on); store('muse.side', on ? '1' : '0'); }
-  else b.classList.toggle('sideopen', show ?? !b.classList.contains('sideopen'));
+  const b = document.body, on = show ?? !sideShown();
+  if (isWide()) { b.classList.toggle('noside', !on); store('muse.side', on ? '1' : '0'); }
+  else b.classList.toggle('sideopen', on);
+  syncSideBtn();
+  if (!recording) q.focus();
 }
 if (store('muse.side') === '0') document.body.classList.add('noside');
 $('sidebtn').onclick = () => toggleSide();
 $('sideclose').onclick = () => toggleSide(false);
-window.matchMedia('(min-width: 761px)').addEventListener('change', () => document.body.classList.remove('sideopen'));
+window.matchMedia('(min-width: 761px)').addEventListener('change', () => { document.body.classList.remove('sideopen'); syncSideBtn(); });
+document.addEventListener('keydown', (ev) => {
+  if ((ev.metaKey || ev.ctrlKey) && !ev.altKey && !ev.shiftKey && ev.key.toLowerCase() === 'b') { ev.preventDefault(); toggleSide(); }
+});
+syncSideBtn();
 statusEl.onclick = () => toggleSide(true);
 
 function group(key, title, items, fill) {

@@ -33,8 +33,9 @@ Keyboard focus goes back to the text field after every action, except while list
 
 ### Sizes
 
-- **Wider than 760 px:** the sidebar sits beside the conversation. The sidebar button hides it, and the window remembers that.
-- **760 px or narrower** (the ~640 pt hotkey panel): the sidebar starts collapsed. When it's open, the bank covers the whole panel with a **Done** button, and Escape also closes it, so it never hides part of an answer or the input. Asking a question, or clicking a person, closes it. The page background is transparent, so the panel's system material shows through.
+- **Show / hide the bank** at any width: the sidebar button at the top left (it looks pressed while the bank is shown), **Hide** at the top of the sidebar, or ⌘B.
+- **Wider than 760 px:** the sidebar sits beside the conversation, shown by default. Hiding it is remembered in this browser (localStorage).
+- **760 px or narrower** (the ~640 pt hotkey panel): the sidebar always starts hidden. When it's open, the bank covers the whole panel with a **Hide** button, and Escape also closes it, so it never hides part of an answer or the input. Asking a question, or clicking a person, closes it. The page background is transparent, so the panel's system material shows through.
 - **480 px or narrower:** each table row puts its date above the item.
 - The conversation column is at most 680 px wide and centred at full screen.
 
@@ -71,6 +72,7 @@ Full width, with the bank sidebar:
 |---|---|---|
 | before | ![](window/before-wide-light.png) | ![](window/before-wide-dark.png) |
 | after | ![](window/after-wide-light.png) | ![](window/after-wide-dark.png) |
+| after, bank hidden | ![](window/after-wide-hidden-light.png) | |
 
 The approved mock is `window/mock.html`, with its screenshots in `window/mock-*.png`.
 
