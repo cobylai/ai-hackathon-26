@@ -1,9 +1,0 @@
-{
-  "id": "s04_elsewhere_no",
-  "task": "sufficiency",
-  "note": "right page, answer is elsewhere",
-  "question": "Which room is the CS 2800 final exam in?",
-  "url": "https://course.example.edu/cs2800/exams",
-  "page": "CS 2800 Final Exam Information\nThe final exam is on Monday, December 14 at 2:00 PM and lasts 150 minutes.\nIt is cumulative and closed-book; you may bring one double-sided sheet of notes.\nRoom assignments will be emailed to each student the week before the exam, based on the first letter of your NetID.",
-  "expected": "not enough"
-}

@@ -114,13 +114,16 @@ def main(argv=None) -> int:
     ap.add_argument("--today", help="YYYY-MM-DD the mail is built for (generator default 2026-11-14)")
     ap.add_argument("--extra", action="store_true",
                     help="also the optional demo emails (make_test_mail.build(extra=True))")
+    ap.add_argument("--video", action="store_true",
+                    help="only the video's staged set (make_test_mail.VIDEO_KEYS)")
     a = ap.parse_args(argv)
 
     gen = load_generator(a.generator)
     if a.today:
         from datetime import date
         gen.TODAY = date.fromisoformat(a.today)
-    mails = [parse_mail(m) for m in (gen.build(extra=True) if a.extra else gen.build())]
+    mails = [parse_mail(m) for m in (gen.build_video() if a.video else
+                                     gen.build(extra=True) if a.extra else gen.build())]
     if a.n > len(mails):
         print(f"make_test_mail.py builds {len(mails)} emails; writing {len(mails)}, not {a.n}")
     mails = mails[: a.n]

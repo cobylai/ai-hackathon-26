@@ -1,9 +1,0 @@
-{
-  "id": "p02_course_due_yes",
-  "task": "sufficiency",
-  "note": "",
-  "question": "What is due for CS 3110 this week?",
-  "url": "https://course.example.edu/cs3110/schedule",
-  "page": "CS 3110 Fall 2026 - Schedule\nWeek 12 (Nov 9-13)\n- Lecture 23: Streams and laziness\n- Lecture 24: Monads\n- Due: Problem Set 5 (Wed Nov 11, 11:59pm)\n- Due: Lab 12 checkoff (Fri Nov 13, in section)\nWeek 13 (Nov 16-20)\n- Prelim 2 on Tuesday",
-  "expected": "enough"
-}

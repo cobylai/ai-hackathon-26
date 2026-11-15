@@ -120,6 +120,16 @@ def build(today: date = None) -> list[dict]:
     return out
 
 
+def trim_for_video(items: list[dict], today: date) -> list[dict]:
+    """The video's short lists: nothing due from today to the end of "this week" (the same
+    weekend rule as reason.route) except Lab Report 3 and the first item due tomorrow."""
+    mon = today - timedelta(days=today.weekday())
+    end = mon + timedelta(days=6 + (7 if today.weekday() >= 5 else 0))
+    tomorrow = sorted((x for x in items if x["due"].date() == today + timedelta(days=1)), key=lambda x: x["due"])
+    keep = {id(tomorrow[0])} if tomorrow else set()
+    return [x for x in items if not today <= x["due"].date() <= end or x["title"] == "Lab Report 3" or id(x) in keep]
+
+
 # ---- real strings in the templates ------------------------------------------
 
 def real_strings(trees: dict, raw: dict) -> set[str]:
@@ -360,6 +370,7 @@ def main(argv=None) -> int:
     ap.add_argument("--templates", type=Path, default=ROOT / "data" / "canvas-templates")
     ap.add_argument("--out", type=Path, default=ROOT / "data" / "test-canvas")
     ap.add_argument("--today", help=f"YYYY-MM-DD the coursework is built for (default {TODAY})")
+    ap.add_argument("--video", action="store_true", help="the video's trimmed set (trim_for_video)")
     a = ap.parse_args(argv)
     today = date.fromisoformat(a.today) if a.today else TODAY
 
@@ -370,6 +381,8 @@ def main(argv=None) -> int:
     fake_words = " ".join(f"{c} {n} {s}" for c, n, s, _ in COURSES).lower()
     real = {r for r in real if r.lower() not in fake_words}
     items = build(today)
+    if a.video:
+        items = trim_for_video(items, today)
     out = a.out.resolve()
     pages: dict[Path, str] = {out / "dashboard.html": render_dashboard(trees["dashboard"], items, today, ids)}
     for code, _, slug, _ in COURSES:

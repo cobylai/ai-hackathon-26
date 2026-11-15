@@ -46,13 +46,13 @@ Edits take effect the next time Flux starts.
 Run the checker after editing any playbook or prompt:
 
 ```bash
-FLUX_BANK_DIR=~/flux-demo-bank uv run python -m reason.playbook_check --today 2026-11-15
+FLUX_BANK_DIR=~/flux-demo-check-bank uv run python -m reason.playbook_check --today 2026-11-15
 ```
 
 It runs every example on a temporary copy of the bank, with the network blocked, so it never changes the bank. Keep a change only if the checker still passes every example and brief M's score does not drop:
 
 ```bash
-FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/demo/make_test_mail.py check ~/flux-demo-threads --today 2026-11-15 --offline
+FLUX_BANK_DIR=~/flux-demo-check-bank uv run python scripts/demo/make_test_mail.py check ~/flux-demo-threads --today 2026-11-15 --offline
 ```
 
 (37/38 on 2026-11-15; the one miss is the hackathon team-name options.)

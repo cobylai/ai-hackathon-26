@@ -166,8 +166,8 @@ def extra_mail() -> list[tuple]:
          1, 16, None, "seminar", ["seminar talk"]),
         ("d03", "jonah", "Lab Report 3 template",
          "Hi all,\n\nFor Lab Report 3, please use the template on Canvas and cite at least "
-         f"three sources. Upload it by {_long(lab_due)} at 11:59pm.\n\nJonah (TA, Kitchen Chemistry)",
-         2, 9, lab_due, "template", ["three sources"]),
+         "three sources. The due date is on the assignment page.\n\nJonah (TA, Kitchen Chemistry)",
+         2, 9, None, "template", ["three sources"]),
         ("d04", "ivy", "Garden workday photos",
          f"Hello,\n\nCould you send me your photos from the garden workday by {_long(fri)}? "
          "I'm making the slideshow.\n\nIvy", 3, 18, fri, "photos", ["slideshow"]),
@@ -178,9 +178,20 @@ def extra_mail() -> list[tuple]:
          "Hi everyone,\n\nThe climbing wall reopens Monday, and yoga moves to the small gym this week. "
          "Have a good week!\n\nCampus Rec", 1, 8, None, None, ["climbing wall"]),
         ("d07", "sam", "Graphing calculator",
-         f"Hey,\n\nCan you return my graphing calculator by {_long(wed)}? I need it for the exam.\n\nSam",
+         f"Hey,\n\nCan you return my graphing calculator by {_long(wed)}? I need it for my problem set.\n\nSam",
          2, 20, wed, "calculator", ["calculator"]),
     ]
+
+
+# The video's staged set (thinker ruling 2: short lists on screen). Lab report: Lena's format
+# mail + Jonah's template mail; tomorrow: Hugo's vote; Tuesday: Tess; Felix's Thursday-at-3
+# meeting; the $48.20 bill; Omar's no-deadline ask; the newsletter with no ask.
+VIDEO_KEYS = ("m02", "m04", "m05", "m11", "d01", "d03", "d05", "d06")
+
+
+def build_video() -> list[dict]:
+    """The video bank's mail: VIDEO_KEYS out of build(extra=True), every row optional-free."""
+    return [m for m in build(extra=True) if m["key"] in VIDEO_KEYS]
 
 
 def build_extra() -> list[dict]:
