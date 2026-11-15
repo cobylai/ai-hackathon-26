@@ -103,7 +103,7 @@ Bank: a copy of `~/flux-bank` after a real Sync mail from the test Gmail account
 | Drafts (reply and new email) | works: a draft box from the bank, Open in Mail not clicked |
 | Add to calendar, Remind me, Set me up, Open my calendar | works up to the yes (each shows what it will do; cancelled) |
 | Discovery | works: 4 questions from the live bank |
-| Bank question "How much is my phone bill?" / "my Brightline bill?" | **miss**: "I don't have that in your notes or mail." The bill email's summary has no amount (bank summaries lose details); the bill email above fixes the demo. |
+| Bank question "How much is my phone bill?" / "my Brightline bill?" | **miss**: "I don't have that in your notes or mail." The bill email's summary has no amount (bank summaries lose details), so the bill question is left out of the live run. |
 | Suggestions | shown under due, person and catch-me-up answers |
 | Voice, real Wi-Fi off | not run here (needs a person at the mic) |
 
