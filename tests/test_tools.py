@@ -123,6 +123,7 @@ def test_registry_shape():
         "type",
         "back",
     ]
+    assert registry.GROUPS["computer"] == ["app_open", "file_find", "file_open"]
     for name, tool in registry.TOOLS.items():
         assert tool.name == name
         assert tool.desc and "\n" not in tool.desc
