@@ -233,3 +233,32 @@ def test_second_process_on_live_profile_returns_err(monkeypatch, tmp_path):
             holder.wait(timeout=10)
         except subprocess.TimeoutExpired:
             holder.kill()
+
+
+def test_read_on_blocked_page(btools, site):
+    btools.goto(site.url("captcha.html"))
+    out = check(btools.read(1))
+    assert out.startswith("BLOCKED")
+    assert "bot check" in out
+
+
+def test_elements_on_blocked_page(btools, site):
+    btools.goto(site.url("captcha.html"))
+    out = check(btools.elements())
+    assert out.startswith("BLOCKED")
+    assert "list may be incomplete" in out
+
+
+def test_type_into_a_link_is_err(btools, site):
+    btools.goto(site.url("form.html"))
+    link = number_of(btools.elements(), "Help page")
+    out = check(btools.type(link, "nope"))
+    assert out.startswith("ERR")
+    assert "type into" in out
+
+
+def test_back_without_history_is_err(btools, site):
+    btools.goto(site.url("hello.html"))
+    out = check(btools.back())
+    assert out.startswith("ERR")
+    assert "no history" in out
