@@ -78,6 +78,14 @@ def search(query: str, page: Page | None = None) -> list[Result]:
         results = _run(current, GOOGLE_URL.format(query=quote_plus(query)), google.parse)
         if results:
             return results
-        _fallback_until = _now() + FALLBACK_SECONDS
+        # Google is not usable: try the fallback, but only remember it when it
+        # actually answers. A walled fallback must not pin every later query.
+        results = _run(current, DDG_URL.format(query=quote_plus(query)), ddg.parse)
+        _fallback_until = _now() + FALLBACK_SECONDS if results else 0.0
+        return results
 
-    return _run(current, DDG_URL.format(query=quote_plus(query)), ddg.parse)
+    results = _run(current, DDG_URL.format(query=quote_plus(query)), ddg.parse)
+    if not results:
+        # The remembered engine stopped working: probe Google again next time.
+        _fallback_until = 0.0
+    return results

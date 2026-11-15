@@ -12,6 +12,11 @@ from harness.search import ddg, engine
 PAGES = Path(__file__).parent / "pages"
 DDG_HTML = (PAGES / "ddg_results.html").read_text(encoding="utf-8", errors="replace")
 CAPTCHA_HTML = (PAGES / "captcha.html").read_text(encoding="utf-8", errors="replace")
+DDG_CHALLENGE = (
+    "<html><head><title>DuckDuckGo</title></head><body><p>Unfortunately, bots use "
+    "DuckDuckGo too. Please complete the following challenge to confirm this search was "
+    "made by a human. Select all squares containing a duck:</p></body></html>"
+)
 
 
 # --- DuckDuckGo parser -----------------------------------------------------
@@ -182,6 +187,26 @@ def test_fallback_is_remembered_for_ten_minutes():
     # Google is tried again and is still walled, so it falls back once more.
     assert "google.com/search" in page_.visited[before]
     assert "duckduckgo" in page_.visited[before + 1]
+
+
+def test_walled_ddg_fallback_is_reported_as_blocked():
+    page_ = FakePage({"google.com/search": CAPTCHA_HTML, "html.duckduckgo.com": DDG_CHALLENGE})
+    assert engine.search("python", page=page_) == []
+    assert engine.last_status == "BLOCKED"
+    # Both engines failed, so nothing is remembered: the next query tries Google again.
+    assert not engine.in_fallback()
+    assert len(page_.visited) == 2
+    engine.search("python", page=page_)
+    assert "google.com/search" in page_.visited[2]
+
+
+def test_fallback_is_dropped_when_ddg_stops_working():
+    page_ = fake_site()
+    engine.search("python", page=page_)  # Google walled, DDG answers
+    assert engine.in_fallback()
+    page_.routes["html.duckduckgo.com"] = DDG_CHALLENGE
+    assert engine.search("python", page=page_) == []
+    assert not engine.in_fallback()
 
 
 def test_google_success_does_not_set_fallback():
