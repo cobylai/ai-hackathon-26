@@ -34,7 +34,14 @@ def ingest(text: str, source: str, kind: str, *, today: date | None = None,
         return {"status": "duplicate", "path": str(dup), "entry": store.read_entry(dup), "raw": []}
 
     from . import extract
-    raws = [extract.ask_model(c, kind) for c in extract.chunks(text)]
+    raws = []
+    for c in extract.chunks(text):
+        r = extract.ask_model(c, kind)
+        phrases = extract._phrases(r.get("deadlines"))
+        if phrases and not extract._clean(r.get("ask")):
+            r["ask"] = extract.ask_for_deadline(c, kind, phrases[0])
+            r["_ask_from_followup"] = True
+        raws.append(r)
     entry = extract.build_fields(text, kind, today or date.today(), raws)
     entry.update(id=cid, source=source)
     path = store.write_entry(entry, root)

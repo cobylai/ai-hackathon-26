@@ -16,8 +16,8 @@ PROMPT = """Read the {kind} below and fill in the JSON.
 
 Rules:
 - sender_address: the email address in the From line. Never a name.
-- ask: the one thing the reader is asked to do. A bill or statement that says payment is due asks the reader to pay. Newsletters, announcements and generic lines like "visit the website", "questions? contact us" or "have a great week" are not asks: use null.
-- deadlines: every time by which the reader must do something, copied exactly as written, including relative words like "tomorrow morning", "Friday at 5pm", "before Tuesday", "the 25th". Do not turn them into dates. Event days in a newsletter are not deadlines. Empty list if none.
+- ask: the main thing the reader should do, as a short instruction. Any request or instruction to the reader counts, even polite or automated ones: pay, submit, send, book, register, fill out, push, reply. A bill or statement that says payments are due asks the reader to pay, even if it also says some people need no action. Pick the task given to the reader ("could you take X?") over closing lines like "let me know". Use null only when the text asks nothing of the reader, as in a newsletter or a thank-you note; a generic line like "visit the website" or "questions? contact us" alone is not an ask.
+- deadlines: every time by which the reader must do something, copied exactly as written, including relative words like "tomorrow morning", "Friday at 5pm", "before Tuesday", "the 25th". Do not turn them into dates. Event days, menus and opening hours are not deadlines. Empty list if none.
 - course: a course code like "CS 3110" if the text names one, else null.
 
 {KIND}:
@@ -102,6 +102,19 @@ def ask_model(text: str, kind: str) -> dict:
     return got if isinstance(got, dict) else {}
 
 
+ASK_FOLLOWUP = ("{KIND}:\n{text}\n\nThis {kind} gives the deadline \"{phrase}\". What does the reader "
+                "have to do by then? Reply with one short instruction to the reader, nothing else.")
+
+
+def ask_for_deadline(text: str, kind: str, phrase: str) -> str | None:
+    """Second call, only when the model listed a deadline but no ask."""
+    from llm import client
+    got = client.complete(ASK_FOLLOWUP.format(KIND=kind.upper(), kind=kind, text=text, phrase=phrase),
+                          system=SYSTEM, max_tokens=60)
+    got = got.strip().strip('"').strip()
+    return _clean(got)
+
+
 def chunks(text: str) -> list[str]:
     from llm import tokens
     if tokens.count(text) <= CHUNK_TOKENS:
@@ -142,6 +155,13 @@ def build_fields(text: str, kind: str, today: date, raws: list[dict]) -> dict:
             seen.add(key)
             deadlines.append({"phrase": ph, "date": d.isoformat() if d else None, "time": t})
             prev = d or prev
+    if not deadlines and ask:
+        # The model sometimes leaves a deadline inside the ask ("send it tomorrow").
+        for ph in dates.find_phrases(ask):
+            d, t = dates.resolve(ph, sent, prev)
+            if d:
+                deadlines.append({"phrase": ph, "date": d.isoformat(), "time": t})
+                prev = d
 
     model_course = next((str(_clean(r.get("course"))) for r in raws if _clean(r.get("course"))), None)
     course = classify.find_course(subject, text, model_course)

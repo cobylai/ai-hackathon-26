@@ -66,6 +66,13 @@ class TestResolve(unittest.TestCase):
     def test_midnight(self):
         self.check("Sunday at midnight", FRI13, "2026-11-15", "23:59")
 
+    def test_find_phrases_in_ask(self):
+        from bank.dates import find_phrases
+        self.assertEqual(find_phrases("start the writeup tomorrow morning"), ["tomorrow morning"])
+        self.assertEqual(find_phrases("push it by Friday at 5pm please"), ["by Friday at 5pm"])
+        self.assertEqual(find_phrases("Submit the notebook"), [])
+        self.assertEqual(find_phrases("monitor the mon"), [])
+
     def test_unresolvable(self):
         self.check("soon", MON9, None)
         self.check("when you get a chance", MON9, None)

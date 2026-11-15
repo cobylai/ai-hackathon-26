@@ -138,3 +138,18 @@ def resolve_date(phrase: str, sent: date, prev: date | None = None) -> date | No
 
 def resolve(phrase: str, sent: date, prev: date | None = None) -> tuple[date | None, str | None]:
     return resolve_date(phrase, sent, prev), resolve_time(phrase)
+
+
+_FIND = re.compile(
+    r"\b(?:(?:by|before|on|until|due)\s+)?(?:"
+    r"(?:next |this )?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+(?:morning|afternoon|evening|night))?"
+    r"|tomorrow(?:\s+(?:morning|afternoon|evening|night))?|tonight|today|end of (?:the )?day"
+    r"|" + MON_RE + r"\.? \d{1,2}(?:st|nd|rd|th)?"
+    r"|the \d{1,2}(?:st|nd|rd|th)"
+    r")(?:\s+(?:at\s+)?(?:\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?|noon|midnight))?\b",
+    re.I)
+
+
+def find_phrases(text: str) -> list[str]:
+    """Deadline-like phrases inside free text, e.g. an ask sentence."""
+    return [m.group(0).strip() for m in _FIND.finditer(text or "")]
