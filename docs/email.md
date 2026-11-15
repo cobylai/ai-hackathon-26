@@ -20,7 +20,7 @@ profile. How long that lasts, and why the cookie key store has to match:
 | tool | args | returns |
 |---|---|---|
 | `email_search` | `sender`, `text`, `days` | numbered rows: `n. sender \| subject \| date \| snippet` |
-| `email_read` | `n`, `page` | messages newest first, quoted replies and signatures removed, wrapped in `<email from date>` |
+| `email_read` | `n`, `page` | messages newest first, quoted replies and signatures removed, wrapped in `<email from date attachments>` |
 | `email_asks` | `sender`, `days` | questions and dated lines from the top 3 threads, tagged with the thread number |
 | `email_draft` | `to`, `subject`, `body` | `OK draft saved` (new draft) |
 | `email_reply_draft` | `n`, `body` | `OK draft saved \| to <address>` (reply in thread `n`) |
@@ -106,7 +106,8 @@ it needs no babysitting once the profile is signed in.
 
 ## Known gaps
 
-- **Attachments** are not listed or read; `email_read` returns message text only.
+- Attachment **contents** are not read. Names do come through
+  (`<email ... attachments="a.pdf; b.png">`), taken from Gmail's chips.
 - **Outlook web** is not implemented (the plan's fallback if Google refuses sign-in).
 - A digest script exists (`scripts/daily_digest.py`), but nothing schedules it
   and it is not yet wired into the teammate's automation template.

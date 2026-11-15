@@ -26,6 +26,7 @@ SELECTORS: dict[str, tuple[str, ...]] = {
     "message_date": ("span.g3[title]", "span.g3"),
     "message_body": ("div.a3s", "div[role='listitem'] div.a3s"),
     "quoted_text": ("div.gmail_quote", "blockquote.gmail_quote"),
+    "attachment_name": ("div.aQH span.aV3", "div.aQH .aV3"),
     # Compose and reply, from the page.
     "compose_button": (
         "div[role='button'][class~='T-I-KE']",

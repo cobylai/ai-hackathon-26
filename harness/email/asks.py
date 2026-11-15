@@ -146,9 +146,7 @@ def scan(
         if not _open_row(page, row):
             continue
         sentences = [
-            sentence
-            for _who, _date, body in read.read_messages(page)
-            for sentence in extract(body)
+            sentence for message in read.read_messages(page) for sentence in extract(message.body)
         ]
         entries.append((row, sentences))
         if position < len(rows) - 1:

@@ -48,7 +48,7 @@ def test_fixture_thread_newest_first_without_quotes(wired):
     assert "Undergraduate TA" not in out
 
     # Every message is wrapped for the model.
-    assert '<email from="Alex Chen <alex.chen@example.edu>" date="Sat, Nov 14, 2026, 9:12 AM">' in out
+    assert '<email from="Alex Chen <alex.chen@example.edu>" date="Sat, Nov 14, 2026, 9:12 AM"' in out
     assert out.count("<email from=") == 3
     assert out.count("</email>") == 3
 
@@ -82,3 +82,10 @@ def test_read_row_out_of_range(wired):
 def test_read_signed_out_returns_login(wired, monkeypatch):
     monkeypatch.setattr(read_mod, "signed_in", lambda page: False)
     assert wired.read(1).startswith("LOGIN")
+
+
+def test_attachments_are_named_in_the_tag(wired):
+    out = wired.read(1)
+    assert 'attachments="Lab safety checklist.pdf"' in out
+    # Only the message that has one carries the attribute.
+    assert out.count("attachments=") == 1

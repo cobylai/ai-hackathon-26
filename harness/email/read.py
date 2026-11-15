@@ -8,6 +8,7 @@ model treats the text as data.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 
 from playwright.sync_api import Page
 
@@ -33,6 +34,14 @@ BODY_JS = """el => {
   host.remove();
   return text;
 }"""
+
+
+@dataclass(frozen=True)
+class Message:
+    sender: str
+    date: str
+    body: str
+    attachments: tuple[str, ...] = ()
 
 
 def clean_body(raw: str) -> str:
@@ -133,10 +142,24 @@ def _expand(page: Page, message) -> None:
         pass
 
 
-def read_messages(page: Page) -> list[tuple[str, str, str]]:
-    """``[(sender, date, body)]`` newest first."""
+def _attachments(message) -> tuple[str, ...]:
+    """File names on one message (Gmail's chips, never downloaded)."""
+    items = selectors.all_in(message, "attachment_name")
+    names: list[str] = []
+    for i in range(items.count()):
+        try:
+            name = " ".join(items.nth(i).inner_text().split())
+        except Exception:
+            continue
+        if name and name not in names:
+            names.append(name)
+    return tuple(names)
+
+
+def read_messages(page: Page) -> list[Message]:
+    """Messages newest first, quotes and signatures removed."""
     items = selectors.all_in(page, "thread_message")
-    found: list[tuple[str, str, str]] = []
+    found: list[Message] = []
     for i in range(items.count()):
         message = items.nth(i)
         body = _body(message)
@@ -148,15 +171,26 @@ def read_messages(page: Page) -> list[tuple[str, str, str]]:
                 body = _body(message)
             if body is None:
                 body = ""
-        found.append((_sender(message), _date(message), clean_body(body)))
+        found.append(
+            Message(
+                sender=_sender(message),
+                date=_date(message),
+                body=clean_body(body),
+                attachments=_attachments(message),
+            )
+        )
     found.reverse()
     return found
 
 
-def render(messages: list[tuple[str, str, str]]) -> str:
+def render(messages: list[Message]) -> str:
     blocks = []
-    for sender, date, body in messages:
-        blocks.append(f'<email from="{sender}" date="{date}">\n{body}\n</email>')
+    for message in messages:
+        attrs = f'from="{message.sender}" date="{message.date}"'
+        if message.attachments:
+            names = "; ".join(name.replace('"', "'") for name in message.attachments)
+            attrs += f' attachments="{names}"'
+        blocks.append(f"<email {attrs}>\n{message.body}\n</email>")
     return "\n".join(blocks)
 
 
@@ -192,6 +226,7 @@ def read(n: int, page_no: int = 1) -> str:
     hint = f"[more: call email_read(n={index}, page={page_no + 1})]"
     room = max(200, config.MAX_CHARS - len(head) - len(hint) - 4)
     chunk, total = paginate(render(messages), page_no, max_chars=room)
+    chunk = chunk.rstrip()  # a trailing blank line would eat the cap
 
     if not chunk:
         return f"{head} | page {page_no}/{total}\n(no text on that page)"
