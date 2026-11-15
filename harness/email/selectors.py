@@ -20,6 +20,8 @@ SELECTORS: dict[str, tuple[str, ...]] = {
     "row_subject": ("span[data-thread-id]", "span.bog"),
     "row_snippet": ("span.y2", "td.a4W span.y2"),
     "row_date": ("td.xW span[title]", ".xW span[title]"),
+    # Paging a result list (read-only navigation).
+    "older_button": ("div[role='button'][aria-label='Older']", "div[role='button'][data-tooltip='Older']"),
     # One opened thread; these are looked up inside each message container.
     "thread_message": ("div.adn.ads", "div[role='listitem']"),
     "message_sender": ("span.gD[email]", "span.gD"),

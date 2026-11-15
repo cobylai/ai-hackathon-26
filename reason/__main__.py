@@ -69,6 +69,10 @@ def main(argv=None) -> int:
                 return 0
             if q.lower() in ("quit", "exit"):
                 return 0
+            if q.lower() in ("/sync", "sync mail"):
+                from .web import default_sync
+                print(f"flux> {default_sync()}\n")
+                continue
             if not q:
                 if not voice:
                     continue

@@ -47,6 +47,16 @@ class Web(unittest.TestCase):
         self.assertEqual(re.findall(r"(?:src|href)\s*=\s*[\"']?(?:https?:)?//", PAGE), [])
         self.assertNotIn("@import", PAGE)
 
+    def test_sync_mail_endpoint_and_button(self):
+        self.assertIn('id="syncmail"', PAGE)
+        srv = HTTPServer(("127.0.0.1", 0), make_handler(sync_fn=lambda: "Mail: 3 thread(s)"))
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        base = f"http://127.0.0.1:{srv.server_address[1]}"
+        r = json.load(urllib.request.urlopen(urllib.request.Request(base + "/sync", method="POST")))
+        self.assertEqual(r["text"], "Mail: 3 thread(s)")
+        self.assertEqual(json.load(urllib.request.urlopen(base + "/sync/status"))["text"], "Mail: 3 thread(s)")
+        srv.shutdown()
+
     def test_status(self):
         self.assertEqual(json.loads(self.get("/status")),
                          {"online": False, "items": 17, "voice": False, "voice_why": None})
