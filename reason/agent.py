@@ -81,11 +81,12 @@ What I found so far:
 {notes}
 
 Steps left: {left}
-Pick the ONE next step:
+Pick the ONE next step. Pick a step that finds something new for the task. As soon as what I
+found answers the task, pick finish.
 {menu}
 
-Example reply: {{"choice": 2, "arg": "this week"}}
-Reply with only one JSON object: {{"choice": <number 1-{n}>, "arg": "<short text, or empty>"}}"""
+Reply with only one JSON object: {{"choice": <number 1-{n}>}}
+(Only for web_search, add the search words: {{"choice": <number>, "arg": "<words>"}})"""
 
 FINAL_PROMPT = """Task: {task}
 Today: {today}
@@ -224,6 +225,10 @@ class Run:
 
 def _range(arg: str, today: date):
     from . import route
+    m = re.fullmatch(r"(\d{4}-\d\d-\d\d)\.\.(\d{4}-\d\d-\d\d)", (arg or "").strip())
+    if m:
+        s, e = date.fromisoformat(m.group(1)), date.fromisoformat(m.group(2))
+        return s, e, _range_label(s, e)
     return route.due_range(arg or "", today)
 
 
@@ -361,73 +366,188 @@ def t_web_search(run: Run, arg: str):
     return f"web results for '{words}': {len(hits)}", lines
 
 
-# name -> (menu text, needs arg?, function, words in the task that make it likely)
+# Tool name -> (what it does, function, task words that make it likely). The menu shows each
+# as a concrete, pre-filled line ("deadlines for Fri Nov 20"), so the model picks a number and
+# never writes a tool argument (arXiv 2510.07248: adapt the tools to the small model). The one
+# exception is web_search, whose words the model writes; they are checked before any search.
 TOOLS = {
-    "deadlines": ("deadlines <when>: what is due (when: today, tomorrow, Friday, this week, next week)",
-                  t_deadlines, r"\b(due|deadlines?|owe|ready|homework|assignments?|week|by when|when)\b"),
-    "calendar": ("calendar <when>: my events (when: today, tomorrow, Friday, this week)",
-                 t_calendar, r"\b(free|busy|calendar|schedule|meet|meeting|ready|plans?|day|week|"
-                             r"monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today)\b"),
-    "open_asks": ("open_asks: mail where someone asked me for something (who I owe a reply)",
-                  t_open_asks, r"\b(owe|reply|replies|waiting|asks?|asked|respond|answer|ready|todo|to do)\b"),
-    "search_mail": ("search_mail <words>: find mail and notes about a topic or person",
-                    t_search_mail, r"."),
-    "person": ("person <name>: who someone is and their recent mail", t_person, r"\b[A-Z][a-z]{2,}\b"),
-    "recent": ("recent <since>: mail, coursework and notes that came in since then (since: yesterday, this week)",
-               t_recent, r"\b(changed?|new|since|latest|recent|yesterday|update[sd]?)\b"),
-    "free_check": ("free_check <id>: am I free at the time a meeting mail proposes (id like m2)",
-                   t_free, r"\b(free|busy|available|both|time works?|can i make|meet)\b"),
-    "read": ("read <id>: read one mail or web result in full (id like m2 or w1)", t_read, r"."),
-    "web_search": ("web_search <words>: search the public web", t_web_search,
-                   r"\b(what|when|where|who|how|which)\b"),
+    "deadlines": ("what is due", t_deadlines,
+                  r"\b(due|deadlines?|owe|ready|prepare|hand in|submit|homework|assignments?|week|by when)\b"),
+    "calendar": ("my calendar events", t_calendar,
+                 r"\b(free|busy|calendar|schedule|meet|meeting|advising|ready|prepare|plans?|day|week|"
+                 r"monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today)\b"),
+    "open_asks": ("mail where someone asked me for something and is waiting (who I owe a reply)", t_open_asks,
+                  r"\b(owe|reply|replies|waiting|asks?|asked|respond|ready|prepare|todo|to do)\b"),
+    "recent": ("mail, coursework and notes that came in recently", t_recent,
+               r"\b(changed?|new|since|latest|recent|yesterday|updates?|updated)\b"),
+    "search_mail": ("find mail and notes about", t_search_mail, r"."),
+    "person": ("who this person is and their recent mail", t_person, r"(?!)"),
+    "read": ("read in full", t_read, r"(?!)"),
+    "free_check": ("check my calendar at the time this meeting mail proposes", t_free,
+                   r"\b(free|busy|available|both|works?|make it|can i make|if i'?m)\b"),
+    "web_search": ("search the public web (write the search words in arg; no names or personal details)",
+                   t_web_search, r"\b(who wrote|author|what is|wikipedia|look up|find out)\b"),
 }
-PROPOSE = ("propose <draft|calendar|remind|open> <id>: suggest ONE change for me to confirm "
-           "(draft a reply, add to calendar, a reminder, open it); nothing happens without my yes")
-FINISH = "finish: answer now from what I found"
 KINDS = ("draft", "calendar", "remind", "open")
+INTENT = {
+    "draft": r"\b(draft|reply|write back|write to|answer him|answer her|tell (him|her|them)|say yes|a yes|a no)\b",
+    "calendar": r"\b(calendar|put it|add it|schedule it|book it)\b",
+    "remind": r"\b(remind|reminder)\b",
+    "open": r"\b(open|show me the page|pull up)\b",
+}
+MEETING = re.compile(r"\b(meet|practice|call|coffee|lunch|dinner|study|session|hang|join|come)\b", re.I)
+GENERIC = set("""find get tell me ready draft yes free both owe reply when each changed since yesterday put
+calendar remind day before after what who whom which where how and the for with about from that this
+there their have has had need needs want wants make sure please could would should can also anything
+everything things thing out up my mine our your his her its give show list sum summarize summary
+besides hand turn submit due time times week next last today tomorrow it's i'm i'd i've""".split())
 
 
-def _menu(run: Run) -> list[str]:
-    """At most MAX_CHOICES actions that fit the task and what has been seen. Code decides
-    what is offered; the model only picks."""
-    q = run.q
-    seen_entry = any(it["kind"] == "entry" for it in run.items.values())
-    seen_read = any(it["kind"] in ("entry", "web") and "text" not in it for it in run.items.values())
-    meeting = any(it["kind"] == "entry" and re.search(r"\b(meet|practice|call|coffee|lunch|dinner|study|"
-                                                       r"session|hang|join|come)\b",
-                                                       it["line"], re.I) for it in run.items.values())
-    cand = []
-    for name, (_, _, pat) in TOOLS.items():
-        if name == "read" and not seen_read:
-            continue
-        if name == "free_check" and not meeting:
-            continue
-        if name == "web_search" and (not (run.env.online and run.env.web_search_fn) or FIRST_PERSON.search(q)):
-            continue
-        if name in ("open_asks",) and (name, "") in run.done:
-            continue
-        hit = re.search(pat, q, 0 if name == "person" else re.I)
-        score = (2 if hit else 0) + (1 if name == "search_mail" else 0)
-        if name == "read" or name == "free_check":
-            score += 1
-        used = sum(1 for (n, _) in run.done if n == name)
-        cand.append((score - used, list(TOOLS).index(name), name))
-    cand.sort(key=lambda x: (-x[0], x[1]))
-    extra = ["finish"]
-    if seen_entry and WRITE_WORDS.search(q):
-        extra.insert(0, "propose")
-    if not run.items and not run.done:
-        extra = ["finish"]  # nothing seen yet: finishing now will fail safe, but stays offered
-    room = MAX_CHOICES - len(extra)
-    return [n for _, _, n in cand[:room]] + extra
+def _words(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9']+", (text or "").lower()) if len(w) > 2}
 
 
-def _menu_text(names: list[str]) -> str:
-    out = []
-    for i, n in enumerate(names, 1):
-        text = PROPOSE if n == "propose" else FINISH if n == "finish" else TOOLS[n][0]
-        out.append(f"{i}. {text}")
-    return "\n".join(out)
+def _qwords(q: str) -> set[str]:
+    from bank.query import STOPWORDS
+    return {w for w in _words(q) if w not in GENERIC and w not in STOPWORDS}
+
+
+def _names(run: Run) -> list[str]:
+    """Sender name words the task mentions ("Milo"), in task order. Code only."""
+    if not hasattr(run, "_names"):
+        from bank import store
+        from . import route
+        known: set[str] = set()
+        for e in store.all_entries(run.env.root):
+            if e.get("kind") == "email":
+                known |= route.name_words(e.get("sender_name"), e.get("sender_address"))
+        seen, out = set(), []
+        for w in re.findall(r"[A-Za-z][a-z']+", run.q):
+            k = re.sub(r"'s$", "", w).lower()
+            if k in known and k not in seen and w[:1].isupper():
+                seen.add(k)
+                out.append(re.sub(r"'s$", "", w))
+        run._names = out
+    return run._names
+
+
+def _relevance(run: Run, it: dict) -> int:
+    qw = _qwords(run.q) | {n.lower() for n in _names(run)}
+    text = it["line"] + " " + str(it["obj"].get("body") or "") + " " + str(it["obj"].get("title") or "")
+    hits = qw & _words(text)
+    return len(hits) + 2 * len({n.lower() for n in _names(run)} & _words(it["line"]))
+
+
+def _iso_range(s: date, e: date) -> str:
+    return f"{s.isoformat()}..{e.isoformat()}"
+
+
+def _range_label(s: date, e: date) -> str:
+    return _short(s.isoformat()) if s == e else f"{_short(s.isoformat())} to {_short(e.isoformat())}"
+
+
+def _ranges(run: Run) -> list[tuple[date, date]]:
+    """Date ranges worth offering: the one the task names, the days of events or items that
+    match the task, then the next 7 days."""
+    from . import route
+    s, e, label = route.due_range(run.q, run.env.today)
+    out = [] if label == "in the next 7 days" else [(s, e)]
+    rel = sorted((it for it in run.items.values() if it["kind"] == "event" and _relevance(run, it) > 0),
+                 key=lambda it: -_relevance(run, it))
+    for it in rel[:2]:
+        d = it["obj"]["start"].date()
+        out.append((d, d))
+    out.append((run.env.today, run.env.today + timedelta(days=6)))
+    return list(dict.fromkeys(out))
+
+
+def _options(run: Run) -> list[dict]:
+    """At most MAX_CHOICES concrete next steps that fit the task and what has been seen.
+    Code decides what is offered and fills every argument; the model only picks."""
+    q, items = run.q, run.items
+    names = _names(run)
+    cand: list[tuple[float, dict]] = []
+
+    def offer(score, action, arg, label, free_arg=False):
+        if (action, arg.lower()) in run.done:
+            return
+        cand.append((score, {"action": action, "arg": arg, "label": label, "free_arg": free_arg}))
+
+    def likely(name):
+        return 2 if re.search(TOOLS[name][2], q, re.I) else 0
+
+    for i, (s, e) in enumerate(_ranges(run)):
+        bonus = 1 if i == 0 else 0
+        offer(likely("deadlines") + bonus, "deadlines", _iso_range(s, e), f"deadlines: what is due {_range_label(s, e)}")
+        offer(likely("calendar") + bonus, "calendar", _iso_range(s, e), f"calendar: my events {_range_label(s, e)}")
+    offer(likely("open_asks"), "open_asks", "", "open_asks: " + TOOLS["open_asks"][0])
+    if likely("recent"):
+        offer(3, "recent", "yesterday", "recent: mail, coursework and notes since yesterday")
+    for n in names:
+        offer(2.5, "search_mail", n, f"search_mail: find mail and notes from or about {n}")
+    kw = sorted(_qwords(q) - {n.lower() for n in names})
+    if kw:
+        words = " ".join(kw[:4])
+        offer(1.5, "search_mail", words, f"search_mail: find mail and notes about '{words}'")
+    for it in sorted(items.values(), key=lambda it: -_relevance(run, it)):
+        if it["kind"] not in ("entry", "web") or "text" in it:
+            continue
+        rel = _relevance(run, it)
+        if rel > 0 or it["kind"] == "web":
+            offer(1 + rel * 0.5, "read", it["id"], f"read [{it['id']}] in full: {it['line'][:70]}")
+    wants_free = re.search(TOOLS["free_check"][2], q, re.I)
+    for it in items.values():
+        if it["kind"] == "entry" and MEETING.search(it["line"]) and (wants_free or _relevance(run, it) > 1):
+            offer(3 + _relevance(run, it) * 0.2, "free_check", it["id"],
+                  f"free_check [{it['id']}]: am I free when this meeting is proposed? {it['line'][:60]}")
+    if run.env.online and run.env.web_search_fn and likely("web_search"):
+        offer(1.5, "web_search", "", "web_search: " + TOOLS["web_search"][0], free_arg=True)
+    # Proposals: only kinds the task asks for, only items seen, and after a free check when
+    # the task makes the write depend on being free.
+    props = []
+    for kind in KINDS:
+        if not re.search(INTENT[kind], q, re.I):
+            continue
+        for it in sorted(items.values(), key=lambda it: -_relevance(run, it)):
+            if _relevance(run, it) <= 0 or _eligible(run, kind, it):
+                continue
+            if wants_free and kind in ("draft", "calendar") and MEETING.search(it["line"]) \
+                    and ("free_check", it["id"]) not in run.done:
+                continue
+            gist = "yes" if re.search(r"\byes\b", q, re.I) else ("no" if re.search(r"\bsay no\b", q, re.I) else "")
+            what = {"draft": "draft a reply to", "calendar": "add to my calendar", "remind": "set a reminder for",
+                    "open": "open"}[kind]
+            props.append({"action": "propose", "arg": f"{kind} {it['id']}" + (f" {gist}" if gist and kind == "draft" else ""),
+                          "label": f"propose: {what} [{it['id']}] {it['line'][:60]} (shown to me, waits for my yes)",
+                          "free_arg": False})
+            break
+    props = props[:2]
+    cand.sort(key=lambda x: -x[0])
+    tools_room = MAX_CHOICES - 1 - len(props)
+    opts = [o for _, o in cand[:tools_room]] + props
+    opts.append({"action": "finish", "arg": "", "label": "finish: answer now from what I found", "free_arg": False})
+    return opts
+
+
+def _eligible(run: Run, kind: str, it: dict) -> str:
+    """"" when this item can carry this kind of proposal, else why not."""
+    from . import computer
+    o = it["obj"]
+    if it["kind"] == "event":
+        return "" if kind == "open" else f"[{it['id']}] is already an event"
+    if it["kind"] != "entry":
+        return f"[{it['id']}] can't be used for {kind}"
+    if kind == "draft" and not (o.get("kind") == "email" and o.get("sender_address")):
+        return f"[{it['id']}] is not an email I can reply to"
+    if kind in ("calendar", "remind") and not computer._dated(o):
+        return f"[{it['id']}] has no date"
+    if kind == "open" and not (o.get("kind") == "email" or re.match(r"^(https?|file)://", str(o.get("source") or ""))):
+        return f"[{it['id']}] has nothing to open"
+    return ""
+
+
+def _menu_text(opts: list[dict]) -> str:
+    return "\n".join(f"{i}. {o['label']}" for i, o in enumerate(opts, 1))
 
 
 def _notes_text(run: Run) -> str:
@@ -498,31 +618,16 @@ def parse_choice(text: str, n: int) -> tuple[int, str] | None:
 
 
 def _proposal(run: Run, arg: str) -> tuple[dict | None, str]:
-    """Validate "draft m2" / "calendar d1": a known kind and an item seen in this run."""
-    from . import computer
-    words = (arg or "").lower()
-    kind = next((k for k in KINDS if re.search(rf"\b{k}\b", words)), None)
-    if kind is None and re.search(r"\b(reply|yes|no|email)\b", words):
-        kind = "draft"
-    if kind is None and re.search(r"\b(event|add)\b", words):
-        kind = "calendar"
-    m = ITEM_ID.search(words)
-    it = run.items.get(m.group(1)) if m else None
+    """"draft m2 yes" / "calendar d1" (always code-built): a known kind and an item seen here."""
+    parts = (arg or "").split()
+    kind = parts[0] if parts and parts[0] in KINDS else None
+    it = run.items.get(parts[1]) if len(parts) > 1 else None
     if kind is None or it is None:
         return None, "propose needs a kind (draft, calendar, remind, open) and an id I found"
-    o = it["obj"]
-    if it["kind"] != "entry":
-        if kind == "open" and it["kind"] == "event":
-            return {"kind": "open", "item": it}, ""
-        return None, f"[{it['id']}] can't be used for {kind}"
-    if kind == "draft" and not (o.get("kind") == "email" and o.get("sender_address")):
-        return None, f"[{it['id']}] is not an email I can reply to"
-    if kind == "calendar" and computer.event_for(o, run.env.today) is None:
-        return None, f"[{it['id']}] has no date to put on the calendar"
-    if kind == "remind" and computer.reminder_for(o, "", run.env.today) is None:
-        return None, f"[{it['id']}] has no date for a reminder"
-    gist = "yes" if re.search(r"\byes\b", words) else ("no" if re.search(r"\bno\b", words) else "")
-    return {"kind": kind, "item": it, "arg": gist}, ""
+    why = _eligible(run, kind, it)
+    if why:
+        return None, why
+    return {"kind": kind, "item": it, "arg": parts[2] if len(parts) > 2 else ""}, ""
 
 
 def _step(n, action, arg, note, tokens_, seconds, valid=True) -> dict:
@@ -602,7 +707,7 @@ def run(question: str, env: Env, llm=None) -> Result:
     bad = 0
     proposal = None
     for n in range(1, MAX_STEPS + 1):
-        names = _menu(r)
+        names = _options(r)
         prompt = STEP_PROMPT.format(task=r.q, today=_today(env.today), notes=_notes_text(r),
                                     left=MAX_STEPS - n + 1, menu=_menu_text(names), n=len(names))
         t1 = time.monotonic()
@@ -628,8 +733,16 @@ def run(question: str, env: Env, llm=None) -> Result:
                 return _fail(r, "the model's replies didn't fit the choices", "bad_reply", t0)
             continue
         bad = 0
-        k, arg = got
-        action = names[k - 1]
+        k, said = got
+        opt = names[k - 1]
+        action, arg = opt["action"], opt["arg"]
+        if opt["free_arg"]:
+            arg = _safe_query(r, said)
+            if not arg:
+                note = f"{action}: search words missing or too personal ({said[:40]!r})"
+                r.trace.append(_step(n, action, said, note, used_tokens, time.monotonic() - t1, False))
+                r.notes.append(note)
+                continue
         if action == "finish":
             r.trace.append(_step(n, "finish", "", "decided to answer", used_tokens, time.monotonic() - t1))
             return _finish(r, llm, proposal, t0)
@@ -643,6 +756,8 @@ def run(question: str, env: Env, llm=None) -> Result:
                 return _finish(r, llm, proposal, t0)
             continue
         key = (action, arg.lower())
+        if action == "web_search":
+            r.done.add(("web_search", ""))
         if key in r.done:
             note = f"{action} {arg}: already done, see above"
             r.trace.append(_step(n, action, arg, note, used_tokens, time.monotonic() - t1, False))
@@ -665,6 +780,21 @@ def run(question: str, env: Env, llm=None) -> Result:
         r.trace.append(_step(n, action, arg, head, used_tokens, time.monotonic() - t1))
     r.trace.append(_step(MAX_STEPS + 1, "budget", "", f"{MAX_STEPS} steps used; answering from what I have", 0, 0))
     return _finish(r, llm, proposal, t0)
+
+
+def _safe_query(run: Run, words: str) -> str:
+    """Model-written web search words, kept only if they carry nothing personal: no address,
+    no sender's name, no long numbers (RULES.md: nothing personal goes to a search engine)."""
+    from bank import store
+    from . import route
+    w = " ".join(re.findall(r"[A-Za-z0-9'.-]+", words or ""))[:100].strip()
+    if not w or re.search(r"@|\d{5,}", words or ""):
+        return ""
+    known: set[str] = set()
+    for e in store.all_entries(run.env.root):
+        if e.get("kind") == "email":
+            known |= route.name_words(e.get("sender_name"), e.get("sender_address"))
+    return "" if _words(w) & known else w
 
 
 # ---- glue for reason/answer.py ------------------------------------------------------
