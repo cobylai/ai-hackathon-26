@@ -1,0 +1,12 @@
+{
+  "id": "s01_paraphrase_yes",
+  "task": "sufficiency",
+  "note": "answer worded differently from the question",
+  "question": "When does the dining hall stop serving dinner?",
+  "url": "https://dining.example.edu/okenshields",
+  "page": "Okenshields Dining Room\nLocated in Willard Straight Hall, lower level.\nBreakfast 7:00-10:30 AM\nLunch 11:00 AM-2:30 PM\nEvening meal service ends at 8:30 PM (opens 5:00 PM).\nClosed weekends during break periods. Meal swipes and BRBs accepted.",
+  "expected": "enough",
+  "expect_evidence": [
+    "8:30"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "s02_paraphrase_yes",
+  "task": "sufficiency",
+  "note": "answer worded differently from the question",
+  "question": "Do I need a permit to park on campus overnight?",
+  "url": "https://transport.example.edu/parking/rules",
+  "page": "Parking Rules and Regulations\nVisitors may park in pay-by-plate lots during the day.\nVehicles left in campus lots between 2am and 6am must display a valid overnight pass, available from the Transportation Office for $5 per night.\nTowing is enforced in fire lanes at all times.",
+  "expected": "enough",
+  "expect_evidence": [
+    "overnight pass"
+  ]
+}
