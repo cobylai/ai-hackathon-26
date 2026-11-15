@@ -75,6 +75,9 @@ At the 640 pt panel size, light and dark (the before shots are from before the r
 | after, bar | ![](window/after-panel-bar-light.png) | ![](window/after-panel-bar-dark.png) |
 | after, chats open | ![](window/after-panel-chats-light.png) | ![](window/after-panel-chats-dark.png) |
 | after, chats, delete armed | | ![](window/after-panel-chats-delete-dark.png) |
+| after, Suggested rows | ![](window/after-panel-suggest-light.png) | ![](window/after-panel-suggest-dark.png) |
+| after, draft from a suggestion | ![](window/after-panel-draft-light.png) | ![](window/after-panel-draft-dark.png) |
+| after, compose answer | ![](window/after-panel-compose-light.png) | ![](window/after-panel-compose-dark.png) |
 
 At 420 px, rows stack: ![](window/after-narrow-light.png)
 
@@ -112,13 +115,21 @@ The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it 
 
 - **Fn-Space, tap** (Fn = the Globe key): shows or hides the panel, with the cursor in the question box. Escape or clicking another app hides it.
 - **Fn-Space, hold:** push to talk. It records while held and stops on release; the panel shows the transcript and the answer. It calls the page's own talk start and stop (`window.museTalk.start()/stop()` when the page has them, else the "Hold to talk" button).
-- **Menu bar** (waveform icon): Open, Sync mail (`scripts/sync_email.py 7` into `MUSE_SYNC_BANK_DIR`, default `~/muse-bank`, never the demo bank; the last result shows under it), Discover (presses the page's Discover button), Check setup, Set Argmax key…, Quit Muse.
+- **Menu bar** (waveform icon): Open, Sync mail (`scripts/sync_email.py 7` into `MUSE_SYNC_BANK_DIR`, default `~/muse-bank`, never the demo bank; the last result shows under it), Discover (presses the page's Discover button), Set Up Muse…, Check setup, Set Argmax key…, Quit Muse.
 - The hotkey is two constants at the top of `app/Muse.swift` (`hotKeyCode`, `hotKeyFlags`). The system hotkey call ignores Fn, so Muse reads the keyboard with an event tap, which needs **Accessibility** for Muse. It swallows Fn-Space, so no space reaches the app in front.
 
-### First launch (once, online or off)
+### First launch: the setup window
 
-1. It asks for the Argmax `ax_` key and keeps it in the login Keychain as **"Muse Argmax key"**. It is never written to the repo, the app or a file. Change it with Set Argmax key….
-2. macOS asks for the **microphone**, **Calendar** (Automation) and **Accessibility** (for Fn-Space) for Muse. Allow all three; Accessibility opens System Settings, where you turn Muse on. The hotkey starts working within 2 s, no relaunch. Muse starts the Python server, so macOS charges the microphone and Calendar allows to Muse; asking at launch means nothing asks mid-demo.
+"Set Up Muse" shows one step per screen, each with a button, a live status dot and Back / Skip / Continue (Continue turns on once that permission is allowed):
+
+1. Welcome and privacy: what stays on the Mac, what leaves it, and a link to https://cobydev.com/muse/privacy (placeholder).
+2. Argmax key: kept in the login Keychain as **"Muse Argmax key"**, never in the repo, the app or a file. Each Mac needs its own.
+3. Accessibility, for Fn-Space: opens the right Settings pane; the app icon can be dragged into the list (Jot's pattern).
+4. Microphone.
+5. Calendar, 6. Reminders, 7. Mail: Automation, one app each; Muse launches the app hidden and asks, so macOS shows its own prompt.
+8. Done.
+
+It shows on first launch and whenever the key, Accessibility or the microphone is missing; "Set Up Muse…" in the menu reopens it. Muse starts the Python server, so macOS charges the microphone and Automation allows to Muse.
 
 ### What it does on every launch
 
@@ -126,7 +137,7 @@ The build records the main checkout (`~/code/ai-hackathon-26`) as the folder it 
 2. Starts `scripts/serve_bonsai.sh 4B` and `uv run python -m reason.web --no-open` if :8080 or :8765 doesn't answer, and shows "Starting… Bonsai ready · window starting" meanwhile. If one exits, the panel names it and shows the last log lines. Logs: `~/Library/Logs/Muse/`.
 3. Checks setup and lists any problem in the panel, one line each with the fix: the key, the Whisper model folder, the `argmax-voice` binary, Bonsai 4B on :8080, voice ready in the window server, microphone allowed, Accessibility allowed, Calendar allowed and the "Muse demo" calendar present, and the checkout not behind `origin/main` (as of its last fetch, no network). All fine: it shows the page.
 
-**After a rebuild:** the app is signed ad hoc, so macOS treats each build as a new app. It may ask for the microphone, Calendar and Keychain again, and Accessibility has to be turned off and on again for Muse. Build once before the demo, then don't rebuild.
+**Signing:** `app/build.sh` signs with "Developer ID Application: Coby Lai (XD7QDRDR78)" and the hardened runtime when that identity is in the keychain (entitlements in `app/Muse.entitlements`: microphone and Apple Events only). macOS identifies Muse by bundle id plus team, so its permissions survive rebuilds. Without the identity it signs ad hoc, and then every rebuild counts as a new app to macOS (permissions ask again). `MUSE_SIGN=adhoc` forces that.
 
 **Quit** stops only what Muse started (SIGINT so Python closes voice, then SIGTERM). A Bonsai or window server that was already running stays up.
 
@@ -135,12 +146,15 @@ If the window server was started from a terminal instead, Muse uses it as it is;
 ### Ship to another Mac
 
 ```bash
-app/make_dmg.sh              # -> app/dist/Muse.dmg (~100 KB), app/build/ untouched
+app/make_dmg.sh                  # -> app/dist/Muse.dmg, signed + notarized + stapled
+MUSE_NOTARIZE=0 app/make_dmg.sh  # signed only, for a quick look
 ```
 
-The disk image holds `Muse.app` (no folder recorded, so it looks in `~/ai-hackathon-26` or the `defaults` setting), `INSTALL.html`, `setup.sh` and an Applications shortcut. No models, keys, bank or `data/`.
+Order: build and sign Muse.app (Developer ID, hardened runtime), notarize and staple it, make the DMG, sign it, notarize and staple it, then `stapler validate` and `spctl -a -vvv` on both. `app/build/` (your own app) is untouched.
 
+- **Notary profile:** its own, "Muse-notarize" (`MUSE_NOTARY_PROFILE` to change). Made once by hand: accept the current agreement at developer.apple.com/account; make an app-specific password at appleid.apple.com named "Muse notarize"; then `xcrun notarytool store-credentials "Muse-notarize" --apple-id <Apple ID> --team-id XD7QDRDR78`. The script stops with these steps if the profile doesn't work.
+- **The window:** 660x400, drawn locally by `app/dmg/art.swift` (light background, arrow, one line of text; also the app and volume icon: a white waveform on a blue-grey square). Layout in `app/dmg/dmg_settings.py`, built by `dmgbuild` through `uvx --python 3.12` (nothing installed, no Finder automation prompt; Python 3.9's older dmgbuild loses the background on macOS 26).
+- **Contents:** `Muse.app` (no folder recorded, so it looks in `~/ai-hackathon-26` or the `defaults` setting), `INSTALL.html`, `setup.sh`, an Applications link. No models, keys, bank or `data/`.
 - **INSTALL.html** has two paths. One command: `bash /Volumes/Muse/setup.sh`. Do it yourself: one numbered step per part, each with its official link and exact command: Xcode, uv, the repo (private), Python packages and Playwright Chromium, Bonsai 2 4B with its own venv, the Whisper model, the Argmax registry login and your own keys, building `voice/swift`, the demo bank and "Muse demo" calendar, then opening Muse. Each part installs on its own, so Bonsai, Argmax and the harness are visibly separate.
 - **setup.sh** prints each command before it runs it, asks before every download or install, skips what's already there, never uses `sudo`, and reads the Argmax secret token hidden. It ends with `defaults write … MuseRepo <folder>`.
-- **First open:** Muse is ad-hoc signed and not notarized. Right-click → Open, or `xattr -dr com.apple.quarantine /Applications/Muse.app`.
 - **Each Mac needs its own Argmax key**, and the first voice start on a new Mac takes several minutes (one-time Neural Engine compile).

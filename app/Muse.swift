@@ -158,12 +158,21 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         sigterm = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
         sigterm?.setEventHandler { NSApp.terminate(nil) }
         sigterm?.resume()
+        if Setup.needed() { setup.show { self.start() } } else { start() }
+    }
+
+    let setup = Setup()
+
+    /// After setup: show the panel and bring the servers up.
+    func start() {
+        guard !started else { return }
+        started = true
+        argmaxKey = Keychain.read()
         showMessage("Starting…")
         show()
-        argmaxKey = Keychain.read()
-        if argmaxKey == nil { askForKey() }
         DispatchQueue.global().async { self.bringUp() }
     }
+    var started = false
 
     func applicationWillTerminate(_ n: Notification) {
         window.stop(); bonsai.stop()
@@ -183,6 +192,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         syncInfo.isEnabled = false; syncInfo.isHidden = true
         m.addItem(withTitle: "Discover", action: #selector(discover), keyEquivalent: "")
         m.addItem(.separator())
+        m.addItem(withTitle: "Set Up Muse…", action: #selector(openSetup), keyEquivalent: "")
         m.addItem(withTitle: "Check setup", action: #selector(checkSetup), keyEquivalent: "")
         m.addItem(withTitle: "Set Argmax key…", action: #selector(setKey), keyEquivalent: "")
         m.addItem(.separator())
@@ -387,9 +397,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
 
     func bringUp() {
         say("Starting…\nAsking for microphone and Calendar access if needed.")
-        askMicrophone()
-        // Accessibility, for the Fn-Space tap: macOS shows its own prompt once.
-        _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
+        askMicrophone()   // no-op once setup has asked
         let calProblem = calendarProblem()
 
         if !FileManager.default.fileExists(atPath: repo + "/scripts/serve_bonsai.sh") {
@@ -464,6 +472,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
 
     // ---- Menu actions ----
     @objc func openPanel() { show() }
+    @objc func openSetup() { setup.show { self.start() } }
 
     /// The page's own Discover button: it asks "discover" and shows the Yes/No/Skip/Stop choices.
     @objc func discover() {
@@ -531,6 +540,227 @@ func run(_ path: String, _ args: [String], timeout: TimeInterval, env extra: [St
     if p.isRunning { p.terminate(); return (-2, "timed out") }
     reader.sync {}
     return (p.terminationStatus, String(data: data, encoding: .utf8) ?? "")
+}
+
+// ---- First-run setup: one permission per screen (after Jot's Accessibility window) ----
+let privacyURL = URL(string: "https://cobydev.com/muse/privacy")!   // placeholder until the page is up
+let settingsBase = "x-apple.systempreferences:com.apple.preference.security?"
+
+/// Automation status for one app, without asking. nil = can't tell (app not running).
+func automationGranted(_ bundleID: String, ask: Bool = false) -> Bool? {
+    let target = NSAppleEventDescriptor(bundleIdentifier: bundleID)
+    let st = AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, ask)
+    if st == noErr { return true }
+    if st == OSStatus(procNotFound) { return nil }
+    return false   // -1743 denied, -1744 would ask
+}
+
+/// Launch an app hidden in the background, so its Automation status can be read.
+func launchHidden(_ bundleID: String) {
+    guard NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty,
+          let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return }
+    let cfg = NSWorkspace.OpenConfiguration(); cfg.activates = false; cfg.hides = true
+    NSWorkspace.shared.openApplication(at: url, configuration: cfg, completionHandler: nil)
+}
+
+/// The app's own icon, draggable into the Accessibility list (Jot's DraggableAppIconView).
+final class DragIcon: NSView, NSDraggingSource {
+    override init(frame: NSRect) { super.init(frame: frame) }
+    required init?(coder: NSCoder) { fatalError() }
+    override func draw(_ r: NSRect) { NSApp.applicationIconImage.draw(in: bounds) }
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
+    func draggingSession(_ s: NSDraggingSession, sourceOperationMaskFor c: NSDraggingContext) -> NSDragOperation { .copy }
+    override func mouseDown(with e: NSEvent) {
+        let item = NSDraggingItem(pasteboardWriter: Bundle.main.bundleURL as NSURL)
+        item.setDraggingFrame(bounds, contents: NSApp.applicationIconImage)
+        beginDraggingSession(with: [item], event: e, source: self)
+    }
+}
+
+struct Step {
+    let title: String, body: String, button: String?
+    var pane: String? = nil
+    var granted: () -> Bool? = { nil }       // nil: nothing to check (Continue is always on)
+    var act: (Setup) -> Void = { _ in }
+    var onShow: () -> Void = {}
+}
+
+final class Setup: NSObject, NSWindowDelegate {
+    var win: NSWindow!
+    let icon = NSImageView(), titleL = NSTextField(labelWithString: ""), bodyL = NSTextField(wrappingLabelWithString: "")
+    let slot = NSView(), actionB = NSButton(), statusL = NSTextField(labelWithString: ""), countL = NSTextField(labelWithString: "")
+    let backB = NSButton(), skipB = NSButton(), nextB = NSButton()
+    let keyField = NSSecureTextField()
+    var steps: [Step] = []
+    var i = 0
+    var timer: Timer?
+    var onDone: () -> Void = {}
+
+    static func needed() -> Bool {
+        !UserDefaults.standard.bool(forKey: "SetupDone") || Keychain.read() == nil || !AXIsProcessTrusted()
+            || AVCaptureDevice.authorizationStatus(for: .audio) != .authorized
+    }
+
+    func automationStep(_ name: String, _ bundleID: String, _ why: String) -> Step {
+        Step(title: name, body: why + " Muse asks \(name) through AppleScript; macOS asks you once.",
+             button: "Allow \(name)…", pane: settingsBase + "Privacy_Automation",
+             granted: { automationGranted(bundleID) },
+             act: { s in
+                 launchHidden(bundleID)
+                 DispatchQueue.global().async {
+                     Thread.sleep(forTimeInterval: 1.0)   // let it finish launching
+                     let ok = automationGranted(bundleID, ask: true)
+                     if ok == false { DispatchQueue.main.async { s.openPane() } }
+                 }
+             },
+             onShow: { launchHidden(bundleID) })
+    }
+
+    func build() {
+        steps = [
+            Step(title: "Welcome to Muse",
+                 body: "Muse answers from your mail, calendar and notes, on this Mac. The language model (Bonsai) and speech to text (Argmax) run here, and your mail bank stays in your home folder.\n\nWhat leaves this Mac: a web search when the bank has no answer and you're online, a mail sync when you choose Sync mail or Discover, and Argmax's licence check when voice starts. Nothing else.\n\nThe next screens ask for one permission each.",
+                 button: "How Muse handles your data", act: { _ in NSWorkspace.shared.open(privacyURL) }),
+            Step(title: "Argmax key",
+                 body: "Voice needs your own Argmax key (ax_…, from app.argmaxinc.com). Muse keeps it in your login Keychain as \"\(keychainService)\" and gives it only to its voice program. Each Mac needs its own key.",
+                 button: "Save key", granted: { Keychain.read()?.hasPrefix("ax_") ?? false },
+                 act: { s in
+                     let k = s.keyField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                     if k.hasPrefix("ax_"), Keychain.save(k) { s.keyField.stringValue = "" }
+                     else { s.statusL.stringValue = "That doesn't start with ax_." }
+                 }),
+            Step(title: "Accessibility",
+                 body: "For the \(hotKeyName) hotkey: tap it to open Muse from any app, hold it to talk. Muse only watches for that one key. Click the button, then turn Muse on in the list, or drag this icon into it.",
+                 button: "Open Accessibility Settings", pane: settingsBase + "Privacy_Accessibility",
+                 granted: { AXIsProcessTrusted() },
+                 act: { s in
+                     _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
+                     s.openPane()
+                 }),
+            Step(title: "Microphone",
+                 body: "So you can talk to Muse. It listens only while you hold \(hotKeyName) or the talk button.",
+                 button: "Allow Microphone", pane: settingsBase + "Privacy_Microphone",
+                 granted: { AVCaptureDevice.authorizationStatus(for: .audio) == .authorized },
+                 act: { s in
+                     if AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined {
+                         AVCaptureDevice.requestAccess(for: .audio) { _ in }
+                     } else { s.openPane() }
+                 }),
+            automationStep("Calendar", "com.apple.iCal", "To read your \"\(calendarName)\" calendar and add events you ask for."),
+            automationStep("Reminders", "com.apple.reminders", "To add reminders you ask for."),
+            automationStep("Mail", "com.apple.mail", "To open an email in Mail when you ask Muse to show it. Muse doesn't send mail."),
+            Step(title: "You're set",
+                 body: "Tap \(hotKeyName) to ask from any app; hold it to talk and let go to get the answer. The waveform in the menu bar has the rest, including Set Up Muse… to come back here.",
+                 button: nil),
+        ]
+    }
+
+    func show(onDone: @escaping () -> Void) {
+        self.onDone = onDone
+        if win == nil { build(); makeWindow() }
+        NSApp.activate(ignoringOtherApps: true)
+        win.center(); win.makeKeyAndOrderFront(nil)
+        go(0)
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.refresh() }
+    }
+
+    func makeWindow() {
+        win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 520), styleMask: [.titled, .closable],
+                       backing: .buffered, defer: false)
+        win.title = "Set Up Muse"; win.isReleasedWhenClosed = false; win.delegate = self
+        let v = win.contentView!
+        icon.image = NSApp.applicationIconImage
+        titleL.font = .systemFont(ofSize: 20, weight: .semibold); titleL.alignment = .center
+        bodyL.font = .systemFont(ofSize: 13); bodyL.textColor = .secondaryLabelColor; bodyL.alignment = .center
+        keyField.placeholderString = "ax_…"
+        actionB.bezelStyle = .rounded; actionB.target = self; actionB.action = #selector(doAction)
+        statusL.font = .systemFont(ofSize: 12); statusL.alignment = .center
+        countL.font = .systemFont(ofSize: 11); countL.textColor = .tertiaryLabelColor
+        for (b, t, a) in [(backB, "Back", #selector(back)), (skipB, "Skip", #selector(skip)), (nextB, "Continue", #selector(next))] {
+            b.title = t; b.bezelStyle = .rounded; b.target = self; b.action = a
+        }
+        nextB.keyEquivalent = "\r"
+        for x in [icon, titleL, bodyL, slot, actionB, statusL, countL, backB, skipB, nextB] as [NSView] {
+            x.translatesAutoresizingMaskIntoConstraints = false; v.addSubview(x)
+        }
+        NSLayoutConstraint.activate([
+            icon.topAnchor.constraint(equalTo: v.topAnchor, constant: 28), icon.centerXAnchor.constraint(equalTo: v.centerXAnchor),
+            icon.widthAnchor.constraint(equalToConstant: 72), icon.heightAnchor.constraint(equalToConstant: 72),
+            titleL.topAnchor.constraint(equalTo: icon.bottomAnchor, constant: 14), titleL.centerXAnchor.constraint(equalTo: v.centerXAnchor),
+            bodyL.topAnchor.constraint(equalTo: titleL.bottomAnchor, constant: 10),
+            bodyL.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 36), bodyL.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -36),
+            slot.topAnchor.constraint(equalTo: bodyL.bottomAnchor, constant: 16), slot.centerXAnchor.constraint(equalTo: v.centerXAnchor),
+            slot.widthAnchor.constraint(equalToConstant: 280), slot.heightAnchor.constraint(equalToConstant: 64),
+            actionB.topAnchor.constraint(equalTo: slot.bottomAnchor, constant: 12), actionB.centerXAnchor.constraint(equalTo: v.centerXAnchor),
+            statusL.topAnchor.constraint(equalTo: actionB.bottomAnchor, constant: 10), statusL.centerXAnchor.constraint(equalTo: v.centerXAnchor),
+            nextB.bottomAnchor.constraint(equalTo: v.bottomAnchor, constant: -20), nextB.trailingAnchor.constraint(equalTo: v.trailingAnchor, constant: -20),
+            skipB.centerYAnchor.constraint(equalTo: nextB.centerYAnchor), skipB.trailingAnchor.constraint(equalTo: nextB.leadingAnchor, constant: -8),
+            backB.centerYAnchor.constraint(equalTo: nextB.centerYAnchor), backB.leadingAnchor.constraint(equalTo: v.leadingAnchor, constant: 20),
+            countL.centerYAnchor.constraint(equalTo: nextB.centerYAnchor), countL.leadingAnchor.constraint(equalTo: backB.trailingAnchor, constant: 12),
+        ])
+    }
+
+    func go(_ n: Int) {
+        i = max(0, min(n, steps.count - 1))
+        let s = steps[i]
+        NSApp.activate(ignoringOtherApps: true)
+        titleL.stringValue = s.title; bodyL.stringValue = s.body
+        actionB.isHidden = s.button == nil; actionB.title = s.button ?? ""
+        slot.subviews.forEach { $0.removeFromSuperview() }
+        if s.title == "Argmax key" {
+            keyField.frame = NSRect(x: 20, y: 20, width: 240, height: 24); slot.addSubview(keyField)
+            win.makeFirstResponder(keyField)
+        } else if s.title == "Accessibility" {
+            slot.addSubview(DragIcon(frame: NSRect(x: 108, y: 0, width: 64, height: 64)))
+        }
+        backB.isEnabled = i > 0
+        skipB.isHidden = s.granted() == nil && s.title != "Accessibility" || i == steps.count - 1
+        nextB.title = i == steps.count - 1 ? "Done" : "Continue"
+        countL.stringValue = "\(i + 1) of \(steps.count)"
+        statusL.stringValue = ""
+        s.onShow()
+        refresh()
+    }
+
+    func openPane() { if let p = steps[i].pane, let u = URL(string: p) { NSWorkspace.shared.open(u) } }
+
+    func refresh() {
+        let s = steps[i]
+        guard let ok = s.granted() else { nextB.isEnabled = true; statusL.stringValue = ""; return }
+        if ok {
+            statusL.attributedStringValue = NSAttributedString(string: "●  Allowed", attributes: [.foregroundColor: NSColor.systemGreen])
+            nextB.isEnabled = true
+            skipB.isHidden = true
+        } else {
+            if !statusL.stringValue.hasPrefix("That") {
+                statusL.attributedStringValue = NSAttributedString(string: "○  Not yet", attributes: [.foregroundColor: NSColor.secondaryLabelColor])
+            }
+            nextB.isEnabled = false
+            skipB.isHidden = i == steps.count - 1
+        }
+    }
+
+    @objc func doAction() { steps[i].act(self); refresh() }
+    @objc func back() { go(i - 1) }
+    @objc func skip() { go(i + 1) }
+    @objc func next() {
+        if i == steps.count - 1 { finish() } else { go(i + 1) }
+    }
+
+    func finish() {
+        UserDefaults.standard.set(true, forKey: "SetupDone")
+        timer?.invalidate(); timer = nil
+        win.orderOut(nil)
+        let done = onDone; onDone = {}
+        done()
+    }
+
+    func windowWillClose(_ n: Notification) {   // closing it counts as done for now
+        timer?.invalidate(); timer = nil
+        let done = onDone; onDone = {}
+        done()
+    }
 }
 
 let app = NSApplication.shared

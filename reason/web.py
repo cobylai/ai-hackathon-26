@@ -168,7 +168,7 @@ PAGE = """<!doctype html>
              align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
   .confirm .what { flex: 1 1 220px; color: var(--text); }
   .confirm .done { color: var(--text2); white-space: pre-wrap; }
-  .btn { height: 24px; padding: 0 12px; border-radius: 6px; font-size: 13px; border: 1px solid var(--fieldline); background: var(--field); }
+  .btn { height: 24px; padding: 0 12px; white-space: nowrap; flex: none; border-radius: 6px; font-size: 13px; border: 1px solid var(--fieldline); background: var(--field); }
   .btn:hover { filter: brightness(.97); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 
