@@ -30,6 +30,7 @@ def no_web(*a, **k):
 @mock.patch("llm.client.complete", no_model)
 @mock.patch("llm.client.chat", no_model)
 @mock.patch("reason.answer._web", no_web)
+@mock.patch("applecal.events", lambda *a, **k: [])  # never this Mac's real calendars
 class Problem8(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

@@ -82,8 +82,11 @@ class Events(unittest.TestCase):
     def test_calendar_name_env(self):
         with mock.patch.dict("os.environ", {"FLUX_CALENDAR": "Hearth"}):
             self.assertEqual(applecal.calendar_name(), "Hearth")
-        with mock.patch.dict("os.environ", {"FLUX_CALENDAR": ""}):
+        with mock.patch.dict("os.environ", {"FLUX_CALENDAR": "", "FLUX_MODE": "demo"}):
             self.assertEqual(applecal.calendar_name(), "Flux demo")
+        with mock.patch.dict("os.environ", {"FLUX_CALENDAR": "", "FLUX_MODE": "live"}):
+            self.assertEqual(applecal.calendar_key(), "")
+            self.assertEqual(applecal.calendar_name(), "all calendars")
 
     def test_missing_calendar(self):
         with _run(stderr="execution error: no calendar named Flux demo (4040)", code=1):

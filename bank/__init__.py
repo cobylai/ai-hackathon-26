@@ -4,7 +4,7 @@
     ingest(text, source="msg:1234", kind="email")   # needs the Bonsai server
     due("2026-11-16", "2026-11-20")                  # offline, no model call
 
-Data lives in $FLUX_BANK_DIR, else data/bank/ (gitignored).
+Data lives in $FLUX_BANK_DIR, else ~/flux-bank (live) or ~/flux-demo-bank (demo), see bank/mode.py.
 """
 from __future__ import annotations
 

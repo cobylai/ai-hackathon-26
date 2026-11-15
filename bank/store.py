@@ -1,6 +1,6 @@
 """Entry files on disk: one markdown file per item, JSON-valued front matter.
 
-Data lives in $FLUX_BANK_DIR, else data/bank/ under the repo root. Gitignored.
+Data lives in $FLUX_BANK_DIR, else the mode's bank (bank/mode.py): ~/flux-bank live, ~/flux-demo-bank demo.
 """
 from __future__ import annotations
 
@@ -19,7 +19,10 @@ REPO = Path(__file__).resolve().parent.parent
 
 def bank_dir() -> Path:
     env = (os.environ.get("FLUX_BANK_DIR") or os.environ.get("MUSE_BANK_DIR"))
-    return Path(env).expanduser() if env else REPO / "data" / "bank"
+    if env:
+        return Path(env).expanduser()
+    from . import mode
+    return mode.bank_default()
 
 
 def content_id(text: str) -> str:
