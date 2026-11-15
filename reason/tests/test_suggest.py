@@ -98,6 +98,21 @@ class FreeBusy(Base):
         self.assertIsNone(suggest.meeting(IVY, cal))
         self.assertIsNone(suggest.meeting(MILO, no_cal))
 
+    def test_the_event_it_added_is_not_a_clash(self):
+        # Q14 / finding 12: after "Add to calendar", the same title at the same start is ours.
+        def own(day_start, day_end):
+            return [{"title": MILO["subject"], "start": datetime(2026, 11, 19, 19, 0),
+                     "end": datetime(2026, 11, 19, 20, 0), "location": "Lincoln Hall 101",
+                     "all_day": False}]
+        self.assertIsNone(suggest.meeting(MILO, own))
+
+        def somebody_elses(day_start, day_end):
+            return [{"title": "Dentist", "start": datetime(2026, 11, 19, 19, 0),
+                     "end": datetime(2026, 11, 19, 20, 0), "location": "", "all_day": False}]
+        m = suggest.meeting(MILO, somebody_elses)
+        self.assertFalse(m["free"])
+        self.assertEqual(m["clash"], "Dentist")
+
 
 class Suggestions(Base):
     def test_meeting_lines(self):

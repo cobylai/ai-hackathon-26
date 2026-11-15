@@ -20,7 +20,7 @@ None to enter: the bank route hands over to this one when it falls short. Two pa
 3. Offline: say `offline` and stop.
 4. Online: search and read pages (`gather`: the partner's search, then Bing; at most 3 searches and 60 seconds). Each page goes to the same judge as the bank route, with the quote check.
 5. Nothing found: say gather's message, or `not_found`.
-6. Found: answer, the quoted line (if the answer doesn't already contain it), the page's url as the source, and file the answer in the bank under that url so it can be asked offline later. Then say `saved`, `already_saved` or `save_failed`.
+6. Found: answer, the quoted line (if the answer doesn't already contain it) and the page's url as the source. Do not file it yet: say `save_ask` and wait. On yes, file the answer in the bank under that url so it can be asked offline later, then say `saved`, `already_saved` or `save_failed`; on no, file nothing.
 
 ## May look
 
@@ -32,6 +32,7 @@ The model's own knowledge. Person and due questions never come here.
 
 ## Wording
 
+- save_ask: Say or type yes to save that to your notes.
 - saved: Saved to your notes.
 - already_saved: Already in your notes.
 - save_failed: (Could not save the page: {error}.)

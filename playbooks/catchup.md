@@ -11,6 +11,9 @@ The user's day in one answer: today's calendar, what is due soon, and recent ask
 - catchup: `how(?:'s|’s| is| does) my day(?: look(?:ing)?)?`
 - catchup: `what(?:'s|’s| is) going on today`
 - catchup: `brief me`
+- catchup: `(?:what|how)(?:'s|’s| is| does| do) (?:this|my|the|next) (?:week|weekend)(?: look(?:ing)?(?: like)?)?`
+- catchup: `what does (?:today|tomorrow) look like|how does (?:today|tomorrow) look`
+- catchup: `what(?:'s|’s| is) (?:going on|happening) (?:this week|tomorrow|this weekend)`
 
 ## Steps
 
@@ -66,3 +69,5 @@ No model step.
 | What's my day? | catchup | Source: saved mail and Canvas |
 | What's going on today? | catchup | Source: email received in the last 7 days |
 | Brief me | catchup | Calendar |
+| What does this week look like? | catchup | Calendar |
+| How does my week look? | catchup | Calendar |

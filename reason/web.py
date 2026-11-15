@@ -3,11 +3,13 @@
 One local page served by the standard library; nothing is loaded from the internet,
 so it opens with Wi-Fi off. It calls the same answer() as the typed chat loop.
 Hold to talk: POST /listen/start, then POST /listen/stop -> {"text"} (or {"error"}).
-Single-threaded on purpose: the web route drives one Playwright browser, which must
-stay on one thread.
+Questions are handled one at a time (a lock around every POST): the web route drives
+one Playwright browser and one shared session, and both must stay on one thread.
+Reads (the page, /status, /bank, /chats) are served in parallel, so a slow web search
+does not freeze the window. See finding 18 in docs/test-results/antranig-full.md.
 
     GET  /        the page
-    GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None}
+    GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None, "model": bool}
     GET  /bank    [{"date", "sender", "subject", "summary", "ask", "deadlines", "folder", "id"}], newest first
     POST /ask     {"question": str, "speak": bool} -> {"text", "route", "sources", "seconds", "pending"}
                   speak: read the answer aloud with the Mac's `say` (the Speak switch in the bar)
@@ -39,8 +41,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import threading
+import time
 import webbrowser
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import discover
 from bank import store
@@ -519,9 +523,11 @@ $('f').addEventListener('submit', (ev) => { ev.preventDefault(); const v = q.val
 async function refresh() {
   try {
     const r = await (await fetch('/status')).json();
-    statusEl.className = r.online ? 'on' : '';
+    const modelOk = r.model !== false;  // Bonsai answers; online alone is just the internet
+    statusEl.className = r.online && modelOk ? 'on' : '';
     statusEl.innerHTML = '<span class="dot"></span>';
-    statusEl.appendChild(document.createTextNode((r.online ? 'Online' : 'Offline') + ' · ' + r.items + (r.items === 1 ? ' item' : ' items') + ' in the bank'));
+    statusEl.appendChild(document.createTextNode((r.online ? 'Online' : 'Offline') + ' · ' + r.items + (r.items === 1 ? ' item' : ' items') + ' in the bank' + (modelOk ? '' : ' · model down')));
+    statusEl.title = modelOk ? 'Show what is in the bank' : 'The Bonsai model server is not answering; start it with scripts/serve_bonsai.sh 4B';
     voiceOk = !!r.voice;
     if (!recording && !talk.classList.contains('working')) {
       talk.disabled = !voiceOk;
@@ -542,6 +548,7 @@ function talkState(s) {
 async function post(path) { return (await fetch(path, { method: 'POST' })).json(); }
 async function postJSON(path, obj) { return (await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) })).json(); }
 function voiceError(msg) {
+  if (/too short/.test(msg)) msg = "that was too short to hear. Hold the mic while you speak, or click it once, speak, then click again";
   const t = el('section', 'turn'); t.appendChild(el('div', 'err', "Couldn't listen: " + msg + '. Type your question instead.'));
   const e = $('empty'); if (e) e.remove(); log.appendChild(t); bottom();
 }
@@ -553,7 +560,7 @@ async function startTalk() {
 }
 async function stopTalk(cancel) {
   if (!recording) return;
-  recording = false; talkState('working'); talk.disabled = true;
+  recording = false; latched = false; talkState('working'); talk.disabled = true;
   let r; try { r = await post('/listen/stop'); } catch (e) { r = { error: "Flux isn't reachable" }; }
   talk.disabled = !voiceOk; talkState('idle'); q.focus();
   if (cancel) return;
@@ -561,9 +568,21 @@ async function stopTalk(cancel) {
   if (r.text && r.text.trim()) ask(r.text.trim(), true);
   else voiceError("nothing was heard");
 }
-talk.addEventListener('pointerdown', (ev) => { if (talk.disabled) return; ev.preventDefault(); talk.setPointerCapture(ev.pointerId); startTalk(); });
-talk.addEventListener('pointerup', () => stopTalk(false));
-talk.addEventListener('pointercancel', () => stopTalk(false));
+// Hold to talk, or click once to start and click again to send. A press shorter than 0.4 s is a click:
+// it keeps listening (a release that fast would record almost nothing and fail with "recording too short").
+let pressAt = 0, latched = false;
+talk.addEventListener('pointerdown', (ev) => {
+  if (talk.disabled) return; ev.preventDefault();
+  if (latched) { latched = false; stopTalk(false); return; }
+  talk.setPointerCapture(ev.pointerId); pressAt = Date.now(); startTalk();
+});
+talk.addEventListener('pointerup', () => {
+  if (!recording || !pressAt) return;
+  if (Date.now() - pressAt < 400) { latched = true; talk.title = 'Click again to ask, Escape to cancel'; q.placeholder = 'Listening — click the mic again to ask'; }
+  else stopTalk(false);
+  pressAt = 0;
+});
+talk.addEventListener('pointercancel', () => { if (!latched) stopTalk(false); pressAt = 0; });
 window.fluxTalk = { start: startTalk, stop: () => stopTalk(false) };
 window.fluxFocus = () => { if (!recording) q.focus(); };
 
@@ -779,8 +798,21 @@ def bank_rows(entries) -> list[dict]:
     return rows
 
 
+_model_state = {"at": 0.0, "up": True}
+_POST_LOCK = threading.Lock()  # one question at a time; the session and the browser are single-threaded
+
+
+def _model_up(ttl: float = 5.0) -> bool:
+    """Does Bonsai answer on its port? Cached for a few seconds so /status stays cheap."""
+    now = time.monotonic()
+    if now - _model_state["at"] >= ttl:
+        from llm.client import server_up
+        _model_state.update(at=now, up=server_up())
+    return _model_state["up"]
+
+
 def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk=None, voice_why=None,
-                 entries_fn=None, speaker=None, session=None, chats_root=None, mail_fn=None, open_fn=None,
+                 model_fn=None, entries_fn=None, speaker=None, session=None, chats_root=None, mail_fn=None, open_fn=None,
                  draft_fn=None, run_fn=None):
     entries_fn = entries_fn or store.all_entries
     cur = {"s": session or Session()}  # the open chat (single user); swapped on new / open
@@ -793,6 +825,7 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
         cur["s"] = s
     online_fn = online_fn or _online
     count_fn = count_fn or (lambda: len(store.all_entries()))
+    model_fn = model_fn or _model_up
 
     class Handler(BaseHTTPRequestHandler):
         def _send(self, code, body, ctype):
@@ -812,7 +845,7 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 self._send(200, PAGE, "text/html; charset=utf-8")
             elif self.path == "/status":
                 self._json({"online": online_fn(), "items": count_fn(), "voice": talk is not None,
-                            "voice_why": voice_why})
+                            "voice_why": voice_why, "model": model_fn()})
             elif self.path == "/bank":
                 self._json(bank_rows(entries_fn()))
             elif self.path == "/chats":
@@ -826,6 +859,10 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 self._send(404, "not found", "text/plain")
 
         def do_POST(self):
+            with _POST_LOCK:  # a slow web search must not freeze the page or /status (finding 18)
+                self._do_post()
+
+        def _do_post(self):
             if speaker is not None and self.path in ("/ask", "/listen/start", "/speak/stop"):
                 speaker.stop()  # talking, a new question or the switch cuts off the spoken answer
             if self.path == "/speak/stop":
@@ -922,6 +959,11 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
     return Handler
 
 
+def make_server(handler, port: int = 8765) -> ThreadingHTTPServer:
+    """The window server: questions one at a time, reads (page, /status, /bank, /chats) in parallel."""
+    return ThreadingHTTPServer(("127.0.0.1", port), handler)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m reason.web")
     ap.add_argument("--port", type=int, default=8765)
@@ -931,8 +973,9 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     voice, why = (None, "turned off") if args.no_voice else start_voice()
     print("Voice: ready" if voice else f"Voice is unavailable ({why}); typing only.", flush=True)
-    srv = HTTPServer(("127.0.0.1", args.port), make_handler(
-        today=args.today, talk=HoldToTalk(voice) if voice else None, voice_why=why, speaker=Speaker()))
+    srv = make_server(make_handler(
+        today=args.today, talk=HoldToTalk(voice) if voice else None, voice_why=why, speaker=Speaker()),
+        args.port)
     url = f"http://localhost:{args.port}/"
     print(f"Flux window at {url}  (Ctrl-C to stop)", flush=True)
     if not args.no_open:

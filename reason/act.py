@@ -48,6 +48,7 @@ class Held:
 
 
 _held: Held | None = None
+_choice: dict | None = None      # a "which one do you mean?" waiting for its title
 
 
 def waiting() -> bool:
@@ -56,8 +57,9 @@ def waiting() -> bool:
 
 
 def reset() -> None:
-    global _held
+    global _held, _choice
     _held = None
+    _choice = None
 
 
 def _words(q: str) -> str:
@@ -179,6 +181,12 @@ def _hold(what: str, run: Callable[[], str], preview: str):
     global _held
     _held = Held(what, run, time.monotonic())
     return Answer(f"{preview}\n{say('act', 'ask_yes')}", "act")
+
+
+def hold_save(preview: str, run: Callable[[], str]) -> None:
+    """Ask before filing a web answer in the notes (finding 17b): a yes runs it, anything else drops it."""
+    global _held
+    _held = Held("save_note", run, time.monotonic())
 
 
 def _next_due(e: dict, today: date) -> str:
@@ -320,6 +328,11 @@ def _find_entry(target: str, root, today: date, dated: bool):
         words = " ".join(w for w in re.findall(r"[a-z0-9]+", t.lower()) if w not in GENERIC)
         pool = bank.search(words, limit=20, root=root) if words else []
     pool = [e for e in pool if e.get("kind") != "me"]
+    if re.search(r"\b(meeting|meet|appointment|event)\b", t.lower()):
+        # "Greta's meeting" means her meeting, not whatever she wrote last (playbooks/schedule.md)
+        from . import suggest
+        meetings = [e for e in pool if suggest.is_meeting(e)]
+        pool = meetings or pool
     if dated:
         with_date = [e for e in pool if computer._dated(e)]
         if with_date:
@@ -390,7 +403,12 @@ def do_add_event(ev: dict) -> str:
 def do_add_reminder(r: dict) -> str:
     from . import computer
     from applecal import write
-    computer.add_reminder(r)
+    try:
+        computer.add_reminder(r)
+    except Exception as e:  # Reminders not running is the usual one: "Connection is invalid. (-609)"
+        if "-609" in str(e) or "Connection is invalid" in str(e):
+            return say("schedule", "reminders_closed")
+        raise
     return say("schedule", "reminder_added", name=r["name"], list=write.REMINDER_LIST)
 
 
@@ -409,6 +427,8 @@ def _plan_setup(target: str, today: date, root, deps: dict):
     choices = named if len(named) > 1 else (pages if not named and len(pages) > 1 else [])
     if choices:
         names = list(dict.fromkeys(p.get("subject") or "?" for p in choices))[:3]
+        global _choice
+        _choice = {"target": target, "names": names}  # the next message may be one of these
         return Answer(say("setup", "which_one", options="; ".join(names)), "act")
     page = named[0] if named else (pages[0] if pages else None)
     mails = [e for e in (full or hits) if e.get("kind") == "email"][:2]
@@ -469,13 +489,16 @@ def handle(question: str, today: date | None = None, root: Path | None = None, *
            deps: dict | None = None, session=None):
     """Answer for an action request or a yes/no to a held one; None for anything else."""
     from .answer import Answer
-    global _held
+    global _held, _choice
     d = {"online": _default_online, "open_app": open_app, "open_page": open_page,
          "save_draft": save_draft, "write_reply": write_reply, "open_email": open_email,
          "add_event": do_add_event, "add_reminder": do_add_reminder, **(deps or {})}
     held, _held = (_held if waiting() else None), None  # any new input ends the wait
+    choice, _choice = _choice, None  # a "which one" lasts for the next message only
     if is_yes(question) or is_no(question):
         if held is None:
+            if choice is not None and is_no(question):
+                return Answer(say("act", "cancelled"), "act")
             return Answer(say("act", "nothing_held"), "act")
         if is_no(question):
             return Answer(say("act", "cancelled"), "act")
@@ -483,10 +506,18 @@ def handle(question: str, today: date | None = None, root: Path | None = None, *
             return Answer(held.run(), "act")
         except Exception as ex:  # report it; nothing is retried
             return Answer(say("act", "failed", why=f"{type(ex).__name__}: {ex}"), "act")
+    today = today or date.today()
+    if choice is not None:  # the answer to "Which one do you mean: A; B?" is one of the titles
+        said = _words(question).split()
+        names = [n for n in choice["names"] if said and all(w in _words(n) for w in said)]
+        if len(names) == 1:
+            return _plan_setup(names[0], today, root, d)
+        if len(names) > 1:  # still ambiguous: ask again rather than guess (playbooks/setup.md step 3)
+            _choice = {"target": choice["target"], "names": names}
+            return Answer(say("setup", "which_one", options="; ".join(names)), "act")
     req = parse(question)
     if req is None:
         return None
-    today = today or date.today()
     if req["kind"] == "open":
         return _plan_open(req["target"], today, root, d)
     if req["kind"] == "calendar":

@@ -25,6 +25,7 @@ class Web(unittest.TestCase):
 
         cls.srv = HTTPServer(("127.0.0.1", 0), make_handler(
             today="2026-11-14", answer_fn=fake_answer, online_fn=lambda: False, count_fn=lambda: 17,
+            model_fn=lambda: True,
             entries_fn=lambda: [
                 {"sent_date": "2026-11-12", "sender_name": "Ann Old", "subject": "old", "body": "older one"},
                 {"sent_date": "2026-11-14", "sender_name": "Bo New", "folder": "person", "id": "abc123def456", "subject": "Phone bill", "body": "Bill $42.18.",
@@ -49,7 +50,12 @@ class Web(unittest.TestCase):
 
     def test_status(self):
         self.assertEqual(json.loads(self.get("/status")),
-                         {"online": False, "items": 17, "voice": False, "voice_why": None})
+                         {"online": False, "items": 17, "voice": False, "voice_why": None,
+                          "model": True})
+
+    def test_status_line_says_when_the_model_is_down(self):
+        self.assertIn("model down", PAGE)
+        self.assertIn("r.model !== false", PAGE)
 
     def test_bank_list(self):
         rows = json.loads(self.get("/bank"))
@@ -156,6 +162,42 @@ class Talk(unittest.TestCase):
             loop.main([])
         self.assertEqual(asked, ["what is due Monday"])
         self.assertIn("Voice is unavailable (no key)", out.getvalue())
+
+
+class SlowQuestion(unittest.TestCase):
+    """The page and /status stay responsive while a slow question runs (finding 18)."""
+
+    def test_status_answers_during_a_slow_question(self):
+        import time
+        from reason.web import make_server
+
+        def slow(q, today=None):
+            time.sleep(1.2)
+            return Answer("ok", "due")
+
+        srv = make_server(make_handler(
+            answer_fn=slow, online_fn=lambda: True, count_fn=lambda: 3,
+            model_fn=lambda: True, entries_fn=lambda: []), 0)
+        base = f"http://127.0.0.1:{srv.server_address[1]}"
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            def ask():
+                try:
+                    urllib.request.urlopen(urllib.request.Request(
+                        base + "/ask", data=b'{"question": "catch me up"}', method="POST"),
+                        timeout=5).read()
+                except Exception:
+                    pass
+            threading.Thread(target=ask, daemon=True).start()
+            time.sleep(0.25)  # the question is now sleeping inside its handler
+            t0 = time.monotonic()
+            with urllib.request.urlopen(base + "/status", timeout=3) as r:
+                got = json.loads(r.read())
+            took = time.monotonic() - t0
+            self.assertEqual(got["items"], 3)
+            self.assertLess(took, 0.6, f"/status waited {took:.2f}s behind the question")
+        finally:
+            srv.shutdown()
 
 
 if __name__ == "__main__":

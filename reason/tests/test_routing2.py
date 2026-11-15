@@ -49,10 +49,20 @@ class Problem8(unittest.TestCase):
     def test_chat_never_reaches_the_web(self):
         for q, want in (("Hey, can you hear me okay? Hope you're doing well.", "I can hear you"),
                         ("Hi", "Hi."), ("hello flux", "Hi."), ("Is this working?", "I can hear you"),
-                        ("Thanks so much!", "You're welcome."), ("testing testing", "I can hear you")):
+                        ("Thanks so much!", "You're welcome."), ("testing testing", "I can hear you"),
+                        ("Who are you?", "I'm Flux"), ("What can you do?", "I'm Flux"), ("who made you", "I'm Flux")):
             a = self.ask(q)
             self.assertEqual(a.route, "chat", q)
             self.assertTrue(a.text.startswith(want), q)
+
+    def test_a_question_about_my_week_is_a_catch_up_not_a_web_search(self):
+        for q in ("What does this week look like?", "how does my week look", "What's my week?", "what does tomorrow look like"):
+            self.assertEqual(self.ask(q).route, "catchup", q)
+
+    def test_questions_about_the_user_never_reach_the_web(self):
+        for q in ("What am I?", "Who am I?"):
+            a = self.ask(q)
+            self.assertEqual(a.route, "about_me", q)
 
     def test_not_chat(self):
         for q in ("Hey, what's due tomorrow?", "hi, how much is my share", "hey Felix asked me something",

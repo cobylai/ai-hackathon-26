@@ -213,6 +213,71 @@ class Act(unittest.TestCase):
                     reply_out="ERR mail.google.com | draft did not save")
         self.assertIn("wasn't saved", act.save_draft("felix.wu@example.com", "s", "Hi"))
 
+    # ---- set me up (playbooks/setup.md): choosing which one, related mail
+    def _essay_bank(self):
+        for e in (
+            E("b00000000003", "course", "Canvas", None, "2026-11-10", "Essay 2 Draft",
+              "Draft of essay 2 for peer review.", kind="page", source="file:///tmp/essay2-draft.html"),
+            E("b00000000004", "course", "Canvas", None, "2026-11-12", "Essay 2 Final",
+              "Final essay 2 submission.", kind="page", source="file:///tmp/essay2-final.html"),
+            E("b00000000005", "person", "Ada Byron", "ada@example.edu", "2026-11-11",
+              "Essay 2 draft due", "Upload a full draft of essay 2 (1,200 words) for peer review.",
+              ask="Upload your essay 2 draft."),
+        ):
+            store.write_entry(dict(e), self.root)
+
+    def test_setup_asks_which_one(self):
+        self._essay_bank()
+        a = self.h("Set me up for essay 2")
+        self.assertIn("Which one do you mean", a.text)
+        self.assertIn("Essay 2 Draft", a.text)
+        self.assertIn("Essay 2 Final", a.text)
+
+    def test_setup_accepts_the_offered_title_then_lists_page_and_mail(self):
+        self._essay_bank()
+        self.h("Set me up for essay 2")
+        a = self.h("Essay 2 Draft")  # typing one of the offered titles carries on
+        self.assertIn("To set you up for Essay 2 Draft, I'll open:", a.text)
+        self.assertIn('the page "Essay 2 Draft"', a.text)
+        self.assertIn("Essay 2 draft due", a.text)
+
+    def test_setup_choice_asks_again_when_the_answer_is_ambiguous(self):
+        self._essay_bank()
+        self.h("Set me up for essay 2")
+        again = self.h("essay")  # in both titles: ask again instead of guessing
+        self.assertIn("Which one do you mean", again.text)
+        self.assertIn("Essay 2 Draft", again.text)
+        self.assertIn("Essay 2 Final", again.text)
+        final = self.h("Draft")
+        self.assertIn('the page "Essay 2 Draft"', final.text)
+
+    def test_setup_choice_does_not_swallow_the_next_question(self):
+        self._essay_bank()
+        self.h("Set me up for essay 2")
+        self.assertIsNone(self.h("What's due this week?"))
+
+    def test_no_cancels_the_which_one(self):
+        self._essay_bank()
+        self.h("Set me up for essay 2")
+        self.assertIn("Cancelled", self.h("no").text)
+
+    # ---- add a person's meeting (playbooks/schedule.md): the meeting, not their last email
+    def test_add_a_persons_meeting_prefers_the_meeting_email(self):
+        for e in (
+            E("b00000000006", "person", "Greta Lund", "greta@example.edu", "2026-11-14",
+              "Library book hold", "Your book is on hold at the front desk; pick it up by Sunday.",
+              ask="Pick it up", deadlines=[{"phrase": "by Sunday", "date": "2026-11-22", "time": "17:00"}]),
+            E("b00000000007", "person", "Greta Lund", "greta@example.edu", "2026-11-13",
+              "Book club meeting", "Greta asks you to meet to plan the book club.",
+              ask="Can you meet Wednesday, November 18 at 2pm to plan the book club?",
+              deadlines=[{"phrase": "Wednesday, November 18 at 2pm", "date": "2026-11-18", "time": "14:00"}]),
+        ):
+            store.write_entry(dict(e), self.root)
+        a = self.h("Add Greta's meeting to my calendar")
+        self.assertIn("Book club meeting", a.text)
+        self.assertNotIn("Library book hold", a.text)
+        self.assertIn("Wed Nov 18", a.text)
+
     # ---- wiring and safety
     def test_answer_routes_actions_first(self):
         # A typed "draft a reply to X" now opens the offline draft box (playbooks/compose.md,

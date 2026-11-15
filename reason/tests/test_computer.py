@@ -75,6 +75,23 @@ class Dates(unittest.TestCase):
         self.assertEqual(computer.reminder_for(HW, "the day before", SUN)["remind_at"], datetime(2026, 11, 19, 9))
         self.assertEqual(r["name"], "Submit Homework 9")
 
+    def test_reminder_never_fires_in_the_past(self):
+        # Q12: "the day before" on a deadline that is already here used to propose yesterday 9am
+        soon = E("x00000000007", "course", "MATH 2938", None, "2026-11-15", "Homework 9 due",
+                 "Due today.", ask="Submit Homework 9",
+                 deadlines=[{"phrase": "today noon", "date": "2026-11-15", "time": "12:00"}])
+        r = computer.reminder_for(soon, "the day before", SUN)
+        self.assertGreater(r["remind_at"], datetime.now())
+        self.assertEqual(r["due"], datetime(2026, 11, 15, 12, 0))
+
+    def test_reminders_closed_says_how_to_fix_it(self):
+        r = {"name": "Submit Homework 9", "due": datetime(2026, 11, 20, 23, 59),
+             "remind_at": datetime(2026, 11, 19, 9), "note": ""}
+        boom = RuntimeError("CalendarError: Reminders got an error: Connection is invalid. (-609)")
+        with mock.patch("reason.computer.add_reminder", side_effect=boom):
+            text = act.do_add_reminder(r)
+        self.assertIn("Reminders isn't open", text)
+
     def test_gmail_url_only_for_real_threads(self):
         self.assertIn("authuser=ilovelocalai@gmail.com#all/1a1dd43fcca5e8ee",
                       computer.gmail_url({"source": "gmail:1a1dd43fcca5e8ee#0"}))
