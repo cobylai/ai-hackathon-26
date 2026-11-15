@@ -8,6 +8,7 @@ a repeated query stops it early.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from typing import Callable, Sequence
 
@@ -22,6 +23,19 @@ MAX_PAGES_PER_ROUND = 2
 MAX_RESULTS = 10
 MAX_CHUNKS = 2
 MAX_ANSWER_WORDS = 120
+
+
+def _env_int(name: str, default: int = 0) -> int:
+    try:
+        return int(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+
+
+# Experiment (docs/plan/notes-search-eval.md): end a round that added this many
+# notes instead of spending a model call asking whether they are enough.
+# 0 keeps the measured behaviour; HARNESS_STOP_AFTER_NOTES=2 turns it on.
+STOP_AFTER_NOTES = _env_int("HARNESS_STOP_AFTER_NOTES")
 
 Note = tuple[int, str, str]
 
@@ -118,6 +132,11 @@ def research(
                     # answer always match the numbered Sources list.
                     notes.append((len(notes) + 1, item.domain, written))
                     break
+
+        # Optional stop rule, off by default: two independent notes from one round
+        # are usually enough, and this saves the `enough` call and a later round.
+        if STOP_AFTER_NOTES and len(notes) - first_new_note >= STOP_AFTER_NOTES:
+            break
 
         # Nothing after the last round can change the answer, so do not spend a
         # model call asking whether the notes are enough.

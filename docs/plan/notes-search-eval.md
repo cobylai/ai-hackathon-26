@@ -177,7 +177,7 @@ Also fixed while running this:
 
 - **Input looks fixed but is not yet confirmed on a full run.** Run 4's comparable subset is 37% lower (median 7,552 chars) and its q01-q05 median is 7,827, under the target; a clean 12-question run is needed to say so outright.
 - **The budget is now tokens.** `scripts/eval_search.py` judges pass, time, tokens and chars separately, with **2,300 prompt tokens** as the equivalent of the plan's 8,000 characters (3.5 chars/token measured on these pages). Run 3's 2,842-token median would still miss it; Run 4's comparable subset is around 2,250.
-- **Three rounds is the common case** (10 of 12). The second page per round is cheap, but a stop rule such as "enough after a round that added two notes" might cut a round without losing answers.
+- **The stop rule exists but is unmeasured.** `HARNESS_STOP_AFTER_NOTES=2` ends a round that collected two notes, skipping the `enough` call and usually a later round; it stays off because no run yet shows whether that costs accuracy. Three rounds was the common case (10 of 12), so the saving would be roughly one round and one model call per question.
 - **Walls decide the score.** Same code, same questions: 12/12 in Run 3, 0/12 on a cold profile, 4/5 before the walls in Run 4. Until the engine mix is controlled, any pass rate is a statement about the hour it ran in.
 
 Measurement: input chars = `len(llm.SYSTEM) + len(prompt)` for every `ask` call, which is

@@ -99,6 +99,36 @@ def test_rewrites_when_the_notes_are_not_enough():
     assert len(site.opened) == 2
 
 
+def test_stop_after_notes_skips_the_enough_call(monkeypatch):
+    monkeypatch.setattr(loop, "STOP_AFTER_NOTES", 2)
+    fake = llm.FakeLLM(["1 2", "note A", "note B", "Answer [1]."])
+    site = Script()
+    outcome = loop.research("q", ask=fake.ask, search=site.search, open_page=site.open_page)
+    assert outcome.rounds == 1
+    assert len(outcome.notes) == 2
+    assert not any("fully answer" in prompt for prompt in fake.prompts)
+
+
+def test_stop_after_notes_keeps_searching_when_one_note_arrives(monkeypatch):
+    monkeypatch.setattr(loop, "STOP_AFTER_NOTES", 2)
+    fake = llm.FakeLLM(
+        ["1", "note A", "NO", "q2", "1", "note B", "YES", "Answer [1]."]
+    )
+    site = Script()
+    outcome = loop.research("q", ask=fake.ask, search=site.search, open_page=site.open_page)
+    assert outcome.rounds == 2
+    assert len(outcome.notes) == 2
+    assert any("fully answer" in prompt for prompt in fake.prompts)
+
+
+def test_stop_after_notes_is_off_unless_asked(monkeypatch):
+    monkeypatch.setattr(loop, "STOP_AFTER_NOTES", 0)
+    fake = llm.FakeLLM(["1 2", "note A", "note B", "YES", "Answer [1]."])
+    site = Script()
+    loop.research("q", ask=fake.ask, search=site.search, open_page=site.open_page)
+    assert any("fully answer" in prompt for prompt in fake.prompts)
+
+
 def test_last_round_does_not_ask_enough():
     fake = llm.FakeLLM(
         [
