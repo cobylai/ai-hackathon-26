@@ -31,6 +31,24 @@ from harness.search import engine, loop, tools  # noqa: E402
 
 QUESTIONS = ROOT / "tests" / "eval" / "questions.jsonl"
 
+# The plan's budget was 8,000 characters of model input. Now that `ask` reports
+# real usage, the budget is expressed in tokens: 8,000 chars at the 3.5 chars
+# per token measured on these pages is about 2,300 tokens.
+CHAR_TARGET = 8000
+TOKEN_TARGET = 2300
+TIME_TARGET = 20.0
+PASS_TARGET = 9
+
+
+def verdict(passes: int, seconds: float, chars: float, tokens: float) -> dict[str, bool]:
+    """Each target judged on its own, so one miss does not hide the others."""
+    return {
+        "pass": passes >= PASS_TARGET,
+        "time": seconds < TIME_TARGET,
+        "tokens": tokens < TOKEN_TARGET,
+        "chars": chars < CHAR_TARGET,
+    }
+
 
 class CountingAsk:
     """`llm.ask` plus a count of how many characters the model was fed."""
@@ -202,10 +220,18 @@ def main(argv: list[str] | None = None) -> int:
     blocked = sum(row["blocked"] for row in rows)
     print(markdown(rows))
     print()
-    print(f"pass {passes}/{len(rows)}  median {seconds:.1f} s  median {chars:.0f} chars  "
-          f"median {tokens:.0f} prompt tokens  blocked pages {blocked}")
-    print(f"target 9/12, <20 s, <8000 chars: "
-          f"{'met' if passes >= 9 and seconds < 20 and chars < 8000 else 'missed'}")
+    print(
+        f"pass {passes}/{len(rows)}  median {seconds:.1f} s  median {chars:.0f} chars "
+        f"({chars / CHAR_TARGET:.0%} of {CHAR_TARGET})  median {tokens:.0f} prompt tokens "
+        f"({tokens / TOKEN_TARGET:.0%} of {TOKEN_TARGET})  blocked pages {blocked}"
+    )
+    checks = verdict(passes, seconds, chars, tokens)
+    print(
+        f"targets: pass {passes}/{len(rows)} {'met' if checks['pass'] else 'missed'} | "
+        f"time {seconds:.1f} s {'met' if checks['time'] else 'missed'} | "
+        f"tokens {tokens:.0f} {'met' if checks['tokens'] else 'missed'} | "
+        f"chars {chars:.0f} {'met' if checks['chars'] else 'missed'}"
+    )
 
     return 0
 

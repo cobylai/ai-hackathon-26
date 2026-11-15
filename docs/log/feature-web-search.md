@@ -32,3 +32,4 @@
 - S8 Run 4 note: a cold Chromium profile was walled 12/12 from its first query, so profile history matters as much as the hour. Run 3 remains the last complete run; the notes list what a clean run still needs to settle.
 - S8 follow-up: a dead browser no longer aborts a run. `Session.restart()` reopens it, `browser._page()` recovers once from `TargetClosedError`, `open_page` retries after a restart, and search pages now get ad blocking through the same `_page()` helper (Run 4 lost a question to a killed browser).
 - Search tools are reachable from the CLI: `python -m harness search "query"` and `python -m harness research "question"`, so the loop can be exercised by hand or by another harness without the decision tree.
+- The eval judges the input budget in real prompt tokens now (2,300, the token equivalent of the plan's 8,000 chars at 3.5 chars/token) and reports pass/time/tokens/chars as separate checks, so one miss cannot hide the others.

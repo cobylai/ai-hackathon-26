@@ -33,6 +33,18 @@ def test_grading_is_case_insensitive():
     assert module.is_pass("hypertext transfer protocol", "Hypertext", notes=1) is True
 
 
+def test_verdict_judges_each_budget_on_its_own():
+    module = load_script()
+    checks = module.verdict(passes=12, seconds=19.0, chars=9900, tokens=2250)
+    assert checks == {"pass": True, "time": True, "tokens": True, "chars": False}
+    assert module.verdict(passes=4, seconds=25.0, chars=9000, tokens=2600) == {
+        "pass": False,
+        "time": False,
+        "tokens": False,
+        "chars": False,
+    }
+
+
 def test_question_file_has_twelve_well_formed_rows():
     module = load_script()
     items = module.load_questions(module.QUESTIONS)
