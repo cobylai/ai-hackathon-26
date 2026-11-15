@@ -1,0 +1,16 @@
+{
+  "id": "o02_club_social",
+  "kind": "email",
+  "source": "fixture:e02_club_social",
+  "note": "no ask, no deadline",
+  "text": "From: Outing Club <outing@clubs.univ.example.edu>\nDate: Tue, 10 Nov 2026 18:02:11 -0500\nSubject: Fall photo slideshow!\n\nHey everyone! Thanks to all who came on the gorge hike last weekend. We put together a slideshow of the best photos, it's on the club drive. Have a great rest of the semester and stay warm out there!\n\n- The Outing Club board",
+  "expected": {
+    "sender_address": "outing@clubs.univ.example.edu",
+    "sender_name": "Outing Club",
+    "sent_date": "2026-11-10",
+    "ask_keywords": [],
+    "deadline_dates": [],
+    "folder": "other",
+    "course": null
+  }
+}
