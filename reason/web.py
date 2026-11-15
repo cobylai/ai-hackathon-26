@@ -60,7 +60,9 @@ PAGE = """<!doctype html>
   /* sidebar: the bank, grouped */
   #side { width: 240px; flex: none; background: var(--side); border-right: 1px solid var(--line);
           display: flex; flex-direction: column; min-height: 0; }
-  #side .head { padding: 13px 16px 6px; font-size: 11px; font-weight: 600; color: var(--text3); }
+  #side .head { display: flex; align-items: center; justify-content: space-between; min-height: 38px;
+                padding: 7px 12px 2px 16px; font-size: 11px; font-weight: 600; color: var(--text3); }
+  #sideclose { display: none; }
   #groups { flex: 1; overflow-y: auto; padding: 0 8px 12px; }
   .group > button { width: 100%; display: flex; align-items: center; gap: 4px; padding: 6px 8px 4px;
                     font-size: 11px; font-weight: 600; color: var(--text2); text-align: left; }
@@ -151,18 +153,28 @@ PAGE = """<!doctype html>
 
   /* wide: sidebar beside the conversation, hidden on request */
   @media (min-width: 761px) { body.noside #side { display: none; } }
-  /* compact (the ~640 pt panel): sidebar slides over, page lets the panel's material show through */
+  /* compact (the ~640 pt panel): starts collapsed; when open, the bank covers the whole panel with a Done
+     button (Escape also closes it), so it never hides part of an answer. The page lets the panel's material show through. */
   @media (max-width: 760px) {
     body { background: transparent; }
-    #side { position: fixed; z-index: 2; top: 38px; bottom: 0; left: 0; box-shadow: 0 0 0 1px var(--line), 0 8px 24px rgba(0,0,0,.12); }
+    #side { position: fixed; z-index: 3; inset: 0; width: auto; border-right: 0; }
+    #side .head { border-bottom: 1px solid var(--line); font-size: 13px; color: var(--text); margin-bottom: 6px; }
+    #sideclose { display: block; }
     body:not(.sideopen) #side { display: none; }
+    body.sideopen main { visibility: hidden; }
     .turn, .empty { padding-left: 18px; padding-right: 18px; }
     .hint { display: none; }
+  }
+  /* very narrow: a table row puts the date above the item instead of squeezing both */
+  @media (max-width: 480px) {
+    table.rows td { display: block; border: 0; padding: 0; width: auto; }
+    table.rows td.when { padding-top: 6px; font-size: 12px; }
+    table.rows tr { display: block; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
   }
 </style></head>
 <body>
 <aside id="side" aria-label="In the bank">
-  <div class="head">In the bank</div>
+  <div class="head"><span>In the bank</span><button type="button" class="btn" id="sideclose" title="Close (Escape)">Done</button></div>
   <div id="groups"></div>
 </aside>
 <main>
@@ -238,6 +250,10 @@ function render(box, text) {
     if ((m = /^\\s*[-•] (\\S.*?) {2,}(\\S.*)$/.exec(line))) {
       if (!table) { table = el('table', 'rows'); box.appendChild(table); list = null; }
       const tr = el('tr'); tr.appendChild(el('td', 'when', m[1])); last = el('td', '', m[2]); tr.appendChild(last); table.appendChild(tr);
+      continue;
+    }
+    if (table && (m = /^\\s*[-•] (.+)$/.exec(line))) {  // an undated row in a dated list stays in the table
+      const tr = el('tr'); tr.appendChild(el('td', 'when', '')); last = el('td', '', m[1]); tr.appendChild(last); table.appendChild(tr);
       continue;
     }
     if ((m = /^\\s*[-•] (.+)$/.exec(line))) {
@@ -321,6 +337,7 @@ async function ask(question, spoken, into) {
   if (pending && pending.row) { pending.row.remove(); pending = null; }  // a typed or spoken discovery reply
   if (pending && !/^(yes|no)$/i.test(question)) { pending = null; }  // any other question drops the held action
   busy = true; send.disabled = true;
+  document.body.classList.remove('sideopen');  // compact: show the answer, not the bank
   let t;
   if (into) {
     into.textContent = ''; const w = el('div', 'working'); w.appendChild(el('span', 'spin'));
@@ -405,8 +422,8 @@ document.addEventListener('keydown', (ev) => {
   if (altTimer) { clearTimeout(altTimer); altTimer = null; }
   if (ev.key === 'Escape') {
     if (recording) { altTalk = false; stopTalk(true); }
+    else if (document.body.classList.contains('sideopen')) toggleSide(false);
     else if (pending) pending.cancel();
-    else if (document.body.classList.contains('sideopen')) document.body.classList.remove('sideopen');
     ev.preventDefault(); return;
   }
   if (!recording && document.activeElement !== q && ev.key.length === 1 && !ev.metaKey && !ev.ctrlKey) q.focus();
@@ -435,6 +452,8 @@ function toggleSide(show) {
 }
 if (store('muse.side') === '0') document.body.classList.add('noside');
 $('sidebtn').onclick = () => toggleSide();
+$('sideclose').onclick = () => toggleSide(false);
+window.matchMedia('(min-width: 761px)').addEventListener('change', () => document.body.classList.remove('sideopen'));
 statusEl.onclick = () => toggleSide(true);
 
 function group(key, title, items, fill) {

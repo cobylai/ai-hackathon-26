@@ -136,7 +136,15 @@ def _senders(entries: list[dict]) -> dict[str, list[dict]]:
     return by
 
 
-def person_candidates(entries: list[dict], relation_fn=None) -> list[dict]:
+def relation_candidate(name: str, rel: str, sources: list[dict]) -> dict:
+    return _cand("relation", f"Is {name} your {rel}?", rel,
+                 {"to": "relation", "name": name, "relation": rel}, sources, score=len(sources) - 0.5)
+
+
+def person_candidates(entries: list[dict], relation_fn=None, lazy_relation: bool = False) -> list[dict]:
+    """lazy_relation: instead of calling relation_fn now, add a placeholder
+    {"kind": "relation", "lazy": True, "name", "entries", ...} that the caller resolves
+    (one Bonsai call) only when that question comes up."""
     out = []
     for es in _senders(entries).values():
         if len(es) < MIN_PERSON:
@@ -151,11 +159,16 @@ def person_candidates(entries: list[dict], relation_fn=None) -> list[dict]:
         else:
             out.append(_cand("person", f"Is {name} someone you hear from often?",
                              "writes to you often", {"to": "fact", "name": name}, src))
+        if lazy_relation:
+            if relation_fn is None or relation_fn(name, es) is not False:  # False: don't ask
+                out.append({"id": f"lazy-relation:{name.lower()}", "kind": "relation", "lazy": True,
+                            "name": name, "entries": es, "question": f"(how {name} relates to you)",
+                            "fact": "", "write": {"to": "relation", "name": name}, "sources": src,
+                            "score": len(src) - 0.5})
+            continue
         rel = relation_fn(name, es) if relation_fn else None
         if rel:
-            out.append(_cand("relation", f"Is {name} your {rel}?", rel,
-                             {"to": "relation", "name": name, "relation": rel}, src,
-                             score=len(src) - 0.5))
+            out.append(relation_candidate(name, rel, src))
     return out
 
 
@@ -178,7 +191,8 @@ def bill_candidates(entries: list[dict]) -> list[dict]:
     return out
 
 
-def candidates(entries: list[dict], events: list[dict] | None = None, relation_fn=None) -> list[dict]:
-    out = (person_candidates(entries, relation_fn) + course_candidates(entries)
+def candidates(entries: list[dict], events: list[dict] | None = None, relation_fn=None,
+               lazy_relation: bool = False) -> list[dict]:
+    out = (person_candidates(entries, relation_fn, lazy_relation) + course_candidates(entries)
            + event_candidates(events or []) + bill_candidates(entries))
     return sorted(out, key=lambda c: (-c["score"], ORDER[c["kind"]], c["question"]))

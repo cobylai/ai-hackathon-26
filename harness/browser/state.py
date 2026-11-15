@@ -9,6 +9,7 @@ BLOCKED_PHRASES = (
     "are you a robot",
     "unusual traffic",
     "verify you are human",
+    "prove your humanity",
     "captcha",
     "access denied",
     # DuckDuckGo's HTML endpoint answers with its own puzzle when it sees a bot
