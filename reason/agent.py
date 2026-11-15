@@ -587,7 +587,13 @@ def _options(run: Run) -> list[dict]:
     props = props[:2]
     cand.sort(key=lambda x: -x[0])
     tools_room = MAX_CHOICES - 1 - len(props)
+    # Finish is offered once something was found (or two steps were tried): finishing on an
+    # empty scratchpad can only end in "I can't do that reliably".
+    if not items and len(run.trace) < 2 and cand:
+        tools_room += 1
     opts = props + [o for _, o in cand[:tools_room]]
+    if not items and len(run.trace) < 2 and cand:
+        return opts
     done_label = ("finish: answer now from what I found, without the change I asked for" if props
                   else "finish: answer now from what I found")
     opts.append({"action": "finish", "arg": "", "label": done_label, "free_arg": False})
@@ -906,6 +912,8 @@ def wants(question: str) -> bool:
     if not enabled():
         return False
     q = question or ""
+    if len(re.findall(r"[A-Za-z']+", q)) < 5 and not PERSONAL_CUE.search(q):
+        return False  # "the first one", "What's my favorite color?": the old answers stand
     return not (route.web_ok(q) and not FIRST_PERSON.search(q) and not PERSONAL_CUE.search(q))
 
 

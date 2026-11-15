@@ -44,7 +44,7 @@ class Fake:
                 if w in label:
                     self.wants.remove(w)
                     return reply('{"choice": %s}' % n)
-        n = next(n for n, label in lines if label.startswith("finish"))
+        n = next((n for n, label in lines if label.startswith("finish")), "1")
         return reply('{"choice": %s}' % n)
 
 
@@ -88,7 +88,8 @@ class Loop(World):
             if "Pick the ONE" in p:
                 lines = fake.menu(p)
                 self.assertLessEqual(len(lines), agent.MAX_CHOICES)
-                self.assertTrue(lines[-1][1].startswith("finish"))
+                if "(nothing yet)" not in p:
+                    self.assertTrue(lines[-1][1].startswith("finish"))
         self.assertTrue(res.ok)
 
     def test_step_budget(self):
@@ -127,9 +128,14 @@ class Loop(World):
         self.assertTrue(res.text.startswith(agent.CANT))
 
     def test_finish_with_nothing_looked_up_fails_safe(self):
-        res = self.run_task("Book me a flight to Denver", Fake())
+        r = agent.Run("Book me a flight to Denver", self.w.env())
+        self.assertFalse(any(o["action"] == "finish" for o in agent._options(r)))  # look first
+        res = agent._finish(r, Fake(), None, 0.0)
         self.assertFalse(res.ok)
         self.assertEqual(res.stop, "nothing_seen")
+        res = self.run_task("Book me a flight to Denver", Fake(final='{"answer": "x", "used": [], "sure": "no"}'))
+        self.assertFalse(res.ok)
+        self.assertTrue(res.text.startswith(agent.CANT))
 
     def test_unsure_or_unknown_ids_fail_safe(self):
         res = self.run_task("Get me ready for Friday", Fake(["deadlines"], final='{"answer": "x", "used": [], "sure": "no"}'))
