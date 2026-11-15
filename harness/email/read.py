@@ -16,7 +16,7 @@ from harness import config
 from harness.browser.session import get_session
 from harness.browser.text import paginate
 from harness.email import search, selectors
-from harness.email.status import LOGIN_LINE, signed_in
+from harness.email.status import BROWSER_LINE, LOGIN_LINE, signed_in
 
 THREAD_URL = "https://mail.google.com/mail/u/0/#all/{thread_id}"
 QUOTE_HEADER = re.compile(r"^On .{0,120} wrote:$")
@@ -217,7 +217,10 @@ def read(n: int, page_no: int = 1) -> str:
     if problem:
         return f"ERR mail.google.com | {problem} | run email_search again"
 
-    page = get_session().start().page
+    try:
+        page = get_session().start().page
+    except Exception:
+        return BROWSER_LINE
     if not signed_in(page):
         return LOGIN_LINE
     if not open_thread(page, row.thread_id):

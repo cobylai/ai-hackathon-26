@@ -13,7 +13,7 @@ from playwright.sync_api import Page
 
 from harness.browser.session import get_session
 from harness.email import read, search, selectors
-from harness.email.status import LOGIN_LINE, signed_in
+from harness.email.status import BROWSER_LINE, LOGIN_LINE, signed_in
 
 DRAFT_SAVED = "OK draft saved"
 
@@ -187,7 +187,10 @@ def new(to: str, subject: str, body: str) -> str:
     address = (to or "").strip()
     if not address:
         return "ERR mail.google.com | no recipient | give a to address"
-    page = get_session().start().page
+    try:
+        page = get_session().start().page
+    except Exception:
+        return BROWSER_LINE
     if not signed_in(page):
         return LOGIN_LINE
     try:
@@ -240,7 +243,10 @@ def reply(n: int, body: str) -> str:
     if problem:
         return f"ERR mail.google.com | {problem} | run email_search again"
 
-    page = get_session().start().page
+    try:
+        page = get_session().start().page
+    except Exception:
+        return BROWSER_LINE
     if not signed_in(page):
         return LOGIN_LINE
     if not read.open_thread(page, row.thread_id):

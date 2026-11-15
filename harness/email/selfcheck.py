@@ -18,6 +18,7 @@ from playwright.sync_api import Page
 from harness.browser import state
 from harness.browser.session import get_session
 from harness.email import selectors
+from harness.email.status import BROWSER_LINE
 
 INBOX_URL = "https://mail.google.com/mail/u/0/#inbox"
 
@@ -113,7 +114,12 @@ def main(argv: list[str] | None = None) -> int:
         help="also open a blank compose (Gmail may save your signature as a draft)",
     )
     args = parser.parse_args(argv)
-    found, status = collect(get_session().start().page, compose=args.compose)
+    try:
+        page = get_session().start().page
+    except Exception:
+        print(BROWSER_LINE)
+        return 2
+    found, status = collect(page, compose=args.compose)
     print(status)
     missing = False
     if found:

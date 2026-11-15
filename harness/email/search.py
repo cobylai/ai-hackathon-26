@@ -13,7 +13,7 @@ from playwright.sync_api import Page
 from harness import config
 from harness.browser.session import get_session
 from harness.email import query, selectors
-from harness.email.status import LOGIN_LINE, signed_in
+from harness.email.status import BROWSER_LINE, LOGIN_LINE, signed_in
 
 MAX_ROWS = 10
 SNIPPET_CHARS = 80
@@ -174,7 +174,10 @@ def format_rows(label: str, rows: list[Row], total: int) -> str:
 
 def search(sender: str | None = None, text: str | None = None, days: int | None = None) -> str:
     """Search Gmail and return up to ten numbered rows."""
-    page = get_session().start().page
+    try:
+        page = get_session().start().page
+    except Exception:
+        return BROWSER_LINE
     if not signed_in(page):
         return LOGIN_LINE
 

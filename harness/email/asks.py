@@ -12,6 +12,7 @@ import re
 from harness import config
 from harness.browser.session import get_session
 from harness.email import query, read, search, selectors
+from harness.email.status import BROWSER_LINE
 
 TOP_THREADS = 3
 LINE_CHARS = 220
@@ -135,7 +136,10 @@ def scan(
     Shared by ``email_asks`` and the digest: one place that opens threads the
     fast way and extracts the lines worth showing.
     """
-    page = get_session().start().page
+    try:
+        page = get_session().start().page
+    except Exception:
+        return BROWSER_LINE, []
     result = search.search(sender=sender, days=days)
     if not result.startswith("OK"):
         return result, []

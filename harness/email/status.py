@@ -14,6 +14,9 @@ from harness.email import selectors
 
 INBOX_URL = "https://mail.google.com/mail/u/0/#inbox"
 LOGIN_LINE = "LOGIN mail.google.com | sign-in needed | run: harness login https://mail.google.com"
+BROWSER_LINE = (
+    "ERR mail.google.com | browser did not start | close the other Chromium window and retry"
+)
 
 
 def looks_signed_in(page: Page) -> bool:
