@@ -5,7 +5,8 @@
     MUSE_BANK_DIR=FRESH uv run python scripts/make_test_mail.py check OUT_DIR [--offline]
 
 Every name, address and course here is made up (example.edu / example.com). Write
-OUT_DIR and FRESH outside the repo. Today is fixed at Sat 2026-11-14, and the seed is
+OUT_DIR and FRESH outside the repo. Today defaults to Sat 2026-11-14 (--today YYYY-MM-DD
+moves it; sent and due dates are offsets from it), and the seed is
 fixed, so runs repeat. check asks person, due and bank questions through
 reason.answer and scores each against truth.json (keyword and source checks).
 
@@ -210,8 +211,14 @@ def check(out_dir: Path) -> int:
     for d in sorted({m["due"] for m in truth if m["due"]}):
         dd = date.fromisoformat(d)
         due_check(f"What's due on {dd:%B} {dd.day}?", d, d)
-    due_check("What's due this week?", "2026-11-14", "2026-11-22")
-    due_check("What's due next week?", "2026-11-16", "2026-11-22")
+    # Same week rule as reason.route: on Sat/Sun "this week" runs to the coming Sunday.
+    mon = TODAY - timedelta(days=TODAY.weekday())
+    wk_end = mon + timedelta(days=6 + (7 if TODAY.weekday() >= 5 else 0))
+    due_check("What's due this week?", TODAY.isoformat(), wk_end.isoformat())
+    nxt = mon + timedelta(days=7)
+    due_check("What's due next week?", nxt.isoformat(), (nxt + timedelta(days=6)).isoformat())
+    tmr = (TODAY + timedelta(days=1)).isoformat()
+    due_check("What's due tomorrow?", tmr, tmr)
     due_check("Anything due November 29?", "2026-11-29", "2026-11-29")
 
     # bank: fact questions answered from summaries
@@ -246,9 +253,14 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="scripts/make_test_mail.py")
     ap.add_argument("mode", choices=("write", "check"))
     ap.add_argument("out_dir", type=Path)
+    ap.add_argument("--today", type=date.fromisoformat, default=None,
+                    help="the day the mail is built and checked for (default 2026-11-14)")
     ap.add_argument("--offline", action="store_true",
                     help="block the network for this process (localhost stays open for Bonsai)")
     args = ap.parse_args(argv)
+    global TODAY
+    if args.today:
+        TODAY = args.today
     if args.offline:
         from reason.live_check import block_network
         block_network()

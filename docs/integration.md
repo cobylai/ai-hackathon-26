@@ -174,6 +174,45 @@ sent date and subject. Brief M's check on that bank: **32/37 right** (person
 an ask from a no-ask email; the hackathon team-name question missed the bank
 and timed out on the web route (the check ran online).
 
+## Demo bank (brief Q): `~/muse-demo-bank`
+
+The demo answers from sample mail (brief M's 20 fake emails as Gmail thread
+pages), not from live sends. The video says it is sample mail.
+
+- Bank: `~/muse-demo-bank` (outside every worktree).
+- Pages, truth.json and the saved template: `~/muse-demo-threads/`
+  (`template.html` is the saved Gmail page; it has a real sender, so keep it out of git).
+
+Regenerate for the recording day (one command; set DAY to that day). Run from
+the repo root with the Bonsai server up:
+
+```bash
+DAY=2026-11-15; rm -rf ~/muse-demo-bank && uv run python scripts/make_test_threads.py 20 --today $DAY --template ~/muse-demo-threads/template.html --out ~/muse-demo-threads && MUSE_BANK_DIR=~/muse-demo-bank uv run python scripts/sync_test_threads.py ~/muse-demo-threads && MUSE_BANK_DIR=~/muse-demo-bank uv run python scripts/make_test_mail.py check ~/muse-demo-threads --today $DAY --offline
+```
+
+Launch the chat window on it:
+
+```bash
+MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web
+```
+
+`--today` (added at brief Q) moves the generator's fixed "today": sent and due
+dates are offsets from it, and `check` computes "this week" / "next week" /
+"tomorrow" from it with the same weekend rule as `reason.route`. The chat
+window uses the real clock, so build the bank for the day you record.
+
+Built for **2026-11-15** on 2026-11-14: 20/20 threads match sender, address,
+date and subject. Offline check: **37/38 right** (person 14/14, no-match 2/2,
+due 16/16 incl. "What's due tomorrow?", bank 5/6). The one miss: "What are the
+team name options for the hackathon?" -> "I don't have that saved". "What's
+due this week?" lists 7 rows (Mon 11/16 to Sun 11/22), and "What's due
+tomorrow?" lists Hugo's vote (Mon 11/16 5pm).
+
+Person questions for the video (names speech-to-text is unlikely to garble;
+all right in the offline check): What did Felix ask me? / Hugo / Ivy (no ask:
+the newsletter) / Jonah / Greta / Omar / Lena / Milo. Avoid Nina (two of
+them), Tess, Kiri and Rafe.
+
 ## Not run yet
 
-- Re-sync after the partner's demo emails 2, 4, 6, 8 are sent.
+- Re-sync of the partner's demo emails: dropped (brief Q; the demo uses the sample-mail bank).

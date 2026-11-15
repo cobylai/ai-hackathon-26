@@ -37,8 +37,9 @@ def main(argv=None) -> int:
     truth = {m["key"]: m for m in json.loads((folder / "truth.json").read_text())["mail"]}
     se = _sync_email()
     root = bank_dir()
-    if (ROOT / "data" / "bank-test").resolve() != root.resolve() and "test" not in root.name:
-        raise SystemExit(f"MUSE_BANK_DIR is {root}; point it at a test bank (data/bank-test)")
+    if (ROOT / "data" / "bank-test").resolve() != root.resolve() and not (
+            "test" in root.name or "demo" in root.name):
+        raise SystemExit(f"MUSE_BANK_DIR is {root}; point it at a test or demo bank")
     print(f"bank: {root}")
 
     session = Session(ROOT / "data" / "test-profile").start()

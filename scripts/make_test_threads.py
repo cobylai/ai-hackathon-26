@@ -111,9 +111,13 @@ def main(argv=None) -> int:
     ap.add_argument("--template", type=Path, default=ROOT / "data" / "templates" / "thread.html")
     ap.add_argument("--out", type=Path, default=ROOT / "data" / "test-threads")
     ap.add_argument("--generator", type=Path, default=ROOT / "scripts" / "make_test_mail.py")
+    ap.add_argument("--today", help="YYYY-MM-DD the mail is built for (generator default 2026-11-14)")
     a = ap.parse_args(argv)
 
     gen = load_generator(a.generator)
+    if a.today:
+        from datetime import date
+        gen.TODAY = date.fromisoformat(a.today)
     mails = [parse_mail(m) for m in gen.build()]
     if a.n > len(mails):
         print(f"make_test_mail.py builds {len(mails)} emails; writing {len(mails)}, not {a.n}")
