@@ -23,6 +23,8 @@ TIMEOUT_MS = 20_000
 
 # Last status word seen by `search`, so the tool layer can lead with it.
 last_status = "OK"
+# Which engine answered the last search: "google", "duckduckgo" or "".
+last_engine = ""
 
 _fallback_until = 0.0
 
@@ -34,9 +36,10 @@ def _now() -> float:
 
 def reset() -> None:
     """Forget the fallback window and the last status (tests and new sessions)."""
-    global _fallback_until, last_status
+    global _fallback_until, last_status, last_engine
     _fallback_until = 0.0
     last_status = "OK"
+    last_engine = ""
 
 
 def in_fallback() -> bool:
@@ -44,8 +47,9 @@ def in_fallback() -> bool:
     return _now() < _fallback_until
 
 
-def _run(page: Page, url: str, parser) -> list[Result]:
-    global last_status
+def _run(page: Page, url: str, parser, name: str) -> list[Result]:
+    global last_status, last_engine
+    last_engine = name
     try:
         response = page.goto(url, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
     except Exception:
@@ -75,16 +79,20 @@ def search(query: str, page: Page | None = None) -> list[Result]:
     current = page if page is not None else get_session().start().page
 
     if not in_fallback():
-        results = _run(current, GOOGLE_URL.format(query=quote_plus(query)), google.parse)
+        results = _run(
+            current, GOOGLE_URL.format(query=quote_plus(query)), google.parse, "google"
+        )
         if results:
             return results
         # Google is not usable: try the fallback, but only remember it when it
         # actually answers. A walled fallback must not pin every later query.
-        results = _run(current, DDG_URL.format(query=quote_plus(query)), ddg.parse)
+        results = _run(
+            current, DDG_URL.format(query=quote_plus(query)), ddg.parse, "duckduckgo"
+        )
         _fallback_until = _now() + FALLBACK_SECONDS if results else 0.0
         return results
 
-    results = _run(current, DDG_URL.format(query=quote_plus(query)), ddg.parse)
+    results = _run(current, DDG_URL.format(query=quote_plus(query)), ddg.parse, "duckduckgo")
     if not results:
         # The remembered engine stopped working: probe Google again next time.
         _fallback_until = 0.0

@@ -23,3 +23,4 @@
 - S8 fix 5: `llm.ask` leaves the server's exact `prompt_tokens`/`completion_tokens` in `llm.last_usage` (empty on failure, additive to the shared seam), and `scripts/eval_search.py` now prints a real prompt-token column instead of estimating chars/4.
 - S8 Run 3 (cold cache, 20 s pacing, all five fixes): 12/12 pass, median 19.0 s, median 9,900 chars / 2,842 real prompt tokens, 47 pages, 1 BLOCKED (2.1%), 140 model calls. Pass rate and time targets met; the 8,000-char input target is still missed by 24%.
 - S8 Run 3 note: Google answered every query this time, so the wall fixes are covered by tests but were not exercised live. Run 1's six productive questions went 4/6 to 6/6, mostly from the opening-chunk rule (q02, q04).
+- S8 follow-up: `engine.last_engine` records whether Google or DuckDuckGo answered the last search, and `scripts/eval_search.py` prints an engine column, so a walled run is visible in the table instead of inferred.

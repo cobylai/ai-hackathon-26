@@ -157,6 +157,7 @@ def test_blocked_google_falls_back_to_ddg():
     page_ = fake_site()
     results = engine.search("python", page=page_)
     assert len(results) >= 8
+    assert engine.last_engine == "duckduckgo"
     assert len(page_.visited) == 2
     assert "google.com/search" in page_.visited[0]
     assert "html.duckduckgo.com" in page_.visited[1]
@@ -216,9 +217,11 @@ def test_google_success_does_not_set_fallback():
     assert results and results[0].domain == "speedtest.net"
     assert len(page_.visited) == 1
     assert not engine.in_fallback()
+    assert engine.last_engine == "google"
 
 
 def test_blank_query_does_not_open_a_page():
     page_ = fake_site()
     assert engine.search("   ", page=page_) == []
     assert page_.visited == []
+    assert engine.last_engine == ""

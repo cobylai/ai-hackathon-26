@@ -60,6 +60,12 @@ def load_questions(path: Path, limit: int | None = None) -> list[dict]:
 def run_one(item: dict) -> dict:
     ask = CountingAsk()
     statuses: Counter = Counter()
+    engines: list[str] = []
+
+    def search(query: str) -> list:
+        results = engine.search(query)
+        engines.append(engine.last_engine or "?")
+        return results
 
     def open_page(url: str) -> tuple[str, str]:
         word, text = tools.open_page(url)
@@ -68,7 +74,9 @@ def run_one(item: dict) -> dict:
 
     engine.reset()
     started = time.monotonic()
-    outcome = loop.research(item["question"], ask=ask, open_page=open_page)
+    outcome = loop.research(
+        item["question"], ask=ask, search=search, open_page=open_page
+    )
     seconds = time.monotonic() - started
 
     answer = " ".join(outcome.answer.split())
@@ -81,6 +89,7 @@ def run_one(item: dict) -> dict:
         "pass": passed,
         "rounds": outcome.rounds,
         "pages": outcome.pages,
+        "engines": list(dict.fromkeys(engines)),
         "blocked": statuses.get("BLOCKED", 0),
         "errors": statuses.get("ERR", 0) + statuses.get("LOGIN", 0),
         "notes": len(outcome.notes),
@@ -94,13 +103,14 @@ def run_one(item: dict) -> dict:
 
 def markdown(rows: list[dict]) -> str:
     lines = [
-        "| # | kind | pass | rounds | pages | blocked | model calls | input chars | prompt tokens | seconds |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "| # | kind | pass | engine | rounds | pages | blocked | model calls | input chars | prompt tokens | seconds |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for row in rows:
         lines.append(
             f"| {row['id']} | {row['kind']} | {'yes' if row['pass'] else 'NO'} | "
-            f"{row['rounds']} | {row['pages']} | {row['blocked']} | {row['model_calls']} | "
+            f"{', '.join(row['engines'])} | {row['rounds']} | {row['pages']} | "
+            f"{row['blocked']} | {row['model_calls']} | "
             f"{row['chars']} | {row['prompt_tokens']} | {row['seconds']} |"
         )
     return "\n".join(lines)
