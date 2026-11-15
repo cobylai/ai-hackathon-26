@@ -48,6 +48,15 @@ class CountingAsk:
         return reply
 
 
+def is_pass(answer: str, expect: str, notes: int) -> bool:
+    """A question passes only if the loop found notes and the text is in the answer.
+
+    Without the notes check, the "no useful results for <question>" message would
+    pass every question whose expected string appears in its own question.
+    """
+    return notes > 0 and expect.lower() in (answer or "").lower()
+
+
 def load_questions(path: Path, limit: int | None = None) -> list[dict]:
     items = []
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -80,7 +89,7 @@ def run_one(item: dict) -> dict:
     seconds = time.monotonic() - started
 
     answer = " ".join(outcome.answer.split())
-    passed = item["expect"].lower() in answer.lower()
+    passed = is_pass(answer, item["expect"], len(outcome.notes))
     return {
         "id": item["id"],
         "kind": item["kind"],
