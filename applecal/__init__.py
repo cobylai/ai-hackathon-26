@@ -5,7 +5,7 @@
     -> [{"title", "start": datetime, "end": datetime, "location", "all_day"}], sorted by start
 
 Which calendar: FLUX_CALENDAR if set, else the mode's default (bank/mode.py): "Flux demo" in
-demo mode, every calendar on this Mac in live mode (docs/calendar.md).
+demo mode, the calendar you named in live mode (docs/calendar.md).
 Not named `calendar`, which would shadow Python's own `calendar` module.
 """
 from __future__ import annotations
@@ -17,8 +17,8 @@ import time as _time
 from datetime import date, datetime, time, timedelta
 
 DEFAULT_CALENDAR = "Flux demo"  # the demo mode's calendar (bank/mode.py)
-ALL = ""  # calendar key meaning every calendar
-ALL_LABEL = "all calendars"
+NO_CALENDAR = ('no calendar chosen for live mode; name yours with '
+               'scripts/flux-mode live --calendar "<name>"')
 TIMEOUT = 45  # a cold read is 5-6 s, slower when the Mac is busy
 
 
@@ -27,7 +27,7 @@ class CalendarError(RuntimeError):
 
 
 def calendar_key() -> str:
-    """The calendar to read: a name, or ALL ("") for every calendar."""
+    """The calendar to read: FLUX_CALENDAR, else the mode's ("" when live mode has none yet)."""
     env = os.environ.get("FLUX_CALENDAR") or os.environ.get("MUSE_CALENDAR")
     if env:
         return env
@@ -36,8 +36,8 @@ def calendar_key() -> str:
 
 
 def calendar_name() -> str:
-    """For answers' source lines: the calendar's name, or "all calendars"."""
-    return calendar_key() or ALL_LABEL
+    """For answers' source lines: the calendar's name."""
+    return calendar_key() or "none chosen"
 
 
 # Dates come back as numbers (iso()), so the Mac's date format doesn't matter.
@@ -60,23 +60,6 @@ on run argv
     set idx to 0
     if hint > 0 and hint <= (count of calendars) then
       if name of calendar hint is calName then set idx to hint
-    end if
-    if calName is "" then
-      -- every calendar: one bulk fetch per calendar, skipping any that can't be read
-      set out to "0" & RS
-      repeat with c in calendars
-        try
-          tell events of c to set {ts, ss, es, ls, als} to {summary, start date, end date, location, allday event}
-          repeat with i from 1 to count of ts
-            set loc to item i of ls
-            if loc is missing value then set loc to ""
-            set ttl to item i of ts
-            if ttl is missing value then set ttl to ""
-            set out to out & ttl & US & my iso(item i of ss) & US & my iso(item i of es) & US & loc & US & (item i of als) & RS
-          end repeat
-        end try
-      end repeat
-      return out
     end if
     if idx is 0 then
       set ns to name of calendars
@@ -142,6 +125,8 @@ def warm(calendar: str | None = None) -> threading.Thread:
 
 
 def _fetch(name: str) -> list[dict]:
+    if not name:
+        raise CalendarError(NO_CALENDAR)
     with _LOCK:
         return _fetch_locked(name)
 

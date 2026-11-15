@@ -47,19 +47,6 @@ on run argv
 end run
 '''
 
-_WRITABLE = r'''
-on run argv
-  tell application "Calendar"
-    repeat with c in calendars
-      try
-        if writable of c then return name of c
-      end try
-    end repeat
-  end tell
-  error "no writable calendar" number 4040
-end run
-'''
-
 _DEFAULT_LIST = r'''
 on run argv
   tell application "Reminders" to return name of default list
@@ -71,16 +58,7 @@ on run argv
   set {calName, ttl, s} to argv
   set t0 to my mkdate(s)
   tell application "Calendar"
-    set hits to {}
-    if calName is "" then
-      repeat with c in calendars
-        try
-          set hits to hits & (events of c whose summary is ttl and start date >= t0 and start date < (t0 + 60))
-        end try
-      end repeat
-    else
-      set hits to (events of calendar calName whose summary is ttl and start date >= t0 and start date < (t0 + 60))
-    end if
+    set hits to (events of calendar calName whose summary is ttl and start date >= t0 and start date < (t0 + 60))
     if hits is {} then return "NONE"
     show item 1 of hits
     activate
@@ -129,18 +107,16 @@ def _run(script: str, args: list[str], app: str) -> str:
     return p.stdout.strip()
 
 
-_TARGETS: dict[str, str] = {}  # per process: the resolved write calendar and reminders list
+_TARGETS: dict[str, str] = {}  # per process: the resolved default Reminders list
 
 
 def target_calendar() -> str:
-    """The calendar new events go into: the configured one, or in live mode with none
-    configured, the first writable calendar on this Mac."""
+    """The calendar new events go into: the one Flux reads (demo: "Flux demo"; live: yours)."""
     key = calendar_key()
-    if key:
-        return key
-    if "cal" not in _TARGETS:
-        _TARGETS["cal"] = _run(_WRITABLE, [], "Calendar")
-    return _TARGETS["cal"]
+    if not key:
+        from . import NO_CALENDAR
+        raise CalendarError(NO_CALENDAR)
+    return key
 
 
 def reminder_list() -> str:
@@ -162,12 +138,11 @@ def add_event(title: str, start: datetime, end: datetime, location: str = "",
     name = calendar or target_calendar()
     _run(_ADD_EVENT, [name, title, _d(start), _d(end), location or "", "1" if all_day else "0"], "Calendar")
     _CACHE.pop(name, None)  # the next read sees the new event
-    _CACHE.pop(calendar_key(), None)
 
 
 def show_event(title: str, start: datetime, calendar: str | None = None) -> bool:
     """True when Calendar found and showed the event."""
-    return _run(_SHOW_EVENT, [calendar if calendar is not None else calendar_key(), title, _d(start)], "Calendar") == "OK"
+    return _run(_SHOW_EVENT, [calendar or target_calendar(), title, _d(start)], "Calendar") == "OK"
 
 
 def add_reminder(name: str, due: datetime | None, remind_at: datetime | None, note: str = "",

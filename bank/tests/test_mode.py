@@ -39,6 +39,15 @@ class Mode(unittest.TestCase):
         mode.set_mode("live")
         self.assertEqual(mode.current(), "live")
 
+    def test_live_calendar(self):
+        self.assertEqual(mode.calendar(), "")
+        mode.set_calendar("Home")
+        self.assertEqual(mode.calendar(), "Home")
+        mode.set_mode("demo")
+        self.assertEqual(mode.calendar(), "Flux demo")
+        with self.assertRaises(ValueError):
+            mode.set_calendar("Flux demo")
+
     def test_env_wins(self):
         mode.set_mode("demo")
         with mock.patch.dict(os.environ, {"FLUX_MODE": "live"}):

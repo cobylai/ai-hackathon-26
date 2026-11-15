@@ -42,8 +42,10 @@ let demoMode: Bool = {
 let bankDir: String = setting("BANK_DIR") ?? (NSHomeDirectory() + (demoMode ? "/flux-demo-bank" : "/flux-bank"))
 // Sync mail writes real Gmail here (the live bank), never into the demo bank.
 let syncBankDir: String = setting("SYNC_BANK_DIR") ?? (NSHomeDirectory() + "/flux-bank")
-// "" in live mode: every calendar on this Mac is read.
-let calendarName: String = setting("CALENDAR") ?? (demoMode ? "Flux demo" : "")
+// Live mode: the one calendar named in ~/.flux/calendar (scripts/flux-mode live --calendar "<name>").
+let calendarName: String = setting("CALENDAR") ?? (demoMode ? "Flux demo" :
+    ((try? String(contentsOfFile: NSHomeDirectory() + "/.flux/calendar", encoding: .utf8))?
+        .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""))
 let modelFolder: String = env["ARGMAX_MODEL_FOLDER"].flatMap { $0.isEmpty ? nil : $0 } ?? (NSHomeDirectory() +
     "/Documents/huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-large-v3-v20240930_626MB")
 var voiceBin: String { setting("VOICE_BIN") ?? (repo + "/voice/swift/.build/release/argmax-voice") }
@@ -410,7 +412,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         let (code, out) = run("/usr/bin/osascript", ["-e", "tell application \"Calendar\" to get name of calendars"], timeout: 120)
         if code == 0 {
             let names = out.components(separatedBy: ", ")
-            if calendarName.isEmpty { return out.isEmpty ? "Calendar: no calendars on this Mac." : nil }
+            if calendarName.isEmpty { return "Calendar: live mode has no calendar chosen. Run scripts/flux-mode live --calendar \"<name>\"." }
             return names.contains(calendarName) ? nil
                 : "Calendar: no calendar named \"\(calendarName)\" (docs/calendar.md)."
         }

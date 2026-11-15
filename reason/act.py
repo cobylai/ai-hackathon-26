@@ -12,6 +12,7 @@ path anywhere). Drafts are saved only when the signed-in Gmail is TEST_ACCOUNT.
 """
 from __future__ import annotations
 
+import os
 import re
 import time
 from dataclasses import dataclass
@@ -24,7 +25,8 @@ import bank
 from . import playbook
 from .playbook import say
 
-TEST_ACCOUNT = "ilovelocalai@gmail.com"
+# The one mail account Flux may draft in or open mail from: FLUX_ACCOUNT, else the test account.
+TEST_ACCOUNT = os.environ.get("FLUX_ACCOUNT") or "ilovelocalai@gmail.com"
 TTL = 180.0  # seconds a held action waits for its yes
 
 # Only these, and the harness policy (allow_apps / block_apps) still decides on the yes.
