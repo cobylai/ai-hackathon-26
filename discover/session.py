@@ -240,7 +240,7 @@ def _learned(root):
         labels = list(dict.fromkeys(s["label"] for s in r["sources"]))
         frm = "; ".join(labels[:3]) + (f" +{len(labels) - 3} more" if len(labels) > 3 else "")
         lines.append(say("discover", "learned_row", n=i, fact=shown(r), sources=frm))
-    lines.append(say("discover", "unlearn_hint"))
+    lines.append(say("discover", "unlearn_hint", n=len(recs)))
     lines.append(say("discover", "learned_source"))
     return Answer("\n".join(lines), "discover", [r["wrote"] for r in recs if r.get("wrote")])
 

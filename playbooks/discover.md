@@ -52,7 +52,7 @@ New scrapers, the web, any calendar other than the Muse one. The model never wri
 - shown_relation: {name} is your {relation}
 - learned_head: What I've learned about you (you said yes to each):
 - learned_row: {n}. {fact} (from {sources})
-- unlearn_hint: Say "unlearn 2" to remove one.
+- unlearn_hint: Say "unlearn {n}" to remove one.
 - learned_source: Source: your answers in discovery
 - unlearned: Removed: {fact}. I won't ask about it again.
 
@@ -100,10 +100,14 @@ Reply as {{"relation": "..."}}
 | question | route | answer contains |
 |---|---|---|
 | What have you learned? | discover | Nothing learned yet |
-| Discover | discover | Question 1 of; Does Lena Marsh write to you about ZOOL 2150?; Problem set 7 for ZOOL 2150; Say yes, no or skip; Source: Lena Marsh, Nov 15 |
-| yes | discover | Saved: Lena Marsh writes to you about ZOOL 2150. |
-| stop | discover | Stopped |
-| Who is Lena? | people | Lena Marsh; writes to you about ZOOL 2150 |
-| What have you learned? | discover | 1. Lena Marsh writes to you about ZOOL 2150; from Lena Marsh, Nov 15 |
-| Unlearn 1 | discover | Removed: Lena Marsh writes to you about ZOOL 2150 |
+| Discover | discover | Question 1 of; Are you taking CHEM 1583 Kitchen Chemistry?; Lab 7: Emulsions; Say yes, no or skip; Source: CHEM 1583 Kitchen Chemistry, Nov 15 |
+| yes | discover | Saved: I'm taking CHEM 1583 Kitchen Chemistry.; Question 2 of; Are you taking HIST 2147 Maps and Empires? |
+| no | discover | Okay, I won't ask that again.; Question 3 of |
+| stop | discover | Stopped: 1 saved, 1 no |
+| What do you know about me? | about_me | I'm taking CHEM 1583 Kitchen Chemistry |
+| Discover | discover | Question 1 of |
+| stop | discover | Stopped: 0 saved, 0 no |
+| What have you learned? | discover | 1. I'm taking CHEM 1583 Kitchen Chemistry (from CHEM 1583 Kitchen Chemistry, Nov 15); unlearn 1 |
+| Unlearn 1 | discover | Removed: I'm taking CHEM 1583 Kitchen Chemistry. |
 | What have you learned? | discover | Nothing learned yet |
+| What do you know about me? | about_me | Nothing yet |

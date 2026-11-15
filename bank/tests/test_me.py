@@ -131,3 +131,40 @@ class People(Tmp):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WholeWords(Tmp):
+    """bank.search matches whole words (plain plurals allowed), and ranks the user's notes first
+    for questions about the user."""
+
+    def setUp(self):
+        super().setUp()
+        for i, (subj, body) in enumerate([
+                ("Lab 7: emulsions", "Linear Systems Lab report due."),
+                ("Final notebook", "Submit your notebook and reflection."),
+                ("Library book hold", "The book Tidal Ecology is on hold."),
+                ("Box office", "Two boxes of tickets.")]):
+            e = email(f"w0000000000{i}", "Canvas", "notifications@canvas.example", "2026-11-15", subj)
+            e["body"] = body
+            store.write_entry(e, self.root)
+
+    def subjects(self, q):
+        return [e["subject"] for e in bank.search(q, root=self.root)]
+
+    def test_part_of_a_word_does_not_count(self):
+        self.assertEqual(self.subjects("what book is on hold"), ["Library book hold"])
+        self.assertNotIn("Final notebook", self.subjects("book"))
+
+    def test_plurals_both_ways(self):
+        self.assertIn("Lab 7: emulsions", self.subjects("labs"))
+        self.assertIn("Box office", self.subjects("box"))
+        self.assertIn("Final notebook", self.subjects("notebooks"))
+
+    def test_address_parts_still_match(self):
+        self.assertTrue(self.subjects("canvas"))
+
+    def test_my_question_puts_notes_first(self):
+        bank.remember("my lab is Tuesdays at 2", root=self.root)
+        self.assertEqual(bank.search("when is my lab", root=self.root)[0]["kind"], "me")
+        # not about the user: plain score order, the note is not forced first
+        self.assertEqual(bank.search("linear systems lab", root=self.root)[0]["subject"], "Lab 7: emulsions")
