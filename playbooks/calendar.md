@@ -58,3 +58,4 @@ No model step.
 |---|---|---|
 | What's on my calendar tomorrow? | calendar | calendar |
 | When is my next meeting? | calendar | calendar |
+| What do I have this week? | calendar | this week |
