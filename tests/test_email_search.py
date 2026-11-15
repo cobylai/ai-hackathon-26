@@ -70,3 +70,14 @@ def test_cap_cuts_rows_and_adds_a_hint():
     assert len(out) <= 1500
     assert out.endswith(search_mod.HINT)
     assert out.splitlines()[0] == "OK 42 results | from:someone"
+
+
+def test_transient_no_results_is_not_believed(session, site):
+    """Gmail flashes its empty note before the rows of a new query render."""
+    session.page.goto(site.url("gmail_slow_results.html"))
+    assert search_mod.wait_results(session.page, timeout_ms=8000) == 3
+
+
+def test_a_real_empty_result_is_still_zero(session, site):
+    session.page.goto(site.url("gmail_empty.html"))
+    assert search_mod.wait_results(session.page, timeout_ms=8000) == 0

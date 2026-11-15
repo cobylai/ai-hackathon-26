@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Search results - test@example.edu - Cornell Mail</title>
+</head>
+<body>
+<!-- Made-up mail. Gmail flashes its empty note before the rows land; this does the same. -->
+<table role="grid" aria-label="Search results"><tbody id="rows"></tbody></table>
+
+<div class="TC" id="empty">No messages matched your search. Try using search options such as sender, date, size and more.</div>
+
+<script>
+  var names = ["Priya Raman", "Alex Chen", "Robotics Club"];
+  setTimeout(function () {
+    document.getElementById("empty").remove();
+    var body = document.getElementById("rows");
+    for (var i = 0; i < names.length; i++) {
+      var tr = document.createElement("tr");
+      tr.className = "zA yO";
+      tr.innerHTML =
+        '<td class="yX xY"><span class="yP" email="p' + i + '@example.edu">' + names[i] + '</span></td>' +
+        '<td class="xY a4W"><span class="bog"><span data-thread-id="#t' + i + '" data-legacy-thread-id="t' + i + '">Subject ' + i + '</span></span>' +
+        '<span class="y2">- snippet ' + i + '</span></td>' +
+        '<td class="xW xY"><span title="Sat, Nov 14, 2026, 9:12 AM"></span></td>';
+      body.appendChild(tr);
+    }
+  }, 600);
+</script>
+</body>
+</html>

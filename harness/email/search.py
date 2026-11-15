@@ -119,16 +119,21 @@ def wait_results(page: Page, timeout_ms: int = 20000) -> int:
     waited = 0
     last = -1
     stable = 0
+    empty = 0
     while waited <= timeout_ms:
-        if no_results(page):
-            return 0
         rows = len(visible_rows(page))
-        if rows and rows == last:
-            stable += 1
+        if rows:
+            stable = stable + 1 if rows == last else 0
+            empty = 0
             if stable >= 2:
                 return rows
         else:
             stable = 0
+            # Gmail flashes its "no messages" note while a query renders, so
+            # only believe it once it has persisted for a few samples.
+            empty = empty + 1 if no_results(page) else 0
+            if empty >= 3:
+                return 0
         last = rows
         page.wait_for_timeout(400)
         waited += 400
