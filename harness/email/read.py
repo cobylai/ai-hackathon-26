@@ -206,11 +206,14 @@ def read(n: int, page_no: int = 1) -> str:
     if index < 1 or index > len(rows):
         return f"ERR mail.google.com | no row {n} | results are 1 to {len(rows)}"
 
+    row = rows[index - 1]
+    problem = search.row_problem(row, index)
+    if problem:
+        return f"ERR mail.google.com | {problem} | run email_search again"
+
     page = get_session().start().page
     if not signed_in(page):
         return LOGIN_LINE
-
-    row = rows[index - 1]
     if not open_thread(page, row.thread_id):
         return "ERR mail.google.com | thread did not open | try email_search again"
 

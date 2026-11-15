@@ -49,3 +49,12 @@ def test_reply_row_out_of_range(wired):
     out = wired.reply(4, "hi")
     assert out.startswith("ERR")
     assert "1 to 1" in out
+
+
+def test_reply_to_a_draft_row_is_refused(wired, monkeypatch):
+    monkeypatch.setattr(
+        search, "last_rows", lambda: [search.Row(1, "Draft", "(no subject)", "Nov 14", "x", "t9")]
+    )
+    out = wired.reply(1, "hi")
+    assert out.startswith("ERR")
+    assert "draft" in out

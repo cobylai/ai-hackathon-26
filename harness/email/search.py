@@ -45,6 +45,19 @@ def last_query() -> str:
     return _last_query
 
 
+def row_problem(row: "Row", index: int) -> str:
+    """Why this row cannot be opened as a thread ("" when it can).
+
+    A draft row opens a compose rather than a conversation, and a row without a
+    thread id would send the browser to an empty URL.
+    """
+    if row.sender.strip().lower() == "draft":
+        return f"row {index} is a draft, not a thread"
+    if not row.thread_id:
+        return f"row {index} has no thread id"
+    return ""
+
+
 def _text(locator) -> str:
     try:
         if not locator.count():

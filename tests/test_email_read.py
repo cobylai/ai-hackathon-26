@@ -89,3 +89,21 @@ def test_attachments_are_named_in_the_tag(wired):
     assert 'attachments="Lab safety checklist.pdf"' in out
     # Only the message that has one carries the attribute.
     assert out.count("attachments=") == 1
+
+
+def test_read_refuses_a_draft_row(wired, monkeypatch):
+    monkeypatch.setattr(
+        search, "last_rows", lambda: [search.Row(1, "Draft", "(no subject)", "Nov 14", "x", "t9")]
+    )
+    out = wired.read(1)
+    assert out.startswith("ERR")
+    assert "draft" in out
+
+
+def test_read_refuses_a_row_without_a_thread_id(wired, monkeypatch):
+    monkeypatch.setattr(
+        search, "last_rows", lambda: [search.Row(1, "Alex Chen", "Subject", "Nov 14", "x", "")]
+    )
+    out = wired.read(1)
+    assert out.startswith("ERR")
+    assert "thread id" in out
