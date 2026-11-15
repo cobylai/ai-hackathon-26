@@ -69,6 +69,8 @@ def test_long_result_lists_are_cut_to_the_cap(stool, monkeypatch):
     assert [int(line.split(".")[0]) for line in shown] == list(range(1, len(shown) + 1))
     # Only the results the model can see stay openable.
     assert len(tools._last) == len(shown)
+    # And the header counts what is listed, not what was found.
+    assert lines[0] == f"OK search | {len(shown)} of {tools.MAX_RESULTS} results"
 
 
 def test_open_result_reads_the_page(stool, monkeypatch, site):

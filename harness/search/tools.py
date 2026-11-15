@@ -65,9 +65,8 @@ def search(query: str) -> str:
         shown = " ".join((query or "").split())[:60]
         return _cap(f'{word} search | no results for "{shown}" | {advice}', "[end]")
 
-    head = f"OK search | {len(results)} results"
     lines: list[str] = []
-    used = len(head) + 1
+    used = 60  # the status line plus a little slack
     budget = config.MAX_CHARS - 40  # room for the trailing hint
     for n, item in enumerate(results, 1):
         line = _line(n, item)
@@ -75,7 +74,13 @@ def search(query: str) -> str:
             break
         lines.append(line)
         used += len(line) + 1
+
+    # The header counts what is listed, not what was found: a number the model
+    # cannot open is worse than no number at all.
     _last = results[: len(lines)]
+    head = f"OK search | {len(lines)} results"
+    if len(lines) < len(results):
+        head = f"OK search | {len(lines)} of {len(results)} results"
     text = f"{head}\n" + "\n".join(lines)
     if len(results) > len(lines):
         text += "\n[more: search a narrower query]"
