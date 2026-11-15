@@ -19,12 +19,11 @@ def build(days: int = 1, limit: int = 8) -> str:
     if not status.startswith("OK"):
         return status
 
-    total = sum(len(sentences) for _, sentences in entries)
-    head = f"OK {len(entries)} threads, {total} asks | newer_than:{days}d"
+    with_asks = [(row, sentences) for row, sentences in entries if sentences]
+    total = sum(len(sentences) for _, sentences in with_asks)
+    head = f"OK {len(with_asks)} threads, {total} asks | newer_than:{days}d"
     lines: list[str] = []
-    for row, sentences in entries:
-        if not sentences:
-            continue
+    for row, sentences in with_asks:
         lines.append(f"{row.n}. {row.subject[:60]} ({len(sentences)})")
         lines.extend(f"   - {sentence[:LINE_CHARS]}" for sentence in sentences)
     return cap_lines(head, lines, hint=HINT)

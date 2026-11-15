@@ -18,7 +18,14 @@ LINE_CHARS = 220
 HINT = "[more: narrow the sender or days]"
 
 WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
-TRIGGERS = ("due", "deadline", "can you", "could you", "please", "by")
+TRIGGERS = ("due", "deadline", "can you", "could you", "please")
+# A bare "by" is everywhere ("powered by", "by the way"); only a deadline counts.
+BY_DEADLINE_RE = re.compile(
+    r"\bby\s+(?:today|tonight|tomorrow|noon|midnight|eod|end of day|next\s+\w+|"
+    r"\d{1,2}(?::\d{2})?\s?(?:am|pm)\b|\d{1,2}/\d{1,2}\b|"
+    r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*\d{1,2}\b)",
+    re.I,
+)
 
 WEEKDAY_RE = re.compile(r"\b(?:" + "|".join(WEEKDAYS) + r")\b", re.I)
 MONTH_DAY_RE = re.compile(
@@ -36,6 +43,8 @@ def is_ask(sentence: str) -> bool:
     if "?" in sentence:
         return True
     if WEEKDAY_RE.search(sentence) or MONTH_DAY_RE.search(sentence) or TIME_RE.search(sentence):
+        return True
+    if BY_DEADLINE_RE.search(sentence):
         return True
     return any(re.search(rf"\b{re.escape(word)}\b", low) for word in TRIGGERS)
 

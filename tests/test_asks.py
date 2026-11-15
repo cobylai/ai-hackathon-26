@@ -17,6 +17,10 @@ SAMPLES = [
     ("We shipped the order yesterday.", False),
     ("The lab is closed for the holiday.", False),
     ("Bring your laptop.", False),
+    ("Have it done by tomorrow.", True),
+    ("Finish the report by 11/20.", True),
+    ("Powered by TargetX", False),
+    ("By the way, the room changed.", False),
 ]
 
 
