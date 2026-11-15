@@ -38,7 +38,7 @@ round covers what landed since. Start from `main` (a8ecbca or later).
 - **Speak button** (window) / `--speak` (chat loop): reads answers aloud with macOS `say`. Off by default; talking stops it.
 - **No web for chit-chat**: greetings, mic checks, misheard names and "what did everyone ask me" now stay off the web (your round 1 bug 8). Bot-check and error pages are never saved (bug 7).
 - **Bank** is now a right-side slide-over (bank button, Done, Escape or ⌘B).
-- **Install on another Mac**: `Muse.dmg` (ask Coby) with INSTALL.html and setup.sh. See "Ship to another Mac" in `docs/window.md`.
+- **Install on another Mac**: `Flux.dmg` (ask Coby) with INSTALL.html and setup.sh. See "Ship to another Mac" in `docs/window.md`.
 
 Still being built, so don't test these yet: saved chats on the left, bigger computer control (Mail/Settings/Chrome), and suggested replies.
 
@@ -107,15 +107,15 @@ offline.
 - Window: check that each answer type above looks right, the sidebar groups
   and source links work, Yes/Cancel shows inline, and Escape cancels. Try a
   narrow window and full screen.
-- Mac app on a spare Mac: the disk image and its install page, see "Ship to another Mac" in `docs/window.md` (`app/make_dmg.sh` → `app/dist/Muse.dmg`).
-- Mac app from your checkout: `app/build.sh`, then open `app/build/Muse.app`. On first launch,
+- Mac app on a spare Mac: the disk image and its install page, see "Ship to another Mac" in `docs/window.md` (`app/make_dmg.sh` → `app/dist/Flux.dmg`).
+- Mac app from your checkout: `app/build.sh`, then open `app/build/Flux.app`. On first launch,
   enter your own Argmax key and allow the mic, Calendar and Accessibility prompts. "Check
   setup" in the menu should list no problems. Then, from another app: tap
   Fn-Space, type a question, press Escape; hold Fn-Space, say
-  "what's due this week", and let go. Quit Muse should leave no stray
+  "what's due this week", and let go. Quit Flux should leave no stray
   servers (`lsof -iTCP:8765 -sTCP:LISTEN`). The app runs the servers from the
   checkout recorded at build (yours, when you build it), or the one set with
-  `defaults write local.ai-hackathon-26.muse MuseRepo <folder>`.
+  `defaults write local.ai-hackathon-26.flux MuseRepo <folder>`.
 
 ## Report back
 

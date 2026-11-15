@@ -167,7 +167,7 @@ class OpenIt(Base):
 
 
 class Injection(Base):
-    """Text inside an email is data: it never chooses what Muse opens or adds."""
+    """Text inside an email is data: it never chooses what Flux opens or adds."""
 
     def test_instruction_in_mail_causes_no_action(self):
         s = Session()

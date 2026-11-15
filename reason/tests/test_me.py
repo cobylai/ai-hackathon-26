@@ -53,7 +53,7 @@ class Routes(unittest.TestCase):
                          'Nothing yet. Say "remember that …" to tell me something.')
 
     def test_spoken_forms(self):
-        for q in ("- Remember that I'm vegetarian.", "Muse, remember I'm vegetarian",
+        for q in ("- Remember that I'm vegetarian.", "Flux, remember I'm vegetarian",
                   "please remember I'm vegetarian", "Don't forget that I'm vegetarian"):
             self.assertEqual(route.remember_text(q), "I'm vegetarian", q)
 

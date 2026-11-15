@@ -150,11 +150,11 @@ def person_in(question: str, names: set[str]) -> str | None:
 
 # ---- notes about the user, and person pages (playbooks/remember.md, people.md) ----
 
-_LEAD = re.compile(r"^[\s\-–•*]*(?:(?:hey|ok|okay)[\s,]+)?(?:(?:muse|hearth)[\s,!.:]+)?(?:please[\s,]+)?", re.I)
+_LEAD = re.compile(r"^[\s\-–•*]*(?:(?:hey|ok|okay)[\s,]+)?(?:(?:flux|muse|hearth)[\s,!.:]+)?(?:please[\s,]+)?", re.I)
 
 
 def _lead(question: str) -> str:
-    """Drop what comes before the command: a list dash from voice, "Muse,", "please"."""
+    """Drop what comes before the command: a list dash from voice, "Flux," (or "Muse,"), "please"."""
     return _LEAD.sub("", question or "", count=1).strip()
 
 

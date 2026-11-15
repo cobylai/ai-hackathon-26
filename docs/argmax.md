@@ -10,7 +10,7 @@ Tested 2026-11-14 on Coby's MacBook Pro (MacBookPro18,2, macOS 26.6.2) with SDK 
 - Each launch contacts Argmax's server (`api.argmaxinc.com`) and Hugging Face, even when warm.
 - **The license:** a failed check doesn't stop the app. With the model loaded from its folder (`ARGMAX_MODEL_FOLDER`, i.e. `modelFolder:` and `download: false`), the transcription worked with all network denied (run F).
 - **The downloader:** without that folder setting, the Hugging Face downloader hangs for 60 s when connections are blocked, because macOS still reports a network.
-- **The app:** Muse's voice program (`argmax-voice`, `docs/voice-input.md`) always loads from the folder. It was proven by voice with the network denied in both the chat loop and the window.
+- **The app:** Flux's voice program (`argmax-voice`, `docs/voice-input.md`) always loads from the folder. It was proven by voice with the network denied in both the chat loop and the window.
 - **Still unproven:** one real Wi-Fi-off run of the whole app (`docs/PARTNER-TESTING.md`).
 
 **New tester or Mac:** you need your own `ax_` key (one per application, from Argmax at the event; don't use Coby's), plus the registry login below. The first run must be online to activate the license and download the model.
@@ -27,10 +27,10 @@ export ARGMAX_API_KEY="$(bw get password 'Argmax API key - ai-hackathon-26')"   
 Test clip used (6.7 s, 16 kHz mono):
 
 ```bash
-say -o clip.wav --data-format=LEI16@16000 "Muse, remind me to buy oat milk tomorrow at nine. The quick brown fox jumps over the lazy dog."
+say -o clip.wav --data-format=LEI16@16000 "Flux, remind me to buy oat milk tomorrow at nine. The quick brown fox jumps over the lazy dog."
 ```
 
-The transcript was: `Muse, remind me to buy oat milk tomorrow at 9. The quick brown fox jumps over the lazy dog.` Language detected: en. Every word is correct, and "nine" was written as "9".
+The transcript was: `Flux, remind me to buy oat milk tomorrow at 9. The quick brown fox jumps over the lazy dog.` Language detected: en. Every word is correct, and "nine" was written as "9".
 
 The sample built and ran unchanged on main. One change was added afterwards for offline use:
 
@@ -43,7 +43,7 @@ The sample built and ran unchanged on main. One change was added afterwards for 
 | A, cold | download + first-time Neural Engine compile + transcribe | ~4–5 min in total. Of that, model load (compile) took 238.6 s and transcription 1.4 s (from the SDK's own timing). |
 | B, warm | launch + license + model load + transcribe | **4.5 s** wall clock for the whole process |
 
-Transcription itself is fast (1.4 s for 6.7 s of audio). The warm cost is mostly loading the model at launch. So for Muse, keep one process running rather than launching one per question.
+Transcription itself is fast (1.4 s for 6.7 s of audio). The warm cost is mostly loading the model at launch. So for Flux, keep one process running rather than launching one per question.
 
 ## Where the models are
 
@@ -81,7 +81,7 @@ Model: `large-v3-v20240930_626MB` (Whisper large-v3 turbo, the sample default). 
    - The downloader (`HubApi.swift` in argmax-oss-swift) uses on-disk files only when `NWPathMonitor` reports no link. Wi-Fi off triggers that. Blocked connections don't, so C timed out.
    - It **ignores `HF_HUB_OFFLINE`**.
    - `HF_ENDPOINT` is honored by part of it, but WhisperKit's model download passes its own `huggingface.co` endpoint (run E still connected there).
-   - So for Muse, pass the local model path (`modelFolder:` in the WhisperKit config). That skips the download step entirely and doesn't depend on how macOS reports the network.
+   - So for Flux, pass the local model path (`modelFolder:` in the WhisperKit config). That skips the download step entirely and doesn't depend on how macOS reports the network.
 
 **Still unproven:**
 - A real Wi-Fi-off run. Coby's steps are below.
@@ -97,7 +97,7 @@ The sample-only Wi-Fi-off run and the microphone step that used to be here are r
 - The microphone is granted and voice is proven through `argmax-voice` (`docs/voice-input.md`).
 - The one remaining Wi-Fi-off run covers the whole app. Load the key while online, start Bonsai and the window, turn Wi-Fi off, then ask the demo questions. Steps are in `docs/PARTNER-TESTING.md`.
 
-## For Muse (done)
+## For Flux (done)
 
 - `voice/` is built and on main. `argmax-voice` stays running, loads from the model folder with downloads off, and does push to talk over stdin/stdout. See `docs/voice-input.md`.
 - Its compile cache is `~/Library/Caches/argmax-voice/`; meeting-scribe's own cache is `~/Library/Caches/meeting-scribe/`. Each is named after its executable, so a rename means a ~4-minute recompile.

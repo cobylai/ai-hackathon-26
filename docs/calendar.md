@@ -1,6 +1,6 @@
 # Apple Calendar
 
-Muse answers calendar questions from the macOS Calendar app, offline:
+Flux answers calendar questions from the macOS Calendar app, offline:
 
 - "what's on my calendar tomorrow"
 - "when is my next meeting"
@@ -10,10 +10,10 @@ Muse answers calendar questions from the macOS Calendar app, offline:
 
 ## Setup
 
-1. **Make the calendar.** In Calendar.app: File > New Calendar. Put it under **On My Mac** if that's offered, and name it **Muse demo**. Add made-up events (title, time, location). Muse reads only this calendar, so a video shows no real appointments.
-   - Another name: set `MUSE_CALENDAR="Other name"` in the shell that runs Muse. The name is expected to change later.
+1. **Make the calendar.** In Calendar.app: File > New Calendar. Put it under **On My Mac** if that's offered, and name it **Muse demo**. Add made-up events (title, time, location). Flux reads only this calendar, so a video shows no real appointments.
+   - Another name: set `MUSE_CALENDAR="Other name"` in the shell that runs Flux. The name is expected to change later.
 2. **Allow access.** The first question makes macOS ask: **"Terminal" wants access to control "Calendar"** (or iTerm, VS Code: whichever app runs Python). Click **OK**.
-   - If you clicked Don't Allow: System Settings > Privacy & Security > Automation > your terminal app > turn on **Calendar**. Muse then answers "I couldn't read Apple Calendar (no permission to control Calendar ...)".
+   - If you clicked Don't Allow: System Settings > Privacy & Security > Automation > your terminal app > turn on **Calendar**. Flux then answers "I couldn't read Apple Calendar (no permission to control Calendar ...)".
 3. Ask through either front end:
 
 ```bash

@@ -1,6 +1,6 @@
-# NAME
+# Flux
 
-NAME is a Mac assistant for students that answers from your own mail, coursework, calendar and notes, entirely on your Mac. You hold a key and ask out loud ("catch me up", "what's due this week", "what did Felix ask me"), and it answers in about a second with Wi-Fi off, because every model call goes to a local Bonsai 2 4B and speech-to-text runs on-device with Argmax.
+Flux is a Mac assistant for students that answers from your own mail, coursework, calendar and notes, entirely on your Mac. You hold a key and ask out loud ("catch me up", "what's due this week", "what did Felix ask me"), and it answers in about a second with Wi-Fi off, because every model call goes to a local Bonsai 2 4B and speech-to-text runs on-device with Argmax.
 
 By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 
@@ -12,7 +12,7 @@ By Coby Lai and Antranig. Built at the local-AI hackathon, 2026-11-14 to 15.
 |---|---|
 | Every LLM call is Bonsai 2 | One client, `llm/client.py`, makes every model call. It talks only to the local Bonsai 2 server and raises unless `BONSAI_BASE_URL` is localhost. The partner's `harness/llm.ask` was rewired to call it. A repo search for other model callers (chat/completions, anthropic, openai, lmstudio, ollama, httpx/requests/urlopen) finds none outside `samples/` ([docs/integration.md](docs/integration.md), "Model calls: localhost only"). The server script binds 127.0.0.1. |
 | Argmax is required | Push-to-talk speech-to-text runs through the Argmax Pro SDK (`voice/swift`, Whisper large-v3 turbo loaded from a local folder, downloads off). |
-| Runs with Wi-Fi off | Mail, coursework, notes and web answers are filed into a local bank (markdown files) while online; with Wi-Fi off, NAME answers from the bank and Apple Calendar's local copy. Web and draft requests say they're offline instead of failing. |
+| Runs with Wi-Fi off | Mail, coursework, notes and web answers are filed into a local bank (markdown files) while online; with Wi-Fi off, Flux answers from the bank and Apple Calendar's local copy. Web and draft requests say they're offline instead of failing. |
 | 32k context | Before every send the client counts tokens with Bonsai's own tokenizer and raises `BudgetError` if prompt plus reply would pass 32,768. It never truncates silently. Long mail is split at 6,000 tokens, and web pages are judged in 6,000-token chunks ([docs/bonsai-client.md](docs/bonsai-client.md)). |
 | Right-sizing | 4B was picked over 9B after a side-by-side check: same accuracy on our fixtures, faster, 2.2 GB vs 3.8 GB peak memory. Most questions use **no model at all**: due dates, "what did X ask me", calendar, catch me up, remember / what do you know about me, follow-ups, and greetings are answered by code in 0.0 s. Suggestions, free/busy checks, opening things, adding events and reminders are code too. The model is used only to summarise mail when it's filed, to judge whether saved notes or a web page answer a question, for free-form person questions, for discovery's relation guess, and to write a draft body when no code template fits. |
 
@@ -80,8 +80,8 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason       # terminal chat loo
 **Mac app:**
 
 ```bash
-app/build.sh && open app/build/Muse.app     # menu bar; Fn-Space shows it, hold Fn-Space to talk
-app/make_dmg.sh                             # app/dist/Muse.dmg: drag-to-Applications, with INSTALL.html and setup.sh
+app/build.sh && open app/build/Flux.app     # menu bar; Fn-Space shows it, hold Fn-Space to talk
+app/make_dmg.sh                             # app/dist/Flux.dmg: drag-to-Applications, with INSTALL.html and setup.sh
 ```
 
 The app is signed with a Developer ID (hardened runtime); notarization is pending. On first launch an 8-screen setup window walks through the Argmax key (kept in the Keychain), Accessibility (for Fn-Space), the microphone, and Calendar, Reminders and Mail. It starts Bonsai and the window server itself if they aren't running. The first voice start on a new Mac takes several minutes (one-time Neural Engine compile). Details: "Mac app" in [docs/window.md](docs/window.md).

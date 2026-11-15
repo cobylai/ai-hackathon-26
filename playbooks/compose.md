@@ -6,11 +6,11 @@ Writing an email or a reply into a draft box you can edit, then "Open in Mail". 
 
 ## Triggers
 
-- reply: `^(?:please\s+|can you\s+|could you\s+|muse,?\s+)?(?:(?:draft|write)\s+(?:me\s+)?(?:a\s+|an\s+)?(?:quick\s+|short\s+)?(?:reply|response|answer)(?:\s+back)?|reply)\s+to\s+(.+)$`
-- compose: `^(?:please\s+|can you\s+|could you\s+|muse,?\s+)?(?:draft|write|compose)\s+(?:me\s+)?(?:an?\s+)?(?:quick\s+|short\s+|new\s+)?(?:e-?mail|message|note)(?:\s+(.+))?$`
+- reply: `^(?:please\s+|can you\s+|could you\s+|(?:flux|muse),?\s+)?(?:(?:draft|write)\s+(?:me\s+)?(?:a\s+|an\s+)?(?:quick\s+|short\s+)?(?:reply|response|answer)(?:\s+back)?|reply)\s+to\s+(.+)$`
+- compose: `^(?:please\s+|can you\s+|could you\s+|(?:flux|muse),?\s+)?(?:draft|write|compose)\s+(?:me\s+)?(?:an?\s+)?(?:quick\s+|short\s+|new\s+)?(?:e-?mail|message|note)(?:\s+(.+))?$`
 - gmail: `in gmail|as a gmail draft|gmail draft`
 - gist: `saying|that says|to say|telling (?:him|her|them)|that|about|re|regarding|on`
-- new: `(?:muse,?\s+)?(?:what|when|where|who|whom|whose|why|how|is|are|was|were|do|does|did|can|could|will|would|should|open|remember|forget|catch me up|discover|show|list)`
+- new: `(?:(?:flux|muse),?\s+)?(?:what|when|where|who|whom|whose|why|how|is|are|was|were|do|does|did|can|could|will|would|should|open|remember|forget|catch me up|discover|show|list)`
 - my_name: `my name is ([A-Z][a-z'\-]+)|i'm called ([A-Z][a-z'\-]+)|call me ([A-Z][a-z'\-]+)`
 
 `reply` and `compose` are tried on the question with its end punctuation removed. Group 1 is the rest: an optional "to <name>" and an optional `gist` word followed by the topic or what to say. A question with a `gmail` phrase passes to `act.md`. `my_name` is read from your notes for the sign-off.

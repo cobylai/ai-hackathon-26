@@ -1,4 +1,4 @@
-"""Muse context store: what the assistant has read, as markdown files.
+"""Flux context store: what the assistant has read, as markdown files.
 
     from bank import ingest, search, by_person, due, rebuild_index
     ingest(text, source="msg:1234", kind="email")   # needs the Bonsai server

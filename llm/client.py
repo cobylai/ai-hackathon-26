@@ -1,4 +1,4 @@
-"""The single path for every LLM call in Muse: the local Bonsai 2 server.
+"""The single path for every LLM call in Flux: the local Bonsai 2 server.
 
     from llm.client import complete, complete_json
     text = complete("Summarise this.", system="Be brief.")

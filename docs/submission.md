@@ -1,23 +1,23 @@
 # Submission pack
 
-Everything for the Discord submission (due **noon Sun 2026-11-15**), drafted for Coby to edit. Coby posts and records. **NAME** is the app name (Muse or Hearth, undecided): one find-and-replace of `NAME` fixes this file and the README. Everything has landed on main (computer control X, suggestions and drafts W, saved chats, the signed Mac app).
+Everything for the Discord submission (due **noon Sun 2026-11-15**), drafted for Coby to edit. Coby posts and records. **Flux** is the app name (Flux or Hearth, undecided): one find-and-replace of `Flux` fixes this file and the README. Everything has landed on main (computer control X, suggestions and drafts W, saved chats, the signed Mac app).
 
 - Release page: **link TBD** (built on a cobydev branch, not deployed yet).
 - Last partner test round: [PARTNER-TESTING-FINAL.md](PARTNER-TESTING-FINAL.md) (results not in yet).
 
 ## One-sentence descriptions (pick one)
 
-1. NAME is a voice assistant for students that runs entirely on a Mac, answering "what's due", "what did Felix ask me" and "catch me up" from your mail, coursework, calendar and notes with Wi-Fi off, using local Bonsai 2 4B and Argmax speech-to-text.
-2. Hold a key and ask: NAME answers from your own mail, Canvas coursework, calendar and notes in about a second, fully offline, with every model call on a local Bonsai 2 4B and voice through Argmax.
-3. NAME reads your mail and coursework while you're online and answers questions about them when you're not, privately on your Mac, with zero cloud calls and most answers needing no model at all.
+1. Flux is a voice assistant for students that runs entirely on a Mac, answering "what's due", "what did Felix ask me" and "catch me up" from your mail, coursework, calendar and notes with Wi-Fi off, using local Bonsai 2 4B and Argmax speech-to-text.
+2. Hold a key and ask: Flux answers from your own mail, Canvas coursework, calendar and notes in about a second, fully offline, with every model call on a local Bonsai 2 4B and voice through Argmax.
+3. Flux reads your mail and coursework while you're online and answers questions about them when you're not, privately on your Mac, with zero cloud calls and most answers needing no model at all.
 
 ## Discord post (paste-ready)
 
 ```text
-**NAME**
+**Flux**
 Team: Coby Lai, Antranig Baghdassarian
 
-NAME is a voice assistant for students that runs entirely on a Mac, answering "what's due", "what did Felix ask me" and "catch me up" from your mail, coursework, calendar and notes with Wi-Fi off, using local Bonsai 2 4B and Argmax speech-to-text.
+Flux is a voice assistant for students that runs entirely on a Mac, answering "what's due", "what did Felix ask me" and "catch me up" from your mail, coursework, calendar and notes with Wi-Fi off, using local Bonsai 2 4B and Argmax speech-to-text.
 
 Prizes: Main track (Argmax voice), Sustainability (right-sized: Bonsai 2 4B, and most questions are answered by code with no model call)
 Repo: https://github.com/cobylai/ai-hackathon-26
@@ -42,7 +42,7 @@ Use the Mac app panel (Fn-Space) or the window. Speak is **off** (no spoken answ
 
 | Time | On screen | Said (voice-over or into the mic) |
 |---|---|---|
-| 0:00–0:10 | Title over the panel on the desktop. | "Students live in mail, Canvas and a calendar. NAME answers questions about all three, out loud, entirely on this Mac." |
+| 0:00–0:10 | Title over the panel on the desktop. | "Students live in mail, Canvas and a calendar. Flux answers questions about all three, out loud, entirely on this Mac." |
 | 0:10–0:25 | Open the bank on the right: Mail and Coursework groups. Type "Who wrote the novel Frankenstein?" Answer: Mary Shelley, quoted line, "Source: en.m.wikipedia.org/wiki/Frankenstein", "Saved to your notes." (about 10 s; cut the wait.) | "While we're online, it has read sample mail and sample coursework into a local bank. A question it can't answer, it looks up, quotes, cites, and saves." |
 | 0:25–0:32 | Control Center: Wi-Fi off. The status line turns to offline. | "Now Wi-Fi off." |
 | 0:32–0:45 | Hold Fn-Space: "Catch me up." Answer: today's calendar (Demo practice run, Hackathon judging), due through Tue Nov 17, asks from the last 7 days, each with its source. | (into mic) "Catch me up." |
@@ -50,7 +50,7 @@ Use the Mac app panel (Fn-Space) or the window. Speak is **off** (no spoken answ
 | 1:05–1:20 | Hold: "Remember that my lab is Tuesdays at 2." → "Got it. I'll remember: my lab is Tuesdays at 2." Hold: "What do you know about me?" → the note, "Source: your notes". | (into mic) the two lines. |
 | 1:20–1:35 | Hold: "What did Milo ask me?" → Milo's band-practice ask, and under it **Suggested**: "You're free Thursday, Nov 19 at 7pm. Draft a yes to Milo?" Click **Draft yes** → the draft box (To, Subject "Re: …", a yes body, "Nothing is sent."). Click **Open in Mail** → a new Mail message, filled in. Close it unsent. | (into mic) "What did Milo ask me?" VO: "It checked my calendar, I'm free, so it drafts the yes. Nothing is ever sent." |
 | 1:35–1:48 | Type "Who wrote the novel Frankenstein?" again, still offline → Mary Shelley, same source, from the bank in under a second. | "The web answer from earlier, now offline." |
-| 1:48–2:00 | End card: NAME · Bonsai 2 4B, local · Argmax on-device voice · zero cloud calls · Coby Lai & Antranig Baghdassarian. | "Bonsai 2 4B, Argmax, zero cloud calls." |
+| 1:48–2:00 | End card: Flux · Bonsai 2 4B, local · Argmax on-device voice · zero cloud calls · Coby Lai & Antranig Baghdassarian. | "Bonsai 2 4B, Argmax, zero cloud calls." |
 
 - **1:20 beat:** the draft box and Open in Mail work offline (a `mailto:` handed to Mail), so it stays after Wi-Fi off. The free/busy line needs Milo's meeting email (m21, band practice Thu Nov 19 7pm) in the bank and nothing on "Muse demo" at that time. The wording above is from the window screenshots and the suggest/compose playbook examples; the exact body comes from the code template. Rehearse it once offline before recording.
 - **Spare beat** if time allows, or if the draft beat misbehaves: "What's due tomorrow?" → "open the first one" → yes (the assignment page opens), or Discover → one yes ("Are you taking CHEM 1583 Kitchen Chemistry?" → "Saved: …").

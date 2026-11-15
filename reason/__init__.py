@@ -1,4 +1,4 @@
-"""Muse reasoning layer: one question in, one answer out, bank first.
+"""Flux reasoning layer: one question in, one answer out, bank first.
 
     from reason import answer
     a = answer("what is due Tuesday")   # Answer(text, route, sources, seconds)

@@ -98,7 +98,7 @@ class Problem8(unittest.TestCase):
     def test_web_gate(self):
         self.assertTrue(route.web_ok("When did the Berlin Wall fall?"))
         self.assertTrue(route.web_ok("who wrote Frankenstein"))
-        self.assertTrue(route.web_ok("Muse, what is the capital of Peru"))
+        self.assertTrue(route.web_ok("Flux, what is the capital of Peru"))
         self.assertFalse(route.web_ok("Elena asked me"))
         self.assertFalse(route.web_ok("purple elephants dancing"))
         self.assertFalse(route.web_ok("What's my favorite color?"))

@@ -14,7 +14,7 @@ A short question that leans on the last answer in this conversation. "And tomorr
 - when: `^when(?:\s+is|'s|\s+was|\s+does|\s+do)?\s+(?:(?:that|this|it)(?:\s+one)?|the (\w+)(?:\s+one)?)\s+(?:due|happening|on)$`
 - open: `^(?:please\s+)?(?:open|launch|pull up|bring up)\s+(?:(?:it|that|this)(?:\s+one)?|the (\w+)(?:\s+one)?)$`
 
-Code tries these on the question lowercased, with a leading voice dash, "Muse," and "please" dropped and end punctuation removed. A group that should be an ordinal (`the (\w+) one`) only counts when the word is one (first … tenth, last, 1st … 10th); "open the calendar" is not a follow-up.
+Code tries these on the question lowercased, with a leading voice dash, "Flux," and "please" dropped and end punctuation removed. A group that should be an ordinal (`the (\w+) one`) only counts when the word is one (first … tenth, last, 1st … 10th); "open the calendar" is not a follow-up.
 
 ## Steps
 

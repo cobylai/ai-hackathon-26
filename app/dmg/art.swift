@@ -1,6 +1,6 @@
-// Draws Muse's art locally (no downloaded assets):
+// Draws Flux's art locally (no downloaded assets):
 //   swift app/dmg/art.swift <outdir>
-// -> <outdir>/Muse.iconset/*.png (for iconutil), background.png (660x400), background@2x.png (1320x800)
+// -> <outdir>/Flux.iconset/*.png (for iconutil), background.png (660x400), background@2x.png (1320x800)
 import AppKit
 
 let out = URL(fileURLWithPath: CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : ".")
@@ -48,7 +48,7 @@ func drawIcon(_ r: CGRect) {
     }
 }
 
-let iconset = out.appendingPathComponent("Muse.iconset")
+let iconset = out.appendingPathComponent("Flux.iconset")
 try? FileManager.default.createDirectory(at: iconset, withIntermediateDirectories: true)
 for pt in [16, 32, 128, 256, 512] {
     for scale in [1, 2] {
@@ -58,7 +58,7 @@ for pt in [16, 32, 128, 256, 512] {
 }
 
 // ---- DMG background, 660x400 points ----
-// Icon centres (Finder, top-left origin): Muse (165,150), Applications (495,150); bottom row y=322 (app/dmg/dmg_settings.py).
+// Icon centres (Finder, top-left origin): Flux (165,150), Applications (495,150); bottom row y=322 (app/dmg/dmg_settings.py).
 func drawBackground(_ r: CGRect) {
     NSGradient(starting: NSColor(white: 0.985, alpha: 1), ending: NSColor(white: 0.94, alpha: 1))!.draw(in: r, angle: -90)
     let y = r.height - 150   // flip: Finder y is from the top
@@ -72,7 +72,7 @@ func drawBackground(_ r: CGRect) {
     head.lineWidth = 2.5; head.lineCapStyle = .round; head.lineJoinStyle = .round; head.stroke()
     // one line of text under the icons
     let para = NSMutableParagraphStyle(); para.alignment = .center
-    let text = NSAttributedString(string: "Drag Muse to Applications, then open it to finish setup.",
+    let text = NSAttributedString(string: "Drag Flux to Applications, then open it to finish setup.",
         attributes: [.font: NSFont.systemFont(ofSize: 13), .foregroundColor: NSColor(white: 0.40, alpha: 1), .paragraphStyle: para])
     text.draw(in: CGRect(x: 0, y: r.height - 258, width: r.width, height: 20))
     // hairline above the bottom row

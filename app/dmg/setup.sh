@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Muse setup for a new Mac (Apple Silicon, macOS 15+). Read it before you run it.
+# Flux setup for a new Mac (Apple Silicon, macOS 15+). Read it before you run it.
 #
 #   bash setup.sh                 # installs into ~/ai-hackathon-26
 #   MUSE_DIR=~/somewhere bash setup.sh
@@ -7,11 +7,11 @@
 # Each part is installed on its own, and every step prints what it will run.
 # It asks before every download or install, skips what's already there, and
 # never uses sudo. Nothing is sent anywhere except the downloads named below.
-# The same steps by hand, with links: INSTALL.html on the Muse disk image.
+# The same steps by hand, with links: INSTALL.html on the Flux disk image.
 set -euo pipefail
 
 DIR="${MUSE_DIR:-$HOME/ai-hackathon-26}"
-# Where the Muse code lives. app/make_dmg.sh fills this in from MUSE_REPO_URL; MUSE_REPO_URL overrides it.
+# Where the Flux code lives. app/make_dmg.sh fills this in from MUSE_REPO_URL; MUSE_REPO_URL overrides it.
 REPO_URL="${MUSE_REPO_URL:-@REPO_URL@}"
 MLX="$DIR/samples/bonsai-models/mlx"
 BONSAI="$MLX/models/bonsai2-4b-mlx"
@@ -26,8 +26,8 @@ ask() {  # ask "question" -> 0 for yes
 run() { show "$@"; "$@"; }
 skip() { printf '   already done: %s\n' "$1"; }
 
-[ "$(uname -s)-$(uname -m)" = "Darwin-arm64" ] || { echo "Muse needs an Apple Silicon Mac."; exit 1; }
-echo "Muse setup. Code goes in: $DIR"
+[ "$(uname -s)-$(uname -m)" = "Darwin-arm64" ] || { echo "Flux needs an Apple Silicon Mac."; exit 1; }
+echo "Flux setup. Code goes in: $DIR"
 
 step "0. Xcode (for building the voice program)"
 if xcrun --find swift >/dev/null 2>&1; then skip "$(swift --version 2>/dev/null | head -1)"
@@ -42,10 +42,10 @@ else
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
-step "2. The Muse code — $REPO_URL"
+step "2. The Flux code — $REPO_URL"
 if [ -d "$DIR/.git" ]; then skip "$DIR"
 elif [[ "$REPO_URL" != http* && "$REPO_URL" != git@* ]]; then
-  echo "   This copy of setup.sh doesn't say where the code lives. Ask whoever gave you Muse,"
+  echo "   This copy of setup.sh doesn't say where the code lives. Ask whoever gave you Flux,"
   echo "   then run:  MUSE_REPO_URL=<url> bash setup.sh"; exit 1
 else
   ask "Clone it into $DIR?" || exit 1
@@ -77,7 +77,7 @@ fi
 
 step "6. Argmax SDK and the voice program — https://app.argmaxinc.com"
 echo "   You need YOUR OWN Argmax secret token (axst_…) for the SDK download, and your own"
-echo "   ax_ key, which Muse asks for at first launch. Each Mac needs its own key."
+echo "   ax_ key, which Flux asks for at first launch. Each Mac needs its own key."
 if [ -x "$DIR/voice/swift/.build/release/argmax-voice" ]; then skip "voice/swift built"
 elif ask "Log in to Argmax's Swift package registry and build voice/swift (about 1 min)?"; then
   if [ ! -f "$HOME/.swiftpm/configuration/registries.json" ] || ! grep -q argmaxinc "$HOME/.swiftpm/configuration/registries.json"; then
@@ -105,15 +105,15 @@ elif ask "Write the sample mail and file it into ~/muse-demo-bank (uses Bonsai, 
   [ -n "$STARTED" ] && kill "$STARTED"
 fi
 
-step "8. Point Muse at this folder"
-run defaults write local.ai-hackathon-26.muse MuseRepo "$DIR"
+step "8. Point Flux at this folder"
+run defaults write local.ai-hackathon-26.flux MuseRepo "$DIR"
 
 cat <<EOF
 
 Done. Next:
   - Calendar.app: File > New Calendar, name it "Muse demo", add a few made-up events.
-  - Drag Muse.app to Applications and open it.
-  - "Set Up Muse" walks you through your ax_ key (kept in your Keychain), Accessibility
+  - Drag Flux.app to Applications and open it.
+  - "Set Up Flux" walks you through your ax_ key (kept in your Keychain), Accessibility
     (for Fn-Space), the microphone, Calendar, Reminders and Mail, one screen each.
   - The first voice start on a new Mac takes several minutes while macOS compiles the
     speech model (one time only). Leave it running.

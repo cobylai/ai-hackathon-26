@@ -1,6 +1,6 @@
 # Bonsai client
 
-Every LLM call in Muse goes through `llm/client.py`, which talks only to the local Bonsai 2 server. It has no other provider and no fallback. It only uses the standard library, plus the `tokenizers` package (already in the Bonsai venv) for counting tokens.
+Every LLM call in Flux goes through `llm/client.py`, which talks only to the local Bonsai 2 server. It has no other provider and no fallback. It only uses the standard library, plus the `tokenizers` package (already in the Bonsai venv) for counting tokens.
 
 ## Start the server
 

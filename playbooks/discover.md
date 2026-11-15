@@ -2,7 +2,7 @@
 
 ## For
 
-Muse learning about the user on its own and keeping only what the user confirms. "Discover", "learn about me", then yes / no / skip to each question. "What have you learned?", "Unlearn 2".
+Flux learning about the user on its own and keeping only what the user confirms. "Discover", "learn about me", then yes / no / skip to each question. "What have you learned?", "Unlearn 2".
 
 ## Triggers
 
@@ -14,7 +14,7 @@ Muse learning about the user on its own and keeping only what the user confirms.
 - skip: `skip|next|pass|not sure|maybe|later|ask me later|i don't know|dunno`
 - stop: `stop|done|quit|end|that's all|cancel|enough|stop discovery`
 
-`start`, `unlearn` and the answers must be the whole input, lowercased, with punctuation and a leading "Muse," or "please" removed. `learned` can be anywhere. The answers count only while a discovery question is held.
+`start`, `unlearn` and the answers must be the whole input, lowercased, with punctuation and a leading "Flux," or "please" removed. `learned` can be anywhere. The answers count only while a discovery question is held.
 
 ## Steps
 

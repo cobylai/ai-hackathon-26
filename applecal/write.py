@@ -1,4 +1,4 @@
-"""The only writes Muse makes to the Mac: one calendar event, one reminder, and showing an event.
+"""The only writes Flux makes to the Mac: one calendar event, one reminder, and showing an event.
 
     add_event(title, start, end, location="", all_day=False)  -> into MUSE_CALENDAR ("Muse demo")
     add_reminder(name, due, remind_at, note="")              -> into the "Muse demo" Reminders list

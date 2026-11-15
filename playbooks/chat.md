@@ -10,7 +10,7 @@ Greetings, mic checks and thanks, so they get a short reply instead of a web sea
 - chat: `can you hear me|are you (?:there|listening|working|on)|is this (?:on|working|thing on)|testing(?: testing)*|mic check`
 - chat: `how are you(?: doing)?|hope you'?re (?:doing )?(?:well|good|ok|okay)|nice to meet you`
 - chat: `thanks|thank you|cheers|good job|great|perfect|never ?mind|cool`
-- filler: `okay|ok|so|um|uh|oh|well|just|yeah|yes|muse|there|again|very much|so much|today|a lot`
+- filler: `okay|ok|so|um|uh|oh|well|just|yeah|yes|flux|muse|there|again|very much|so much|today|a lot`
 
 It is chat only when, with every chat and filler phrase taken out, at most 2 words are left and none is a question word (what, when, where, who, which, why, how). So "Hey, what's due tomorrow?" is not chat.
 

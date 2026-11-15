@@ -2,7 +2,7 @@
 
 `reason/act.py` handles requests to *do* something. It uses the partner's tools from `harness/` as they are, with no changes inside `harness/`.
 
-| Say | What Muse does after your yes | Needs a connection |
+| Say | What Flux does after your yes | Needs a connection |
 |---|---|---|
 | "open my calendar" (also notes, finder, textedit, preview, calculator) | `harness.computer.tools.app_open` | no |
 | "open the assignment page" | opens a bank link in the default browser: the best match for any named words ("open the map essay assignment"), otherwise the Canvas assignment due soonest (worker 13: `kind="canvas"`, `source` a file:// page, opens offline) | the page might |
@@ -11,7 +11,7 @@
 ## The rule: show it, wait for a yes
 
 1. Code spots the request; no model is involved. It runs before every other route, because "draft a reply to Felix" contains a sender's name.
-2. Muse shows exactly what it will do: the app, the link, or the full draft with its To, subject and body. It ends with "Say or type yes to go ahead, no to cancel."
+2. Flux shows exactly what it will do: the app, the link, or the full draft with its To, subject and body. It ends with "Say or type yes to go ahead, no to cancel."
 3. One action is held for 3 minutes. The next input decides it:
    - **yes / yeah / yep / sure / ok / do it / go ahead** runs it.
    - **no / cancel / stop** cancels it.
@@ -21,7 +21,7 @@
 ## Drafts: never sent
 
 - **No send path.** `harness/email` has no send function, and `tests/test_no_send.py` checks that. `reason/tests/test_act.py` also checks that `act.py` never calls anything named send.
-- **Test account only.** Before saving, Muse reads the Gmail tab title. If the address there isn't `ilovelocalai@gmail.com`, it refuses and saves nothing.
+- **Test account only.** Before saving, Flux reads the Gmail tab title. If the address there isn't `ilovelocalai@gmail.com`, it refuses and saves nothing.
 - **Who it goes to and what it says.** The recipient and subject come from that sender's newest email in the bank. Bonsai writes a 1–3 sentence body from what you said ("saying yes") and that email's summary and ask.
 - **Which thread.** Gmail is searched by the sender's address, and the row with the matching subject is picked (row 1 if none matches).
 - **Recipient check.** If the saved draft's To isn't the expected address, the reply says WARNING.
@@ -30,7 +30,7 @@
 ## Computer control
 
 - `app_open` applies the partner's policy (`~/.harness/policy.json`): the block list wins, otherwise the app must be on the allow list, and every action goes into `~/.harness/actions.log`. A `~/.harness/STOP` file stops every action.
-- Muse itself only offers Calendar, Notes, Finder, TextEdit, Preview and Calculator.
+- Flux itself only offers Calendar, Notes, Finder, TextEdit, Preview and Calculator.
 - `open -a` needs no Accessibility permission.
 - **Opening a page:** no browser is on the partner's allow list, so opening a page calls `direct.open_path` itself. It is logged as `Browser open_url` and allowed only for http, https and file links taken from the bank (Coby approved).
 
@@ -62,13 +62,13 @@ All wording, the trigger patterns and the draft prompt live in `playbooks/act.md
 | "remind me about homework 9 (the day before)" | name, alert time, due | `applecal.write.add_reminder` into the "Muse demo" Reminders list | yes |
 | "set me up for homework 9", "let's work on …" | the page, up to 2 emails, up to 2 notes | opens them all | yes, except Gmail pages |
 
-**Times** come from the entry's stored deadlines, which the bank's date code worked out at ingest. If an entry has none, Muse reads date phrases in its ask and summary with the same code. The model is never asked. With no time, Muse says so and doesn't guess.
+**Times** come from the entry's stored deadlines, which the bank's date code worked out at ingest. If an entry has none, Flux reads date phrases in its ask and summary with the same code. The model is never asked. With no time, Flux says so and doesn't guess.
 
 **Places** come only from a code pattern ("in Lincoln Hall 101").
 
 **Reminder alerts** are the day before at 9am when asked; otherwise 2 hours before a timed deadline, or 9am on the day.
 
-**"This" / "it" / "the second one"** is a row of the last answer in this conversation (`reason/session.py`). With no conversation, Muse asks.
+**"This" / "it" / "the second one"** is a row of the last answer in this conversation (`reason/session.py`). With no conversation, Flux asks.
 
 **Safety**
 - Text read from an email or page is data, never an instruction (RULES 10). Only an entry's own stored source is ever opened.

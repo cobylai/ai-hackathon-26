@@ -57,7 +57,7 @@ DISCOVER_CHOICES = [["Yes", "yes"], ["No", "no"], ["Skip", "skip"], ["Stop", "st
 PAGE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Muse</title>
+<title>Flux</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -254,9 +254,9 @@ PAGE = """<!doctype html>
 <main>
   <div class="bar">
     <button class="iconbtn" type="button" id="chatsbtn" title="Show chats" aria-pressed="false"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
-    <h1>Muse</h1>
+    <h1>Flux</h1>
     <button type="button" class="btn" id="speak" aria-pressed="false" title="Read answers aloud">Speak</button>
-    <button type="button" class="btn" id="discover" title="Let Muse ask you a few questions about yourself">Discover</button>
+    <button type="button" class="btn" id="discover" title="Let Flux ask you a few questions about yourself">Discover</button>
     <button type="button" id="status" title="Show what's in the bank"><span class="dot"></span>Checking…</button>
     <button class="iconbtn" type="button" id="sidebtn" title="Show the bank (⌘B)" aria-pressed="false"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
   </div>
@@ -404,7 +404,7 @@ function showAnswer(t, r) {
     render(a, kept.join(NL));
     choiceRow(t, r.choices);
   } else if (r.pending) {
-    const what = (kept.shift() || 'Muse is waiting for a yes.').trim();
+    const what = (kept.shift() || 'Flux is waiting for a yes.').trim();
     render(a, kept.join(NL)); if (!a.childNodes.length) a.remove();
     confirmRow(t, what);
   } else if (r.draft) {
@@ -427,7 +427,7 @@ function suggestRows(t, list) {
       if (busy) return;
       row.textContent = ''; const w = el('div', 'working'); w.appendChild(el('span', 'spin'));
       w.appendChild(el('span', '', s.kind === 'open' ? 'Opening…' : (s.kind === 'calendar' || s.kind === 'remind') ? 'Adding…' : 'Writing…')); row.appendChild(w);
-      let r; try { r = await postJSON('/suggest/' + s.id, {}); } catch (e) { r = { text: "Couldn't reach Muse." }; }
+      let r; try { r = await postJSON('/suggest/' + s.id, {}); } catch (e) { r = { text: "Couldn't reach Flux." }; }
       if (r.draft) { const d = draftBox(box, r.draft, row); row.remove(); d.querySelector('textarea').focus(); }
       else { row.textContent = ''; row.appendChild(el('span', 'what done', (r.text || '').trim())); }
     };
@@ -472,7 +472,7 @@ function draftBox(parent, d, before) {
   open.onclick = async () => {
     open.disabled = true;
     let r; try { r = await postJSON('/draft/open', { to: to.value, subject: subj.value, body: body.value }); }
-    catch (e) { r = { text: "Couldn't reach Muse." }; }
+    catch (e) { r = { text: "Couldn't reach Flux." }; }
     open.disabled = false; note.textContent = (r.text || '').trim();
   };
   row.appendChild(note); row.appendChild(discard); row.appendChild(open); c.appendChild(row);
@@ -498,7 +498,7 @@ async function ask(question, spoken, into) {
     if (into) { into.textContent = ''; into.appendChild(el('span', 'what' + (r.route === 'error' ? ' err' : ' done'), (r.text || '').trim())); }
     else showAnswer(t, r);
   } catch (e) {
-    const msg = "Couldn't reach Muse. Check that it's still running, then ask again.";
+    const msg = "Couldn't reach Flux. Check that it's still running, then ask again.";
     if (into) { into.textContent = ''; into.appendChild(el('span', 'what err', msg)); }
     else { const a = t.querySelector('.a'); a.textContent = ''; a.appendChild(el('div', 'err', msg)); }
   }
@@ -528,7 +528,7 @@ async function refresh() {
       talk.title = voiceOk ? 'Hold to talk' : 'Voice is unavailable: ' + (r.voice_why || 'not set up');
     }
     $('hint').hidden = !voiceOk;
-  } catch (e) { statusEl.className = ''; statusEl.textContent = "Can't reach Muse"; }
+  } catch (e) { statusEl.className = ''; statusEl.textContent = "Can't reach Flux"; }
 }
 
 /* ---------- talk: idle, listening, working ---------- */
@@ -548,13 +548,13 @@ function voiceError(msg) {
 async function startTalk() {
   if (!voiceOk || recording || busy || talk.classList.contains('working')) return;
   recording = true; talkState('listening'); q.blur();
-  let r; try { r = await post('/listen/start'); } catch (e) { r = { error: "Muse isn't reachable" }; }
+  let r; try { r = await post('/listen/start'); } catch (e) { r = { error: "Flux isn't reachable" }; }
   if (r.error) { recording = false; talkState('idle'); voiceError(r.error); q.focus(); }
 }
 async function stopTalk(cancel) {
   if (!recording) return;
   recording = false; talkState('working'); talk.disabled = true;
-  let r; try { r = await post('/listen/stop'); } catch (e) { r = { error: "Muse isn't reachable" }; }
+  let r; try { r = await post('/listen/stop'); } catch (e) { r = { error: "Flux isn't reachable" }; }
   talk.disabled = !voiceOk; talkState('idle'); q.focus();
   if (cancel) return;
   if (r.error) { voiceError(r.error); return; }
@@ -664,7 +664,7 @@ function openEntry(path) {
 }
 async function loadBank() {
   try { rows = await (await fetch('/bank')).json(); }
-  catch (e) { groupsEl.textContent = ''; groupsEl.appendChild(el('div', 'none', "Couldn't load the bank. Check that Muse is running.")); return; }
+  catch (e) { groupsEl.textContent = ''; groupsEl.appendChild(el('div', 'none', "Couldn't load the bank. Check that Flux is running.")); return; }
   const sel = groupsEl.querySelector('li.sel'), selId = sel && sel.dataset.id;
   groupsEl.textContent = '';
   for (const [key, title, test] of GROUPS) groupsEl.appendChild(group(key, title, rows.filter(test), entryItem));
@@ -934,7 +934,7 @@ def main(argv=None) -> int:
     srv = HTTPServer(("127.0.0.1", args.port), make_handler(
         today=args.today, talk=HoldToTalk(voice) if voice else None, voice_why=why, speaker=Speaker()))
     url = f"http://localhost:{args.port}/"
-    print(f"Muse window at {url}  (Ctrl-C to stop)", flush=True)
+    print(f"Flux window at {url}  (Ctrl-C to stop)", flush=True)
     if not args.no_open:
         webbrowser.open(url)
     try:

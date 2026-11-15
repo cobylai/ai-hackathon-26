@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Muse</title>
+<title>Flux</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -136,7 +136,7 @@
 <main>
   <div class="bar">
     <button class="iconbtn" type="button" id="toggle" title="Show the bank (⌘B)"><svg width="16" height="14" viewBox="0 0 16 14"><rect x=".75" y=".75" width="14.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 1v12" stroke="currentColor" stroke-width="1.3"/></svg></button>
-    <h1>Muse</h1>
+    <h1>Flux</h1>
     <div id="status" class="on"><span class="dot"></span>Online · 20 items · synced 9:41</div>
   </div>
   <div id="log"></div>
@@ -181,7 +181,7 @@ const CONV = `
     <button class="btn" type="button">Cancel</button><button class="btn primary" type="button">Yes, do it</button></div>
   <div class="foot"><span>act · 1.3 s</span></div></section>
 <section class="turn"><div class="q">What's the weather in Ithaca?</div>
-  <div class="err">Muse is offline, so it can't search the web. Ask about something in the bank, or reconnect and try again.</div></section>`;
+  <div class="err">Flux is offline, so it can't search the web. Ask about something in the bank, or reconnect and try again.</div></section>`;
 log.innerHTML = state === 'empty' ? EMPTY : CONV;
 if (state !== 'empty') log.scrollTop = 1e6;
 document.querySelectorAll('.group > button').forEach(b => b.onclick = () => b.parentElement.classList.toggle('shut'));

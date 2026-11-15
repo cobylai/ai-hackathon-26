@@ -2,7 +2,7 @@
 
 ## For
 
-Set it up so one click finishes it: "add Felix's meeting to my calendar", "add band practice to my calendar", "add this to my calendar", "remind me about the lab report", "remind me about it the day before". Muse creates one calendar event or one reminder, after showing it and getting a yes. These are the only things Muse ever writes on the Mac.
+Set it up so one click finishes it: "add Felix's meeting to my calendar", "add band practice to my calendar", "add this to my calendar", "remind me about the lab report", "remind me about it the day before". Flux creates one calendar event or one reminder, after showing it and getting a yes. These are the only things Flux ever writes on the Mac.
 
 ## Triggers
 

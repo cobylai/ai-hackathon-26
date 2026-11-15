@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Headless Bonsai 2 server for Muse. Never downloads, never opens a browser.
+# Headless Bonsai 2 server for Flux. Never downloads, never opens a browser.
 #   scripts/serve_bonsai.sh          # BONSAI_SIZE or 4B
 #   scripts/serve_bonsai.sh 9B       # 2B | 4B | 9B
 # Env: PORT (8080), BONSAI_MODELS_DIR, BONSAI_VENV.

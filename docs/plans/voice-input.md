@@ -85,6 +85,6 @@ question = voice.listen()                          # instead of input()
 
 ## Open questions
 
-1. Executable name `argmax-voice`, not tied to the app name (Muse or Hearth), so a rename later costs no recompile. Decided with helper 0b.
+1. Executable name `argmax-voice`, not tied to the app name (Flux or Hearth), so a rename later costs no recompile. Decided with helper 0b.
 2. Keep the hidden `file <path>` command? It lets tests run without a microphone. **Default: yes.**
 3. Test whether a dummy `ax_` key works offline once the license is cached? It could remove the need for the vault at the demo. **Default: no.** There's a small risk it replaces the cached license, so I'd only do it with your OK.

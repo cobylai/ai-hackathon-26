@@ -42,7 +42,7 @@ def rebuild_index(root: Path | None = None) -> Path:
     entries = sorted(store.all_entries(root),
                      key=lambda e: (e.get("sent_date") or "", e.get("ingested_at") or ""),
                      reverse=True)
-    header = ("# Muse context store index\n"
+    header = ("# Flux context store index\n"
               "date | from | folder | summary | deadlines | file\n")
     lines, used = [], _count(header)
     for i, e in enumerate(entries):

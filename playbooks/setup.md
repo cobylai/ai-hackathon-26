@@ -2,7 +2,7 @@
 
 ## For
 
-Get me ready to work: "set me up for the lab report", "let's work on Homework 9", "get me ready for the essay". Muse finds the matching coursework or page, its related mail and any note, lists what it will open, and opens them together on a yes.
+Get me ready to work: "set me up for the lab report", "let's work on Homework 9", "get me ready for the essay". Flux finds the matching coursework or page, its related mail and any note, lists what it will open, and opens them together on a yes.
 
 ## Triggers
 

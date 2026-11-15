@@ -1,10 +1,10 @@
-# Muse interfaces: guide for the partner's agents
+# Flux interfaces: guide for the partner's agents
 
 Last updated: 2026-11-14 late, when everything was landed on `main`. Each item below is marked **built**, **planned** or **undecided**. Everything is now built and merged on `main`. The old feature branches (sufficiency-check, context-store, reasoning-layer, voice-input, integration) are history. Update this file when you change an interface. To set up and test, see `docs/PARTNER-TESTING.md`; for what changed in `harness/`, see `docs/PARTNER-UPDATE.md`.
 
 ## 1. Ground rules
 
-- **The app:** Muse, a local assistant. The user types (or later speaks) a question. Muse checks what it already knows, uses a built-in Chromium browser if it needs more, and answers.
+- **The app:** Flux, a local assistant. The user types (or later speaks) a question. Flux checks what it already knows, uses a built-in Chromium browser if it needs more, and answers.
 - **Hackathon rules:**
   - Every LLM call must go to **local Bonsai 2, 4B**.
   - Argmax is the only allowed speech model.
@@ -69,7 +69,7 @@ The partner doesn't need to build a separate `recent_messages()` call.
 
 **Model calls in `harness/`:** `harness/llm.py`'s `ask()` must call `llm.client.complete` with the same signature. That gives it the 32k guard and real errors instead of `""`. Nothing in `harness/` may reach a model that isn't on localhost, so **no Claude Haiku stand-in in the shipped app.**
 
-**Offline plan ("sync online, answer offline"):** while Wi-Fi is on, the sync loop reads email into the context store (§5). With Wi-Fi off, search and `open_page` return BLOCKED/ERR, and Muse answers only from the store.
+**Offline plan ("sync online, answer offline"):** while Wi-Fi is on, the sync loop reads email into the context store (§5). With Wi-Fi off, search and `open_page` return BLOCKED/ERR, and Flux answers only from the store.
 
 ## 3. Bonsai client — **built** (`llm/`, on main)
 
@@ -140,7 +140,7 @@ gather(question: str, search_fn, open_fn, max_results: int = 10, max_rephrases: 
 
 ## 5. Context store — **built** (`bank/`, on `main`)
 
-A store of everything Muse has read, kept as markdown files. This is what the Wi-Fi-off demo answers from. Full details are in `docs/context-store.md`.
+A store of everything Flux has read, kept as markdown files. This is what the Wi-Fi-off demo answers from. Full details are in `docs/context-store.md`.
 
 ```python
 from bank import ingest, search, by_person, due, rebuild_index
@@ -215,7 +215,7 @@ answer(question, today=None, session=None) -> Answer
 - **Saved chats** (`reason/chats.py`, brief T2): each conversation is one `<id>.json` in `$MUSE_CHATS_DIR`, else `<bank dir>-chats` next to the bank (`~/muse-demo-bank-chats`), else `~/muse-chats` when the bank is inside the repo. Never in the repo: it holds personal content. `save(session)` after every answer (atomic; a chat with no turns is not written), `load(id)`, `read(id)`, `listing()` newest first, `delete(id)`. The window lists them in `#chats` (`GET /chats`, `/chats/<id>`, `POST /chats/new`, `/chats/<id>/open`, `/chats/<id>/delete`); the chat loop saves too (`--no-save` skips). A reopened chat shows its saved answers and its follow-ups go on from there. No model call; the title is the first question.
 - **Spoken answers** (`reason/speak.py`): `Speaker().speak(text)` reads the answer with the Mac's `say` (local), without the Source line; `stop()` ends it. Off by default: `python -m reason --speak`, and the window's Speak switch (`#speak`, sends `speak: true` with `POST /ask`). Any `/ask`, `/listen/start` (so hold-to-talk and the Mac app's hotkey) and `POST /speak/stop` stop it.
 - **Discover** (checked first; `discover/`, `playbooks/discover.md`): "discover" (or the window's Discover button, or worker 16's menu item sending "discover" to `POST /ask`) runs the mail sync when online (at most every 30 minutes), reads the bank (mail, Canvas) and Apple Calendar (8 weeks back, 4 ahead), and code proposes facts: an event with the same title, weekday and time 3+ times, a course code in a Canvas entry or 2+ mails, a sender with 3+ emails (and the course they write about), a sender with an amount and a due date 2+ times. Bonsai only suggests a relation ("TA") for a frequent sender, checked in code, when that question comes up. At most 10 questions, most supported first, each shown with its entries. yes writes through `bank.remember` / `people.set_fact` / `people.set_relation`; no is recorded and never asked again; skip comes back next run; stop ends. "What have you learned" lists confirmed facts with sources; "unlearn N" removes one. Answers live in `<bank>/discover/answers.json` (not an entry folder). `POST /ask` returns `choices` (Yes / No / Skip / Stop) while a question is held; `discover.waiting()` says so.
-- **Act** (checked first): "draft a reply to <name> saying ...", "open my calendar", "open the assignment page". Muse shows exactly what it will do and waits for a typed or spoken yes. Then it calls the partner's `app_open`, `email.search` + `draft.reply` (drafts only, never sent, only in `ilovelocalai@gmail.com`), or opens a bank link. A draft needs a connection; opening an app doesn't. Details: `docs/acting.md`.
+- **Act** (checked first): "draft a reply to <name> saying ...", "open my calendar", "open the assignment page". Flux shows exactly what it will do and waits for a typed or spoken yes. Then it calls the partner's `app_open`, `email.search` + `draft.reply` (drafts only, never sent, only in `ilovelocalai@gmail.com`), or opens a bank link. A draft needs a connection; opening an app doesn't. Details: `docs/acting.md`.
 - **Computer control** (act route, `reason/computer.py`, `playbooks/open.md` / `schedule.md` / `setup.md`), each one step shown and confirmed:
   - "open it" opens a row's email in Apple Mail (test account), else its Gmail page, else the saved copy; a Canvas page by its link; a calendar row's event in Calendar.
   - "add <thing> / it to my calendar" creates one event in MUSE_CALENDAR; "remind me about <thing> (the day before)" creates one reminder in the "Muse demo" list. Times always come from the bank's date code.
@@ -259,6 +259,6 @@ Argmax runs only from Swift, so voice is a small Swift program, `voice/swift/` �
 
 ## 8. Not decided yet
 
-- The app's name: "Muse" vs "Hearth" (Coby's call; no code depends on it; the partner prefers not "Muse").
+- The app's name: **Flux** (decided 2026-11-15). Internal names stay: `MUSE_*` variables, `~/muse-demo-bank`, the "Muse demo" calendar and Reminders list.
 - Canvas: mock only (sample coursework from saved-page templates, `docs/canvas.md`). No live Canvas sync.
 - Not used by the app: `email_asks`, `research()`, `ui_click`/`ui_type`, `file_find`. Used since the acting route: `app_open`, `email_search`, `draft.reply`.

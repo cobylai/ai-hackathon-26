@@ -42,11 +42,11 @@ I will test with an **audio file**, not the live mic. The sample has `meeting-sc
 
 ## Interface
 
-The command line only. Muse code is not touched.
+The command line only. Flux code is not touched.
 
 ## Test fixtures
 
-- Clip: `say -o SP/clip.wav --data-format=LEI16@16000 "Muse, remind me to buy oat milk tomorrow at nine. The quick brown fox jumps over the lazy dog."`
+- Clip: `say -o SP/clip.wav --data-format=LEI16@16000 "Flux, remind me to buy oat milk tomorrow at nine. The quick brown fox jumps over the lazy dog."`
 - Model: `large-v3-v20240930_626MB` (Whisper large-v3 turbo, about 626 MB per its name). It is the sample's default.
 - `--no-speakers`, so the Pyannote diarizer is not downloaded.
 
@@ -67,5 +67,5 @@ Adjustments from thinker 0 after approval: the Wi-Fi-off run comes right after A
 ## Open questions
 
 1. Test only the file mode now and leave live mic to Coby? **Default: yes.**
-2. Use the sample's 626 MB turbo model, even if Muse later picks a smaller one? **Default: yes.**
-3. Also do one run with speakers (downloads Pyannote) so that model is cached too? **Default: no, unless Muse needs speaker labels.**
+2. Use the sample's 626 MB turbo model, even if Flux later picks a smaller one? **Default: yes.**
+3. Also do one run with speakers (downloads Pyannote) so that model is cached too? **Default: no, unless Flux needs speaker labels.**

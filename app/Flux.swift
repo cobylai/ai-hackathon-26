@@ -1,4 +1,4 @@
-// Muse menu-bar app: a Spotlight-style panel that shows the local window page
+// Flux menu-bar app: a Spotlight-style panel that shows the local window page
 // (python -m reason.web) and one global hotkey. No answer logic here.
 //   Tap the hotkey: show/hide the panel, cursor in the text field.
 //   Hold it: push to talk (the page's own talk start/stop).
@@ -20,11 +20,11 @@ let windowURL = URL(string: "http://localhost:8765/")!
 let bonsaiURL = URL(string: "http://localhost:8080/v1/models")!
 let statusURL = URL(string: "http://localhost:8765/status")!
 let panelSize = NSSize(width: 640, height: 440)
-let keychainService = "Muse Argmax key"
+let keychainService = "Flux Argmax key"
 let keychainAccount = "ARGMAX_API_KEY"
 
 let env = ProcessInfo.processInfo.environment
-// Where the repo is: `defaults write local.ai-hackathon-26.muse MuseRepo <path>`, then MUSE_REPO,
+// Where the repo is: `defaults write local.ai-hackathon-26.flux MuseRepo <path>`, then MUSE_REPO,
 // then the path baked in at build time (empty in the DMG build), then ~/ai-hackathon-26.
 let repo: String = [UserDefaults.standard.string(forKey: "MuseRepo"), env["MUSE_REPO"],
                     Bundle.main.object(forInfoDictionaryKey: "MuseRepo") as? String]
@@ -36,7 +36,7 @@ let calendarName: String = env["MUSE_CALENDAR"] ?? "Muse demo"
 let modelFolder: String = env["ARGMAX_MODEL_FOLDER"].flatMap { $0.isEmpty ? nil : $0 } ?? (NSHomeDirectory() +
     "/Documents/huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-large-v3-v20240930_626MB")
 let voiceBin: String = env["MUSE_VOICE_BIN"] ?? (repo + "/voice/swift/.build/release/argmax-voice")
-let logDir = NSHomeDirectory() + "/Library/Logs/Muse"
+let logDir = NSHomeDirectory() + "/Library/Logs/Flux"
 
 // ---- Keychain (login keychain, generic password) ----
 enum Keychain {
@@ -44,8 +44,15 @@ enum Keychain {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: keychainService,
          kSecAttrAccount as String: keychainAccount]
     }
+    /// The key, moving it once from the old "Muse Argmax key" item if that's where it is.
     static func read() -> String? {
-        var q = base; q[kSecReturnData as String] = true; q[kSecMatchLimit as String] = kSecMatchLimitOne
+        if let k = read(service: keychainService) { return k }
+        guard let old = read(service: "Muse Argmax key") else { return nil }
+        _ = save(old)
+        return old
+    }
+    static func read(service: String) -> String? {
+        var q = base; q[kSecAttrService as String] = service; q[kSecReturnData as String] = true; q[kSecMatchLimit as String] = kSecMatchLimitOne
         var out: CFTypeRef?
         guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let d = out as? Data else { return nil }
         return String(data: d, encoding: .utf8)
@@ -181,7 +188,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
     // ---- Menu bar ----
     func makeMenu() {
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        let img = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Muse")
+        let img = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Flux")
         img?.isTemplate = true
         item.button?.image = img
         let m = NSMenu()
@@ -192,11 +199,11 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         syncInfo.isEnabled = false; syncInfo.isHidden = true
         m.addItem(withTitle: "Discover", action: #selector(discover), keyEquivalent: "")
         m.addItem(.separator())
-        m.addItem(withTitle: "Set Up Muse…", action: #selector(openSetup), keyEquivalent: "")
+        m.addItem(withTitle: "Set Up Flux…", action: #selector(openSetup), keyEquivalent: "")
         m.addItem(withTitle: "Check setup", action: #selector(checkSetup), keyEquivalent: "")
         m.addItem(withTitle: "Set Argmax key…", action: #selector(setKey), keyEquivalent: "")
         m.addItem(.separator())
-        m.addItem(withTitle: "Quit Muse", action: #selector(quit), keyEquivalent: "q")
+        m.addItem(withTitle: "Quit Flux", action: #selector(quit), keyEquivalent: "q")
         for i in m.items where i.action != nil { i.target = self }
         item.menu = m
     }
@@ -281,7 +288,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
     }
 
     // ---- Hotkey: a keyboard event tap, since the system hotkey call ignores Fn.
-    // Needs Accessibility for Muse (asked once at launch). It swallows Fn-Space so
+    // Needs Accessibility for Flux (asked once at launch). It swallows Fn-Space so
     // no space is typed into the app in front.
     var tap: CFMachPort?
 
@@ -346,7 +353,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         NSApp.activate(ignoringOtherApps: true)
         let a = NSAlert()
         a.messageText = "Argmax key"
-        a.informativeText = "Paste your Argmax key (starts with ax_). It is kept in your login Keychain as \"\(keychainService)\" and given to the voice program when Muse starts."
+        a.informativeText = "Paste your Argmax key (starts with ax_). It is kept in your login Keychain as \"\(keychainService)\" and given to the voice program when Flux starts."
         let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
         field.placeholderString = "ax_…"
         a.accessoryView = field
@@ -363,7 +370,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
 
     // ---- Start-up: allows first (so nothing asks mid-demo), then servers, then checks ----
     func showMessage(_ text: String, continueLink: Bool = false) {
-        let link = continueLink ? "<p><a href=\"\(windowURL.absoluteString)\" style=\"color:-apple-system-blue\">Continue to Muse</a></p>" : ""
+        let link = continueLink ? "<p><a href=\"\(windowURL.absoluteString)\" style=\"color:-apple-system-blue\">Continue to Flux</a></p>" : ""
         web.loadHTMLString("""
         <html><body style="margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
         font:14px/1.5 -apple-system;color:-apple-system-label;color-scheme:light dark;background:transparent;padding:24px;box-sizing:border-box">
@@ -390,7 +397,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
                 : "Calendar: no calendar named \"\(calendarName)\" (docs/calendar.md)."
         }
         if out.contains("-1743") {
-            return "Calendar: not allowed. System Settings → Privacy & Security → Automation → Muse → Calendar."
+            return "Calendar: not allowed. System Settings → Privacy & Security → Automation → Flux → Calendar."
         }
         return "Calendar: could not read it (\(out.prefix(120)))."
     }
@@ -401,7 +408,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
         let calProblem = calendarProblem()
 
         if !FileManager.default.fileExists(atPath: repo + "/scripts/serve_bonsai.sh") {
-            return say("Muse code not found at \(repo).\nRun setup.sh from the Muse disk image, or point Muse at your copy:\n  defaults write local.ai-hackathon-26.muse MuseRepo /path/to/ai-hackathon-26\nthen reopen Muse.")
+            return say("Flux code not found at \(repo).\nRun setup.sh from the Flux disk image, or point Flux at your copy:\n  defaults write local.ai-hackathon-26.flux MuseRepo /path/to/ai-hackathon-26\nthen reopen Flux.")
         }
         let started = Date()
         var extra: [String: String] = [:]
@@ -451,21 +458,21 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
             if (j["voice"] as? Bool) != true {
                 let why = (j["voice_why"] as? String) ?? "unknown"
                 p.append("Voice isn't ready in the window server: \(why)" +
-                         (window.proc == nil ? " (that server was started outside Muse; restart it, or quit it and reopen Muse)" : ""))
+                         (window.proc == nil ? " (that server was started outside Flux; restart it, or quit it and reopen Flux)" : ""))
             }
         } else { p.append("Window server on :8765 doesn't answer. Log: \(window.log)") }
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized: break
-        default: p.append("Microphone: not allowed. System Settings → Privacy & Security → Microphone → Muse.")
+        default: p.append("Microphone: not allowed. System Settings → Privacy & Security → Microphone → Flux.")
         }
         if !AXIsProcessTrusted() {
-            p.append("\(hotKeyName): needs Accessibility. System Settings → Privacy & Security → Accessibility → turn on Muse.")
+            p.append("\(hotKeyName): needs Accessibility. System Settings → Privacy & Security → Accessibility → turn on Flux.")
         }
         if let c = calProblem { p.append(c) }
         // Is the checkout the servers run from behind main? Compares to the last fetch only.
         let (rc, n) = run("/usr/bin/git", ["-C", repo, "rev-list", "--count", "HEAD..origin/main"], timeout: 5)
         if rc == 0, let behind = Int(n), behind > 0 {
-            p.append("Code: \(repo) is \(behind) commit(s) behind origin/main (as of its last fetch). Run  git pull  there, then reopen Muse.")
+            p.append("Code: \(repo) is \(behind) commit(s) behind origin/main (as of its last fetch). Run  git pull  there, then reopen Flux.")
         }
         return p
     }
@@ -496,9 +503,9 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKScriptMess
 
     @objc func setKey() {
         guard askForKey(), ready else { return }
-        // Give the new key to the window server: restart it if Muse started it.
+        // Give the new key to the window server: restart it if Flux started it.
         guard window.proc != nil else {
-            showMessage("Key saved. The window server was started outside Muse: restart it (or quit it and reopen Muse) to use the new key.", continueLink: true)
+            showMessage("Key saved. The window server was started outside Flux: restart it (or quit it and reopen Flux) to use the new key.", continueLink: true)
             return show()
         }
         ready = false
@@ -543,7 +550,7 @@ func run(_ path: String, _ args: [String], timeout: TimeInterval, env extra: [St
 }
 
 // ---- First-run setup: one permission per screen (after Jot's Accessibility window) ----
-let privacyURL = URL(string: "https://cobydev.com/muse/privacy")!   // placeholder until the page is up
+let privacyURL = URL(string: "https://cobydev.com/flux/privacy")!
 let settingsBase = "x-apple.systempreferences:com.apple.preference.security?"
 
 /// Automation status for one app, without asking. nil = can't tell (app not running).
@@ -602,7 +609,7 @@ final class Setup: NSObject, NSWindowDelegate {
     }
 
     func automationStep(_ name: String, _ bundleID: String, _ why: String) -> Step {
-        Step(title: name, body: why + " Muse asks \(name) through AppleScript; macOS asks you once.",
+        Step(title: name, body: why + " Flux asks \(name) through AppleScript; macOS asks you once.",
              button: "Allow \(name)…", pane: settingsBase + "Privacy_Automation",
              granted: { automationGranted(bundleID) },
              act: { s in
@@ -618,11 +625,11 @@ final class Setup: NSObject, NSWindowDelegate {
 
     func build() {
         steps = [
-            Step(title: "Welcome to Muse",
-                 body: "Muse answers from your mail, calendar and notes, on this Mac. The language model (Bonsai) and speech to text (Argmax) run here, and your mail bank stays in your home folder.\n\nWhat leaves this Mac: a web search when the bank has no answer and you're online, a mail sync when you choose Sync mail or Discover, and Argmax's licence check when voice starts. Nothing else.\n\nThe next screens ask for one permission each.",
-                 button: "How Muse handles your data", act: { _ in NSWorkspace.shared.open(privacyURL) }),
+            Step(title: "Welcome to Flux",
+                 body: "Flux answers from your mail, calendar and notes, on this Mac. The language model (Bonsai) and speech to text (Argmax) run here, and your mail bank stays in your home folder.\n\nWhat leaves this Mac: a web search when the bank has no answer and you're online, a mail sync when you choose Sync mail or Discover, and Argmax's licence check when voice starts. Nothing else.\n\nThe next screens ask for one permission each.",
+                 button: "How Flux handles your data", act: { _ in NSWorkspace.shared.open(privacyURL) }),
             Step(title: "Argmax key",
-                 body: "Voice needs your own Argmax key (ax_…, from app.argmaxinc.com). Muse keeps it in your login Keychain as \"\(keychainService)\" and gives it only to its voice program. Each Mac needs its own key.",
+                 body: "Voice needs your own Argmax key (ax_…, from app.argmaxinc.com). Flux keeps it in your login Keychain as \"\(keychainService)\" and gives it only to its voice program. Each Mac needs its own key.",
                  button: "Save key", granted: { Keychain.read()?.hasPrefix("ax_") ?? false },
                  act: { s in
                      let k = s.keyField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -630,7 +637,7 @@ final class Setup: NSObject, NSWindowDelegate {
                      else { s.statusL.stringValue = "That doesn't start with ax_." }
                  }),
             Step(title: "Accessibility",
-                 body: "For the \(hotKeyName) hotkey: tap it to open Muse from any app, hold it to talk. Muse only watches for that one key. Click the button, then turn Muse on in the list, or drag this icon into it.",
+                 body: "For the \(hotKeyName) hotkey: tap it to open Flux from any app, hold it to talk. Flux only watches for that one key. Click the button, then turn Flux on in the list, or drag this icon into it.",
                  button: "Open Accessibility Settings", pane: settingsBase + "Privacy_Accessibility",
                  granted: { AXIsProcessTrusted() },
                  act: { s in
@@ -638,7 +645,7 @@ final class Setup: NSObject, NSWindowDelegate {
                      s.openPane()
                  }),
             Step(title: "Microphone",
-                 body: "So you can talk to Muse. It listens only while you hold \(hotKeyName) or the talk button.",
+                 body: "So you can talk to Flux. It listens only while you hold \(hotKeyName) or the talk button.",
                  button: "Allow Microphone", pane: settingsBase + "Privacy_Microphone",
                  granted: { AVCaptureDevice.authorizationStatus(for: .audio) == .authorized },
                  act: { s in
@@ -648,9 +655,9 @@ final class Setup: NSObject, NSWindowDelegate {
                  }),
             automationStep("Calendar", "com.apple.iCal", "To read your \"\(calendarName)\" calendar and add events you ask for."),
             automationStep("Reminders", "com.apple.reminders", "To add reminders you ask for."),
-            automationStep("Mail", "com.apple.mail", "To open an email in Mail when you ask Muse to show it. Muse doesn't send mail."),
+            automationStep("Mail", "com.apple.mail", "To open an email in Mail when you ask Flux to show it. Flux doesn't send mail."),
             Step(title: "You're set",
-                 body: "Tap \(hotKeyName) to ask from any app; hold it to talk and let go to get the answer. The waveform in the menu bar has the rest, including Set Up Muse… to come back here.",
+                 body: "Tap \(hotKeyName) to ask from any app; hold it to talk and let go to get the answer. The waveform in the menu bar has the rest, including Set Up Flux… to come back here.",
                  button: nil),
         ]
     }
@@ -668,7 +675,7 @@ final class Setup: NSObject, NSWindowDelegate {
     func makeWindow() {
         win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 520), styleMask: [.titled, .closable],
                        backing: .buffered, defer: false)
-        win.title = "Set Up Muse"; win.isReleasedWhenClosed = false; win.delegate = self
+        win.title = "Set Up Flux"; win.isReleasedWhenClosed = false; win.delegate = self
         let v = win.contentView!
         icon.image = NSApp.applicationIconImage
         titleL.font = .systemFont(ofSize: 20, weight: .semibold); titleL.alignment = .center

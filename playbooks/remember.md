@@ -1,10 +1,10 @@
 # Remember
 
-Three routes share this file: **remember**, **forget** and **about_me**. They hold what the user tells Muse about themself, in the bank's `me` folder.
+Three routes share this file: **remember**, **forget** and **about_me**. They hold what the user tells Flux about themself, in the bank's `me` folder.
 
 ## For
 
-Notes the user asks Muse to keep about them. "Remember that my lab is Tuesdays at 2", "Remember I'm vegetarian", "Forget that my lab is Tuesdays at 2", "Forget that", "What do you know about me?"
+Notes the user asks Flux to keep about them. "Remember that my lab is Tuesdays at 2", "Remember I'm vegetarian", "Forget that my lab is Tuesdays at 2", "Forget that", "What do you know about me?"
 
 ## Triggers
 
@@ -15,7 +15,7 @@ Notes the user asks Muse to keep about them. "Remember that my lab is Tuesdays a
 - about_me: `what (?:do|did) you (?:know|remember) about me`
 - about_me: `what have you (?:remembered|saved|noted)(?: about me)?`
 
-remember and forget count only at the start of what was said (after "Muse," or "please", which are dropped). A question ending in "?" is never a remember. about_me can be anywhere.
+remember and forget count only at the start of what was said (after "Flux," or "please", which are dropped). A question ending in "?" is never a remember. about_me can be anywhere.
 
 ## Steps
 
@@ -66,7 +66,7 @@ No model step.
 |---|---|---|
 | What do you know about me? | about_me | Nothing yet |
 | Remember that my lab is Tuesdays at 2. | remember | I'll remember: my lab is Tuesdays at 2. |
-| Muse, remember I'm vegetarian | remember | I'm vegetarian |
+| Flux, remember I'm vegetarian | remember | I'm vegetarian |
 | Remember I'm vegetarian | remember | I already have that |
 | What do you know about me? | about_me | my lab is Tuesdays at 2; I'm vegetarian; Source: your notes |
 | When is my lab? | bank | Tuesday; your note |

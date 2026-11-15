@@ -1,6 +1,6 @@
 # Context store
 
-`bank/` keeps a record of everything Muse has read, one markdown file per email or page. Bonsai 4B pulls out the text fields when an item comes in. Code does everything that has to be exact: the sender and date, deadline dates, course code, folder, duplicates and the index.
+`bank/` keeps a record of everything Flux has read, one markdown file per email or page. Bonsai 4B pulls out the text fields when an item comes in. Code does everything that has to be exact: the sender and date, deadline dates, course code, folder, duplicates and the index.
 
 **Where the sender, date and subject come from,** in this order:
 

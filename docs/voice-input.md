@@ -66,7 +66,7 @@ The chat loop calls `voice.listen(wait_for_stop=lambda: input(...))`. `listen` t
 |---|---|
 | First launch (Neural Engine compile, one time) | ready after **250 s** |
 | Warm launch | ready after **1.5 s** |
-| `say` clip (6.7 s), 3× in one process, online | correct all 3 times: "Muse, remind me to buy oat milk tomorrow at 9. The quick brown fox jumps over the lazy dog." **1.37–1.55 s** each |
+| `say` clip (6.7 s), 3× in one process, online | correct all 3 times: "Flux, remind me to buy oat milk tomorrow at 9. The quick brown fox jumps over the lazy dog." **1.37–1.55 s** each |
 | Same, with all outbound IP denied for the Python process and its Swift child (`sandbox-exec`) | correct all 3 times, 1.37–1.48 s; ready in 1.5 s |
 | `bw get password` with an existing session, network denied | works |
 | Live mic, Coby speaking, online, 3 questions in one session | all right: "What's due this week?" / "Remind me to buy oat milk tomorrow at 9:00." / "Who emailed me about the lab report?" Stop to text **1.18 / 1.25 / 1.15 s**. Ready in 1.7 s. |

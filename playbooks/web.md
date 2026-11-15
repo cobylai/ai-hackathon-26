@@ -11,7 +11,7 @@ None to enter: the bank route hands over to this one when it falls short. Two pa
 - question: `what|what's|who|who's|whom|whose|when|where|which|why|how|is|are|was|were|do|does|did|can|could|will|would|should|has|have|tell me|define|explain`
 - personal: `my|mine`
 
-`question` counts only at the start (after "Muse," or "please"); `personal` anywhere.
+`question` counts only at the start (after "Flux," or "please"); `personal` anywhere.
 
 ## Steps
 
