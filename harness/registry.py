@@ -66,8 +66,8 @@ TOOLS: dict[str, Tool] = {
     ),
     "open_result": Tool(
         "open_result",
-        "Open numbered result N from the last search.",
-        {"n": int},
+        "Open result N from the last search; page=2 reads more.",
+        {"n": int, "page": int},
         search_tools.open_result,
     ),
     "research": Tool(

@@ -120,9 +120,10 @@ def _load(url: str) -> tuple[str, str]:
 
 
 @browser_tools.browser_tool
-def open_result(n: int) -> str:
-    """Open result N from the last search; return its status line and text."""
+def open_result(n: int, page: int = 1) -> str:
+    """Open result N from the last search; page=2 reads the next part of it."""
     n = int(n)
+    page = max(1, int(page))
     if not 1 <= n <= len(_last):
         return _cap(f"ERR search | no result {n} | call search first", "[end]")
 
@@ -136,10 +137,15 @@ def open_result(n: int) -> str:
         }[word]
         return _cap(f"{word} {item.domain} | result {n} | {message}", "[end]")
 
-    chunk, total = paginate(text, 1, max_chars=TEXT_CHARS)
-    head = f"OK {item.domain} | result {n} | page 1/{total}"
-    hint = "[more: call read(page=2)]" if total > 1 else "[end]"
-    return _cap(f"{head}\n{chunk}", hint)
+    chunk, total = paginate(text, page, max_chars=TEXT_CHARS)
+    head = f"OK {item.domain} | result {n} | page {page}/{total}"
+    if not chunk:
+        return _cap(f"{head}\n(no text on that page)", "[end]")
+    # Paging stays inside the search group: `read` belongs to the browser group.
+    body = f"{head}\n{chunk}"
+    if page < total:
+        body += f"\n[more: call open_result({n}, page={page + 1})]"
+    return _cap(body, "[end of text]")
 
 
 @browser_tools.browser_tool

@@ -77,6 +77,17 @@ def test_open_result_reads_the_page(stool, monkeypatch, site):
     out = check(stool.open_result(1))
     assert out.startswith("OK 127.0.0.1 | result 1 | page 1/")
     assert "lighthouse stood at the end" in out
+    assert "open_result(1, page=2)" in out  # paging stays inside the search group
+
+
+def test_open_result_pages_through_long_text(stool, monkeypatch, site):
+    stub_results(monkeypatch, two_results(site))
+    stool.search("lighthouse")
+    first = check(stool.open_result(1))
+    second = check(stool.open_result(1, page=2))
+    assert second.startswith("OK 127.0.0.1 | result 1 | page 2/")
+    assert second.splitlines()[1:] != first.splitlines()[1:]
+    assert check(stool.open_result(1, page=99)).endswith("(no text on that page)")
 
 
 def test_open_result_rejects_unknown_numbers(stool, monkeypatch, site):
@@ -184,7 +195,7 @@ def test_registry_exposes_the_search_group(stool, monkeypatch, site):
     entry = registry.TOOLS["search"]
     assert entry.args == {"query": str}
     assert entry.desc and "\n" not in entry.desc and len(entry.desc) <= 100
-    assert registry.TOOLS["open_result"].args == {"n": int}
+    assert registry.TOOLS["open_result"].args == {"n": int, "page": int}
 
     stub_results(monkeypatch, two_results(site))
     assert check(entry.run(query="lighthouse")).startswith("OK search | 2 results")
