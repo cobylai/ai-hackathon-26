@@ -31,3 +31,18 @@ every action; `~/.harness/actions.log` has one line per call, all ALLOW.
   text area's value read back as the full sentence.
 - Observed earlier, still true: TextEdit windows on another Space are invisible
   to the AX tree; the eval makes a fresh document on the active Space to avoid it.
+
+## Re-run 2026-11-15 (after stale-listing guard + allowlist-before-confirm fixes)
+
+Same script, branch head 69aa939. Both behavior changes verified live: the
+front-app staleness guard does not disturb the same-app TextEdit flow, and
+type/read-back of the test sentence still round-trips. Document closed
+without saving, per the script.
+
+| job | calls | chars to model | time (s) | outcome |
+|---|---|---|---|---|
+| open TextEdit, new document | 1 | 18 | 0.8 | pass |
+| what is on my TextEdit window | 1 | 519 | 0.5 | pass |
+| add a note saying the test sentence | 2 | 577 | 0.0 | pass |
+| read the note back | 1 | 96 | 0.0 | pass |
+| find files named 'harness' (read-only) | 1 | 708 | 0.2 | pass |

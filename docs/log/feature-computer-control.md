@@ -104,3 +104,6 @@
 
 ## Self-review sweep complete (2026-11-15)
 - Read all six computer modules + CLI with fresh eyes. Two real fixes landed (stale-listing guard; allowlist-before-confirm). tools.py, direct.py, permissions.py, __main__.py, registry.py: no defects found.
+
+## Live eval re-run (2026-11-15)
+- scripts/eval_computer.py on 69aa939 (includes both new fixes): all 5 jobs pass, unchanged timings; notes-computer-eval.md updated.
