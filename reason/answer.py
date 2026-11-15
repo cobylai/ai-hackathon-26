@@ -34,7 +34,7 @@ GATHER_SECONDS = 60
 
 # Wording and prompts come from playbooks/<route>.md. STEPS is how many numbered steps
 # each playbook lists; the code below runs them in that order (a test checks the count).
-STEPS = {"about": 5, "followup": 5, "discover": 6, "act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 6, "bank": 4, "web": 6, "chat": 3, "open": 4, "schedule": 5, "setup": 5, "suggest": 5, "compose": 5, "send": 5}
+STEPS = {"about": 6, "followup": 5, "discover": 6, "act": 5, "remember": 4, "people": 4, "catchup": 5, "due": 5, "calendar": 4, "person": 6, "bank": 4, "web": 6, "chat": 3, "open": 4, "schedule": 5, "setup": 5, "suggest": 5, "compose": 5, "send": 5}
 PERSON_SYSTEM = playbook.prompt("person", "person_system")
 PERSON_PROMPT = playbook.prompt("person", "person_prompt")
 PERSON_HINT = playbook.prompt("person", "person_hint")
@@ -359,6 +359,16 @@ def saved_page(question: str, ans: str, quote: str, url: str) -> str:
 
 # ---- entry point ------------------------------------------------------------
 
+def _not_saved(q: str) -> str:
+    """playbooks/web.md: "When is my chemistry exam?" -> "I have nothing saved about a chemistry exam, ..."."""
+    m = playbook.trigger("web", "when_mine").match(route._lead(q))
+    if not m:
+        return say("web", "personal")
+    thing = m.group(1).strip()
+    art = "any" if thing.endswith("s") else ("an" if thing[:1].lower() in "aeiou" else "a")
+    return say("web", "personal_when", topic=f"{art} {thing}")
+
+
 def answer(question: str, today: date | str | None = None, *, root: Path | None = None,
            _online=None, _web_fns: dict | None = None, _events=None,
            _now: datetime | None = None, session=None) -> Answer:
@@ -379,10 +389,10 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
     from . import tour  # playbooks/about.md: "what's Flux" and the guided tour, before follow-ups
     sending = send.handle(q)  # playbooks/send.md: "send it" only ever shows a preview
     held = discover.waiting() or act.waiting() or compose.waiting()
-    tour_a = None if (held or sending is not None) else tour.handle(
-        q, today, root, session=session, run=answer, events=_events)
+    tour_a = (None if sending is not None  # "send it" shows the preview, not the tour
+              else tour.handle(q, today, root, session=session, run=answer, events=_events, held=held))
     if sending is not None:
-        follow = ("answer", sending)
+        follow = ("answer", sending)  # playbooks/send.md: "send it" only ever shows a preview
     elif session is not None and tour_a is None and not held:
         from .session import resolve  # playbooks/followup.md: code only, no model call
         follow = resolve(q, session, today, root)
@@ -432,8 +442,8 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
                 a = agent.answer(q, today, root, session=session, events_fn=_events,
                                  online_fn=_online or online, web_fns=_web_fns)
         if a is None and not route.web_ok(q):  # web only for clear factual questions (RULES 9)
-            a = Answer(say("web", "personal" if playbook.trigger("web", "personal").search(q)
-                           else "unclear"), "not_found")
+            a = Answer(_not_saved(q) if playbook.trigger("web", "personal").search(q)
+                       else say("web", "unclear"), "not_found")
         if a is None:
             is_up = _online() if _online else online()
             if is_up:
