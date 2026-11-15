@@ -164,7 +164,10 @@ class EmptyBank(Base):
 
     def test_overview_still_works(self):
         a = self.ask("What's Flux?")
-        self.assertIn("What did Felix ask me?", [c[1] for c in a.choices])  # the playbook's own example
+        qs = [c[1] for c in a.choices]
+        self.assertNotIn("What did Felix ask me?", qs)  # no staged names on an empty bank
+        self.assertIn("- What someone asked you", a.text)
+        self.assertIn("show me", qs)
 
 
 class Hook(Base):

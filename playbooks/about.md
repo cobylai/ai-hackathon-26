@@ -17,7 +17,7 @@ Each must be the whole question (after a leading "Flux," or "please"); "help me 
 
 ## Steps
 
-1. The whole question is an overview trigger: write `intro`, then one line per row of `## Overview` (its label and its example question), then `show_me`. The example questions are also buttons.
+1. The whole question is an overview trigger: write `intro`, then one line per row of `## Overview` (its label and its example question, filled from the bank; `can_row_plain` with the label alone when the bank has no sender or due item for it), then `show_me`. The example questions are also buttons.
 2. The whole question is a start trigger: go to the first row of `## Tour`. While a tour is on (kept in the chat's session), next, back and skip move one row and stop ends it; any other question is answered as usual and the tour waits.
 3. For a step: write `step_head`, the step's `<key>_what` line, then for each example in its row, fill names and items from the bank (`name` = the newest sender with an ask, `item` = the nearest coursework due item), run it through answer() on a scratch session, and write the question and the real answer. Rows marked `show` write the question without running it.
 4. Clear anything an example left waiting for a yes or for more words (act, compose), so "next" is never taken as a yes. Nothing is saved, opened or sent.
@@ -61,6 +61,7 @@ Each line: step key, then the examples it runs, as playbook and row. `name` or `
 - intro: Flux is a private assistant that runs entirely on this Mac. It knows your mail, coursework and calendar, and it keeps working with Wi-Fi off.
 - can_head: What it can do:
 - can_row: - {label}: "{question}"
+- can_row_plain: - {label}
 - show_me: Say "show me" and I'll walk you through it.
 - source: Source: Flux's guide (playbooks/about.md)
 - step_head: {n} of {total}: {title}

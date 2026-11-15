@@ -86,7 +86,10 @@ def overview(today: date, root: Path | None):
     lines, choices = [say(BOOK, "intro"), "", say(BOOK, "can_head")], []
     for label, spec in _items("Overview"):
         book, n, how = _refs(spec)[0]
-        q = _fill(_example(book, n), how, name, item) or _example(book, n)
+        q = _fill(_example(book, n), how, name, item)
+        if q is None:  # the example names a sender or item this bank doesn't have: no staged names
+            lines.append(say(BOOK, "can_row_plain", label=label))
+            continue
         lines.append(say(BOOK, "can_row", label=label, question=q))
         choices.append([q, q])
     lines += ["", say(BOOK, "show_me"), "", say(BOOK, "source")]
