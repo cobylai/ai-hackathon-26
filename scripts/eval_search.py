@@ -26,6 +26,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from harness import llm  # noqa: E402
+from harness.browser import tools as browser_tools  # noqa: E402
 from harness.browser.session import get_session  # noqa: E402
 from harness.search import engine, loop, tools  # noqa: E402
 
@@ -170,7 +171,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--pause-seconds", type=float, default=0.0, help="wait between questions (pacing)"
     )
+    parser.add_argument(
+        "--profile",
+        type=Path,
+        default=None,
+        help="Chromium profile to use (default: ~/.harness/profile)",
+    )
     args = parser.parse_args(argv)
+
+    session = get_session()
+    if args.profile:
+        session.profile_dir = args.profile.expanduser()
 
     items = load_questions(args.questions, args.limit)
     if args.ids:
@@ -184,6 +195,18 @@ def main(argv: list[str] | None = None) -> int:
             args.json.write_text(json.dumps(rows, indent=1), encoding="utf-8")
 
     try:
+        try:
+            browser_tools._page()  # fail before the questions, not inside them
+        except browser_tools.BrowserStartError as exc:
+            print(f"browser cannot start: {exc}", file=sys.stderr)
+            print(f"profile: {session.profile_dir}", file=sys.stderr)
+            print(
+                "if another Chromium holds it, retry later or pass "
+                "--profile ~/.harness/profile-eval",
+                file=sys.stderr,
+            )
+            return 2
+
         for index, item in enumerate(items):
             if index and args.pause_seconds:
                 time.sleep(args.pause_seconds)
@@ -243,7 +266,7 @@ def main(argv: list[str] | None = None) -> int:
         f"pass {passes}/{len(rows)}  median {seconds:.1f} s  median {chars:.0f} chars "
         f"({chars / CHAR_TARGET:.0%} of {CHAR_TARGET})  median {tokens:.0f} prompt tokens "
         f"({tokens / TOKEN_TARGET:.0%} of {TOKEN_TARGET})  blocked pages {blocked}  "
-        f"questions with no usable search {walled}/{len(rows)}"
+        f"questions with no usable search {walled}/{len(rows)}  profile {session.profile_dir}"
     )
     checks = verdict(passes, seconds, chars, tokens)
     print(
