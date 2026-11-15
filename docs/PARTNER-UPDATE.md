@@ -33,8 +33,8 @@ Your `plan/harness-task-breakdown` branch (plans only) is not merged.
   chat loop and the window now.
 - **`scripts/sync_email.py`**: your Gmail reader -> the bank. Fixed to parse
   Gmail's 24-hour dates ("14 Nov 2026, 22:24").
-- **Test mail**: `scripts/make_test_mail.py` (20 fake emails, 13 senders) and
-  `scripts/make_test_threads.py` + `sync_test_threads.py` (the same emails
+- **Test mail**: `scripts/demo/make_test_mail.py` (20 fake emails, 13 senders) and
+  `scripts/demo/make_test_threads.py` + `sync_test_threads.py` (the same emails
   written into a saved Gmail thread page, read by your reader offline).
   Both score 36/37 on the demo questions with the network blocked.
 

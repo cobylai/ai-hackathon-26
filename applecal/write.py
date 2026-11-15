@@ -14,9 +14,9 @@ import os
 import subprocess
 from datetime import datetime
 
-from . import DEFAULT_CALENDAR, TIMEOUT, CalendarError, _CACHE, calendar_name, read_all
+from . import DEFAULT_CALENDAR, TIMEOUT, CalendarError, _CACHE, calendar_key, read_all
 
-REMINDER_LIST = "Flux demo"
+REMINDER_LIST = "Flux demo"  # the demo mode's list (bank/mode.py)
 
 # A date is passed as "Y M D h m" and built here, so the Mac's date format doesn't matter.
 _DATE = r'''
@@ -44,6 +44,12 @@ on run argv
     end tell
   end tell
   return "OK"
+end run
+'''
+
+_DEFAULT_LIST = r'''
+on run argv
+  tell application "Reminders" to return name of default list
 end run
 '''
 
@@ -101,9 +107,35 @@ def _run(script: str, args: list[str], app: str) -> str:
     return p.stdout.strip()
 
 
+_TARGETS: dict[str, str] = {}  # per process: the resolved default Reminders list
+
+
+def target_calendar() -> str:
+    """The calendar new events go into: the one Flux reads (demo: "Flux demo"; live: yours)."""
+    key = calendar_key()
+    if not key:
+        from . import NO_CALENDAR
+        raise CalendarError(NO_CALENDAR)
+    return key
+
+
+def reminder_list() -> str:
+    """The Reminders list: FLUX_REMINDERS, else the mode's (demo "Flux demo"; live the default list)."""
+    env = os.environ.get("FLUX_REMINDERS") or os.environ.get("MUSE_REMINDERS")
+    if env:
+        return env
+    from bank import mode
+    name = mode.reminders()
+    if name:
+        return name
+    if "rem" not in _TARGETS:
+        _TARGETS["rem"] = _run(_DEFAULT_LIST, [], "Reminders")
+    return _TARGETS["rem"]
+
+
 def add_event(title: str, start: datetime, end: datetime, location: str = "",
               all_day: bool = False, calendar: str | None = None) -> None:
-    name = calendar or calendar_name()
+    name = calendar or (DEFAULT_CALENDAR if read_all() else target_calendar())
     if read_all() and name != DEFAULT_CALENDAR:  # reading every calendar never widens writes
         raise CalendarError(f'Flux only writes to the "{DEFAULT_CALENDAR}" calendar')
     _run(_ADD_EVENT, [name, title, _d(start), _d(end), location or "", "1" if all_day else "0"], "Calendar")
@@ -112,10 +144,10 @@ def add_event(title: str, start: datetime, end: datetime, location: str = "",
 
 def show_event(title: str, start: datetime, calendar: str | None = None) -> bool:
     """True when Calendar found and showed the event."""
-    return _run(_SHOW_EVENT, [calendar or calendar_name(), title, _d(start)], "Calendar") == "OK"
+    return _run(_SHOW_EVENT, [calendar or target_calendar(), title, _d(start)], "Calendar") == "OK"
 
 
 def add_reminder(name: str, due: datetime | None, remind_at: datetime | None, note: str = "",
                  list_name: str | None = None) -> None:
-    lst = list_name or (os.environ.get("FLUX_REMINDERS") or os.environ.get("MUSE_REMINDERS")) or REMINDER_LIST
+    lst = list_name or reminder_list()
     _run(_ADD_REMINDER, [lst, name, _d(due), _d(remind_at), note or ""], "Reminders")

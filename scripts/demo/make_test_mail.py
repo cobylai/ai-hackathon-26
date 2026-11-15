@@ -1,8 +1,8 @@
 """Many-sender fake mail for testing reason.answer, and a checker that scores it.
 
-    uv run python scripts/make_test_mail.py write OUT_DIR            # N emails + truth.json
+    uv run python scripts/demo/make_test_mail.py write OUT_DIR            # N emails + truth.json
     FLUX_BANK_DIR=FRESH uv run python -m bank.load OUT_DIR --kind email
-    FLUX_BANK_DIR=FRESH uv run python scripts/make_test_mail.py check OUT_DIR [--offline]
+    FLUX_BANK_DIR=FRESH uv run python scripts/demo/make_test_mail.py check OUT_DIR [--offline]
 
 Every name, address and course here is made up (example.edu / example.com). Write
 OUT_DIR and FRESH outside the repo. Today defaults to Sat 2026-11-14 (--today YYYY-MM-DD
@@ -25,7 +25,7 @@ import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 TODAY = date(2026, 11, 14)  # a Saturday
 SEED = 2600
@@ -130,6 +130,77 @@ def meeting_phrase(key: str) -> str:
     return f"{d:%A}, {d:%B} {d.day} at {t}"
 
 
+# ---- extra demo mail (brief DEMO): optional rows, not scored by check ---------------
+# Added for the video. Each row is marked "optional": true in truth.json; check() asks no
+# questions about them, lets their due rows be extra, and allows them as a sender's sources.
+EXTRA_SENDERS = {
+    "sam": ("Sam", "Ortiz", "sortiz@example.edu"),
+    "phone": ("Northway Mobile", "Billing", "billing@northway.example.com"),
+    "rec": ("Campus Rec", "Weekly", "news@rec.example.edu"),
+}
+
+
+def _weekday_after(d: date, wd: int, gap: int = 1) -> date:
+    """The first given weekday at least `gap` days after d."""
+    x = d + timedelta(days=gap)
+    return x + timedelta(days=(wd - x.weekday()) % 7)
+
+
+def _long(d: date) -> str:
+    return f"{d:%A}, {d:%B} {d.day}"
+
+
+def extra_mail() -> list[tuple]:
+    """(key, sender, subject, body, sent offset (days before TODAY), sent hour, due date, ask_kw, facts)."""
+    thu = _weekday_after(TODAY, 3, 2)   # Felix's meeting day (free at 3 on the demo calendar)
+    tue = _weekday_after(TODAY, 1)      # Nina's meeting day (clashes with CHEM 1583 Lab, Tue 2-4pm)
+    lab_due = _weekday_after(TODAY, 3, 2)
+    fri = _weekday_after(TODAY, 4, 2)
+    wed = _weekday_after(TODAY, 2, 2)
+    return [
+        ("d01", "felix", "Free Thursday at 3?",
+         "Hey,\n\nAre you free Thursday at 3? I want to plan the robotics bake sale with you.\n\nFelix",
+         0, 10, None, "bake sale", ["bake sale"]),
+        ("d02", "ninav", "Practice our seminar talk",
+         "Hi,\n\nCan we meet Tuesday at 2:30 to practice our seminar talk?\n\nNina",
+         1, 16, None, "seminar", ["seminar talk"]),
+        ("d03", "jonah", "Lab Report 3 template",
+         "Hi all,\n\nFor Lab Report 3, please use the template on Canvas and cite at least "
+         f"three sources. Upload it by {_long(lab_due)} at 11:59pm.\n\nJonah (TA, Kitchen Chemistry)",
+         2, 9, lab_due, "template", ["three sources"]),
+        ("d04", "ivy", "Garden workday photos",
+         f"Hello,\n\nCould you send me your photos from the garden workday by {_long(fri)}? "
+         "I'm making the slideshow.\n\nIvy", 3, 18, fri, "photos", ["slideshow"]),
+        ("d05", "phone", "Your November phone bill",
+         f"Hello,\n\nYour November bill of $48.20 is due {_long(fri)}. Pay it on your account page "
+         "to avoid a late fee.\n\nNorthway Mobile", 4, 7, fri, "48.20", ["48.20"]),
+        ("d06", "rec", "This week at Campus Rec",
+         "Hi everyone,\n\nThe climbing wall reopens Monday, and yoga moves to the small gym this week. "
+         "Have a good week!\n\nCampus Rec", 1, 8, None, None, ["climbing wall"]),
+        ("d07", "sam", "Graphing calculator",
+         f"Hey,\n\nCan you return my graphing calculator by {_long(wed)}? I need it for the exam.\n\nSam",
+         2, 20, wed, "calculator", ["calculator"]),
+    ]
+
+
+def build_extra() -> list[dict]:
+    rng = random.Random(SEED + 1)
+    out = []
+    for key, s, subject, body, back, hour, due, ask_kw, facts in extra_mail():
+        first, last, addr = {**SENDERS, **EXTRA_SENDERS}[s]
+        sent = TODAY - timedelta(days=back)
+        sent_dt = datetime(sent.year, sent.month, sent.day, hour, rng.randint(0, 59))
+        name = f"{first} {last}" if s not in ("phone", "rec") else first
+        text = (f"From: {name} <{addr}>\nDate: {sent_dt:%a, %d %b %Y %H:%M:%S} -0500\n"
+                f"Subject: {subject}\n\n" + body)
+        out.append({"key": key, "sender": s, "name": name, "first": first, "address": addr,
+                    "sent": sent.isoformat(), "subject": subject,
+                    "due": due.isoformat() if due else None, "phrase": None, "ask_kw": ask_kw,
+                    "facts": facts, "sent_at": sent_dt.isoformat(timespec="minutes"),
+                    "body": body, "text": text, "optional": True})
+    return out
+
+
 def phrase_for(d: date, sent: date, rng: random.Random) -> str:
     """An explicit date, or a bare weekday when that is unambiguous from the sent date."""
     t = rng.choice(["5pm", "noon", "11:59pm", None])
@@ -140,7 +211,8 @@ def phrase_for(d: date, sent: date, rng: random.Random) -> str:
     return f"{p} at {t}" if t else p
 
 
-def build() -> list[dict]:
+def build(extra: bool = False) -> list[dict]:
+    """Brief M's mail (m01-m23); extra=True appends the optional demo rows (d01-...)."""
     rng = random.Random(SEED)
     out = []
     for key, s, subject, body, off, ask_kw, facts in MAIL:
@@ -157,12 +229,12 @@ def build() -> list[dict]:
                     "due": due.isoformat() if due else None, "phrase": dl or None,
                     "ask_kw": ask_kw, "facts": facts, "sent_at": sent_dt.isoformat(timespec="minutes"),
                     "body": plain, "text": text})
-    return out
+    return out + (build_extra() if extra else [])
 
 
-def write(out_dir: Path) -> None:
+def write(out_dir: Path, extra: bool = False) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    mails = build()
+    mails = build(extra)
     for m in mails:
         (out_dir / f"{m['key']}.txt").write_text(m["text"])
     truth = [{k: v for k, v in m.items() if k not in ("text", "body")} for m in mails]
@@ -182,7 +254,9 @@ def check(out_dir: Path) -> int:
     from bank import store
     from reason import answer
 
-    truth = json.loads((out_dir / "truth.json").read_text())["mail"]
+    every = json.loads((out_dir / "truth.json").read_text())["mail"]
+    truth = [m for m in every if not m.get("optional")]   # extra demo rows are not scored
+    optional = {m["subject"] for m in every if m.get("optional")}
     by_path = {e["path"]: e for e in store.all_entries()}
     rows = []
 
@@ -195,6 +269,7 @@ def check(out_dir: Path) -> int:
     firsts = [m["first"] for m in truth]
     for s in dict.fromkeys(m["sender"] for m in truth):
         mine = [m for m in truth if m["sender"] == s]
+        allowed = {m["subject"] for m in every if m["sender"] == s}  # incl. their extra demo mail
         first, name = mine[0]["first"], mine[0]["name"]
         who = name if firsts.count(first) > 1 and len({m['sender'] for m in truth if m['first'] == first}) > 1 else first
         q = f"What did {who} ask me?"
@@ -203,12 +278,12 @@ def check(out_dir: Path) -> int:
         text = a.text.lower()
         if asks:
             ok = a.route == "person" and any(k in text for k in asks) and \
-                 _subjects_from(a, by_path) <= {m["subject"] for m in mine}
+                 _subjects_from(a, by_path) <= allowed
             want = f"person route, mentions one of {asks}, sources only {name}'s mail"
         else:
             ok = a.route == "person" and any(w in text for w in ("don't say", "didn't ask", "did not ask",
                                                                      "nothing", "no request", "no ask")) \
-                and _subjects_from(a, by_path) <= {m["subject"] for m in mine}
+                and _subjects_from(a, by_path) <= allowed
             want = f"person route, says {name} asked nothing; sources only {name}'s mail"
         record("person", q, ok, a, want)
 
@@ -230,6 +305,7 @@ def check(out_dir: Path) -> int:
         want = {m["subject"] for m in truth if m["due"] and lo <= m["due"] <= hi}
         got = _subjects_from(a, by_path, kinds=("email",))  # Canvas rows (kind="canvas") may be extra
         got -= {m["subject"] for m in truth if m["key"] in MEETING_KEYS}  # a meeting time filed as a deadline is fine
+        got -= optional  # extra demo mail may add due rows
         record("due", q, a.route == "due" and got == want, a, sorted(want) or "nothing due")
 
     for d in sorted({m["due"] for m in truth if m["due"]}):
@@ -274,11 +350,13 @@ def check(out_dir: Path) -> int:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="scripts/make_test_mail.py")
+    ap = argparse.ArgumentParser(prog="scripts/demo/make_test_mail.py")
     ap.add_argument("mode", choices=("write", "check"))
     ap.add_argument("out_dir", type=Path)
     ap.add_argument("--today", type=date.fromisoformat, default=None,
                     help="the day the mail is built and checked for (default 2026-11-14)")
+    ap.add_argument("--extra", action="store_true",
+                    help="write: also the optional demo emails (d01-d07), marked optional in truth.json")
     ap.add_argument("--offline", action="store_true",
                     help="block the network for this process (localhost stays open for Bonsai)")
     args = ap.parse_args(argv)
@@ -289,7 +367,7 @@ def main(argv=None) -> int:
         from reason.live_check import block_network
         block_network()
     if args.mode == "write":
-        write(args.out_dir)
+        write(args.out_dir, args.extra)
         return 0
     return check(args.out_dir)
 

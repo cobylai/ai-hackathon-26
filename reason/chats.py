@@ -1,6 +1,6 @@
 """Saved chats: one JSON file per conversation, on this Mac, outside the repo.
 
-    folder()            $FLUX_CHATS_DIR, else "<bank dir>-chats" (~/flux-demo-bank-chats),
+    folder()            $FLUX_CHATS_DIR, else "<bank dir>-chats" (~/flux-bank-chats),
                         else ~/flux-chats when the bank sits inside the repo
     save(session)       writes <id>.json (atomically); a chat with no turns is not written
     load(id)            -> Session, follow-ups go on from where it left off

@@ -122,7 +122,8 @@ class Errors(Base):
 
 class Modes(unittest.TestCase):
     def test_default_is_demo_and_uses_osascript_not_eventkit(self):
-        with mock.patch.dict(os.environ, {}, clear=False):
+        # demo mode names the calendar (bank/mode.py); live mode names yours, so pin the mode here
+        with mock.patch.dict(os.environ, {"FLUX_MODE": "demo"}, clear=False):
             os.environ.pop("FLUX_CALENDARS", None)
             self.assertFalse(applecal.read_all())
             self.assertEqual(applecal.source_label(), "Flux demo")

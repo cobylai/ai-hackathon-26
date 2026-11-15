@@ -73,6 +73,7 @@ class Answers(unittest.TestCase):
                    _online=lambda: self.fail("no network check"))
         return a, cal
 
+    @mock.patch.dict("os.environ", {"FLUX_MODE": "demo", "FLUX_CALENDAR": ""})
     def test_tomorrow(self):
         a, cal = self.ask("what's on my calendar tomorrow")
         self.assertEqual(a.route, "calendar")
@@ -132,8 +133,10 @@ class RealCalendars(unittest.TestCase):
            {"title": "Dinner", "start": datetime(2026, 11, 16, 18, 0), "end": datetime(2026, 11, 16, 19, 0),
             "location": "", "all_day": False, "calendar": "Home"}]
 
-    def ask(self, mode):
+    def ask(self, mode, flux_mode=None):
         env = {"FLUX_CALENDARS": mode}
+        if flux_mode:  # the calendar's name comes from the mode (bank/mode.py); live has none by default
+            env["FLUX_MODE"] = flux_mode
         with mock.patch.dict("os.environ", env):
             return __import__("reason.answer", fromlist=["x"])._calendar("what do I have Monday", SAT, NOW, FakeCal(self.EVS))
 
@@ -144,5 +147,5 @@ class RealCalendars(unittest.TestCase):
         self.assertIn("Source: Apple Calendar (Home, Work)", a.text)
 
     def test_demo_mode_source_line_unchanged(self):
-        a = self.ask("demo")
+        a = self.ask("demo", flux_mode="demo")
         self.assertIn("Source: Apple Calendar (Flux demo)", a.text)

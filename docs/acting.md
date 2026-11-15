@@ -77,6 +77,6 @@ All wording, the trigger patterns and the draft prompt live in `playbooks/act.md
 - The only writes are one event or one reminder, into "Flux demo".
 - `sandbox-exec` breaks Calendar and Reminders scripting (-10004), so the offline check is the in-process network block or a real Wi-Fi-off run.
 
-**Demo data:** `scripts/make_test_mail.py` m21 (Milo: band practice Thu Nov 19 7pm, free), m22 (Greta: book club Wed Nov 18 2pm), m23 (Ivy: "sometime soon", no time). The "Flux demo" calendar has "Lab" Wed Nov 18 1:30–3:30pm, which clashes with m22.
+**Demo data:** `scripts/demo/make_test_mail.py` m21 (Milo: band practice Thu Nov 19 7pm, free), m22 (Greta: book club Wed Nov 18 2pm), m23 (Ivy: "sometime soon", no time). The "Flux demo" calendar has "Lab" Wed Nov 18 1:30–3:30pm, which clashes with m22.
 
 Tests: `reason/tests/test_computer.py`, with Mail, Calendar and Reminders mocked, including the injection test.

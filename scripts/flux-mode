@@ -1,0 +1,30 @@
+#!/bin/sh
+# Switch Flux between the staged demo and your own data. Never copies data between them.
+#   scripts/flux-mode demo   -> ~/flux-demo-bank, the "Flux demo" calendar and Reminders list
+#   scripts/flux-mode live [--calendar "Home"]
+#                            -> ~/flux-bank, your one calendar (named once, kept in ~/.flux/calendar),
+#                               your default Reminders list
+#   scripts/flux-mode        -> print the current mode
+# The setting is the file ~/.flux/mode (FLUX_MODE in the environment overrides it).
+# Relaunch Flux (or restart `python -m reason.web`) after switching.
+cd "$(dirname "$0")/.." || exit 1
+case "$1" in
+  demo|live)
+    CAL=""; [ "$2" = "--calendar" ] && CAL="$3"
+    FLUX_SET_CAL="$CAL" exec uv run --quiet python -c "
+import os
+from bank import mode, store
+p = mode.set_mode('$1')
+if os.environ.get('FLUX_SET_CAL'):
+    mode.set_calendar(os.environ['FLUX_SET_CAL'])
+print(f'Flux is in {mode.current()} mode ({mode.label()}): bank {store.bank_dir()}, '
+      f'calendar {mode.calendar() or \"none chosen yet (add --calendar NAME)\"}, reminders {mode.reminders() or \"your default list\"}.')
+print('Saved in', p, '- relaunch Flux to use it.')
+" ;;
+  "")
+    exec uv run --quiet python -c "
+from bank import mode, store
+print(f'{mode.current()} ({mode.label()}): bank {store.bank_dir()}')
+" ;;
+  *) echo "usage: scripts/flux-mode [demo|live]" >&2; exit 2 ;;
+esac

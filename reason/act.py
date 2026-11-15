@@ -12,6 +12,7 @@ path anywhere). Drafts are saved only when the signed-in Gmail is TEST_ACCOUNT.
 """
 from __future__ import annotations
 
+import os
 import re
 import time
 from dataclasses import dataclass
@@ -24,7 +25,8 @@ import bank
 from . import playbook
 from .playbook import say
 
-TEST_ACCOUNT = "ilovelocalai@gmail.com"
+# The one mail account Flux may draft in or open mail from: FLUX_ACCOUNT, else the test account.
+TEST_ACCOUNT = os.environ.get("FLUX_ACCOUNT") or "ilovelocalai@gmail.com"
 TTL = 180.0  # seconds a held action waits for its yes
 
 # Only these, and the harness policy (allow_apps / block_apps) still decides on the yes.
@@ -379,7 +381,17 @@ def _hold_event(e: dict, target: str, today: date, deps: dict):
         when += "–" + computer.when_text(ev["end"]).split(" ")[-1]
     return _hold("add_event", lambda: deps["add_event"](ev),
                  say("schedule", "event_preview", title=ev["title"], when=when, where=where,
-                     calendar=applecal.calendar_name()))
+                     calendar=_write_calendar()))
+
+
+def _write_calendar() -> str:
+    """The calendar an added event goes into, by name (live mode: the first writable one)."""
+    import applecal
+    from applecal import write
+    try:
+        return write.target_calendar()
+    except applecal.CalendarError:
+        return applecal.calendar_name()
 
 
 def _plan_reminder(target: str, when: str, today: date, root, session, deps: dict):
@@ -409,7 +421,7 @@ def do_add_event(ev: dict) -> str:
     from . import computer
     import applecal
     computer.add_event(ev)
-    return say("schedule", "event_added", title=ev["title"], calendar=applecal.calendar_name())
+    return say("schedule", "event_added", title=ev["title"], calendar=_write_calendar())
 
 
 def do_add_reminder(r: dict) -> str:
@@ -421,7 +433,7 @@ def do_add_reminder(r: dict) -> str:
         if "-609" in str(e) or "Connection is invalid" in str(e):
             return say("schedule", "reminders_closed")
         raise
-    return say("schedule", "reminder_added", name=r["name"], list=write.REMINDER_LIST)
+    return say("schedule", "reminder_added", name=r["name"], list=write.reminder_list())
 
 
 def _plan_setup(target: str, today: date, root, deps: dict):

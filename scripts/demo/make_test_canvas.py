@@ -1,9 +1,9 @@
 """Fake Canvas pages from three real saved Canvas pages (mock Canvas, piece 2).
 
-    uv run python scripts/make_test_canvas.py [--templates data/canvas-templates]
+    uv run python scripts/demo/make_test_canvas.py [--templates data/canvas-templates]
                                               [--out data/test-canvas] [--today YYYY-MM-DD]
 
-The templates come from scripts/save_canvas_pages.py (gitignored, under data/):
+The templates come from scripts/demo/save_canvas_pages.py (gitignored, under data/):
 dashboard.html, assignments.html (one course's list) and assignment.html.
 Each output page keeps Canvas's real markup (the classes and data-testids
 canvas/read.py looks for) with every course, title, date, link and
@@ -34,7 +34,7 @@ from zoneinfo import ZoneInfo
 
 import lxml.html
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 TZ = ZoneInfo("America/New_York")
 TODAY = date(2026, 11, 14)
@@ -75,6 +75,11 @@ COURSES = [
         ("Final Project Pitch", "Upload a three-slide pitch for your final project."),
     ]),
 ]
+# (course slug, title, description, due weekday): extra items for the demo video.
+EXTRA = [
+    ("chem1583", "Lab Report 3", "Write up the yeast and gas lab with the lab report template. "
+     "Cite at least three sources and upload one PDF.", 3),
+]
 # Due day offsets from today (24 slots, shuffled with the seed) and due times.
 OFFSETS = [-3, -2, -1, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 TIMES = [time(23, 59), time(17, 0), time(9, 0), time(12, 0), time(23, 59), time(13, 30)]
@@ -101,6 +106,17 @@ def build(today: date = None) -> list[dict]:
                         "course_id": 70001 + ci, "id": 50001 + k, "title": title,
                         "description": desc, "due": due})
             k += 1
+    # Demo item (brief DEMO): the lab report the video's "set me up" opens, due the first
+    # Thursday at least two days out, 11:59pm. Added after the 24 so their dates don't move.
+    for course_slug, title, desc, wd in EXTRA:
+        c = next(i for i, x in enumerate(COURSES) if x[2] == course_slug)
+        code, name = COURSES[c][0], COURSES[c][1]
+        d = today + timedelta(days=2)
+        d += timedelta(days=(wd - d.weekday()) % 7)
+        out.append({"course": f"{code} {name}", "code": code, "slug": course_slug,
+                    "course_id": 70001 + c, "id": 50001 + k, "title": title, "description": desc,
+                    "due": datetime.combine(d, time(23, 59), TZ)})
+        k += 1
     return out
 
 
@@ -340,7 +356,7 @@ def check_clean(name: str, page: str, real: set[str], ids: set[str]) -> None:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="scripts/make_test_canvas.py")
+    ap = argparse.ArgumentParser(prog="scripts/demo/make_test_canvas.py")
     ap.add_argument("--templates", type=Path, default=ROOT / "data" / "canvas-templates")
     ap.add_argument("--out", type=Path, default=ROOT / "data" / "test-canvas")
     ap.add_argument("--today", help=f"YYYY-MM-DD the coursework is built for (default {TODAY})")

@@ -58,7 +58,7 @@ Automation prompt for your terminal app; click Allow.
 (`make_test_mail.py write ... --today <today>`, then `bank.load`).
 
 **Canvas:** the generator needs saved Canvas pages as templates
-(`scripts/save_canvas_pages.py <your canvas url>`, which saves them under `data/`,
+(`scripts/demo/save_canvas_pages.py <your canvas url>`, which saves them under `data/`,
 gitignored). This is optional. If you skip it, test Canvas through the unit
 tests only.
 

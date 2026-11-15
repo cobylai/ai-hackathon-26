@@ -9,10 +9,10 @@ coursework, and a reader files the fake assignments into the bank. The due route
 
 | File | What it does |
 |---|---|
-| `scripts/save_canvas_pages.py <canvas url>` | Opens a visible Chromium on a scratch profile (`data/canvas-profile`) and waits up to 5 minutes while you sign in (Duo push or passcode; Touch ID doesn't work there). It then saves `dashboard.html`, one course's `assignments.html` and one `assignment.html` to `data/canvas-templates/`. These hold real data: gitignored, never committed. |
-| `scripts/make_test_canvas.py [--templates DIR] [--out DIR] [--today YYYY-MM-DD]` | Builds 24 assignments across 4 made-up courses (fixed list, seed 13). Due dates run from today-3 to today+14, and `--today` moves them. It writes them into copies of the real markup, then writes `dashboard.html`, `<course>/assignments.html`, `<course>/<id>.html` and `truth.json`. It drops scripts, styles, frames and images. It first collects the templates' real course names, assignment titles, user name, Canvas host and ids. It stops, writing nothing, if any of them (or any email address) is left in a page. |
+| `scripts/demo/save_canvas_pages.py <canvas url>` | Opens a visible Chromium on a scratch profile (`data/canvas-profile`) and waits up to 5 minutes while you sign in (Duo push or passcode; Touch ID doesn't work there). It then saves `dashboard.html`, one course's `assignments.html` and one `assignment.html` to `data/canvas-templates/`. These hold real data: gitignored, never committed. |
+| `scripts/demo/make_test_canvas.py [--templates DIR] [--out DIR] [--today YYYY-MM-DD]` | Builds 25 assignments across 4 made-up courses (24 from a fixed list, seed 13, plus the demo's Lab Report 3 due the first Thursday at least two days out). Due dates run from today-3 to today+14, and `--today` moves them. It writes them into copies of the real markup, then writes `dashboard.html`, `<course>/assignments.html`, `<course>/<id>.html` and `truth.json`. It drops scripts, styles, frames and images. It first collects the templates' real course names, assignment titles, user name, Canvas host and ids. It stops, writing nothing, if any of them (or any email address) is left in a page. |
 | `canvas/read.py` | lxml reader for those pages (real Canvas classes and data-testids). `read_assignment_list`, `read_assignment`, `read_dashboard` -> course, title, due date/time (local, `$FLUX_TZ`, default America/New_York), `file://` link, description. Offline, no browser, no model. |
-| `scripts/sync_test_canvas.py [DIR]` | Reads every course list and assignment page and files each assignment with `bank.ingest(kind="canvas", sender_name=course, subject=title, source=link, sent_date=truth's today, deadlines=[due date from the page])`. Bonsai writes only the summary and ask. It then checks course, title, due date/time and link against `truth.json`. It refuses any bank folder without "test" or "demo" in its name. |
+| `scripts/demo/sync_test_canvas.py [DIR]` | Reads every course list and assignment page and files each assignment with `bank.ingest(kind="canvas", sender_name=course, subject=title, source=link, sent_date=truth's today, deadlines=[due date from the page])`. Bonsai writes only the summary and ask. It then checks course, title, due date/time and link against `truth.json`. It refuses any bank folder without "test" or "demo" in its name. |
 
 Bank side: `bank.ingest` takes `kind="canvas"` and a `deadlines=` argument that replaces the model's deadlines.
 Both are additive (see `docs/INTERFACES.md` §5).
@@ -23,7 +23,7 @@ The saved templates are in `~/flux-demo-canvas-templates/` (outside every checko
 The pages go to `~/flux-demo-canvas/`, which is where the bank's `file://` links point.
 
 ```bash
-DAY=2026-11-15; uv run python scripts/make_test_canvas.py --today $DAY --templates ~/flux-demo-canvas-templates --out ~/flux-demo-canvas && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/sync_test_canvas.py ~/flux-demo-canvas
+DAY=2026-11-15; uv run python scripts/demo/make_test_canvas.py --today $DAY --templates ~/flux-demo-canvas-templates --out ~/flux-demo-canvas && FLUX_BANK_DIR=~/flux-demo-bank uv run python scripts/demo/sync_test_canvas.py ~/flux-demo-canvas
 ```
 
 Run it after the mail regeneration in `docs/integration.md`, which starts with `rm -rf ~/flux-demo-bank`.

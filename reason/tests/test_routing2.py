@@ -30,6 +30,7 @@ def no_web(*a, **k):
 @mock.patch("llm.client.complete", no_model)
 @mock.patch("llm.client.chat", no_model)
 @mock.patch("reason.answer._web", no_web)
+@mock.patch("applecal.events", lambda *a, **k: [])  # never this Mac's real calendars
 class Problem8(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -50,10 +51,11 @@ class Problem8(unittest.TestCase):
         for q, want in (("Hey, can you hear me okay? Hope you're doing well.", "I can hear you"),
                         ("Hi", "Hi."), ("hello flux", "Hi."), ("Is this working?", "I can hear you"),
                         ("Thanks so much!", "You're welcome."), ("testing testing", "I can hear you"),
-                        ("Who are you?", "I'm Flux"), ("What can you do?", "I'm Flux"), ("who made you", "I'm Flux")):
+                        ("Who are you?", "I'm Flux"), ("What are you?", "I'm Flux"), ("who made you", "I'm Flux")):
             a = self.ask(q)
             self.assertEqual(a.route, "chat", q)
             self.assertTrue(a.text.startswith(want), q)
+        self.assertEqual(self.ask("What can you do?").route, "about")  # the overview (playbooks/about.md)
 
     def test_a_question_about_my_week_is_a_catch_up_not_a_web_search(self):
         for q in ("What does this week look like?", "how does my week look", "What's my week?", "what does tomorrow look like"):

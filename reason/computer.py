@@ -12,13 +12,15 @@ block list and STOP file.
 """
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from datetime import date, datetime, time, timedelta
 
 from bank import dates
 
-TEST_ACCOUNT = "ilovelocalai@gmail.com"
+# The one mail account Flux may draft in or open mail from: FLUX_ACCOUNT, else the test account.
+TEST_ACCOUNT = os.environ.get("FLUX_ACCOUNT") or "ilovelocalai@gmail.com"
 MEETING_MINUTES = 60
 REMIND_HOUR = 9
 

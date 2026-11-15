@@ -1,12 +1,12 @@
 """Fake Gmail thread pages from one real saved thread page (brief N).
 
-    uv run python scripts/make_test_threads.py N [--template data/templates/thread.html]
+    uv run python scripts/demo/make_test_threads.py N [--template data/templates/thread.html]
                                                  [--out data/test-threads]
 
 The template is a single-message thread page saved from the test account
 (gitignored, under data/). Each output page keeps Gmail's real message markup
 (the classes the partner's reader looks for) but has the sender name, address,
-date, subject and body replaced with one email from scripts/make_test_mail.py
+date, subject and body replaced with one email from scripts/demo/make_test_mail.py
 (same senders, text and fixed seed as brief M). Gmail's scripts are dropped, so
 the page opens offline as a local file. Also writes truth.json (brief M's shape).
 The template's own sender is read from the page and scrubbed everywhere, so
@@ -26,14 +26,14 @@ from pathlib import Path
 
 import lxml.html
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _cls(name: str) -> str:
     return f"contains(concat(' ', normalize-space(@class), ' '), ' {name} ')"
 
 
-def load_generator(path: Path = ROOT / "scripts" / "make_test_mail.py"):
+def load_generator(path: Path = ROOT / "scripts" / "demo" / "make_test_mail.py"):
     spec = importlib.util.spec_from_file_location("make_test_mail", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -106,19 +106,21 @@ def render(msg_tpl, real: set[str], m: dict) -> str:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="scripts/make_test_threads.py")
+    ap = argparse.ArgumentParser(prog="scripts/demo/make_test_threads.py")
     ap.add_argument("n", type=int)
     ap.add_argument("--template", type=Path, default=ROOT / "data" / "templates" / "thread.html")
     ap.add_argument("--out", type=Path, default=ROOT / "data" / "test-threads")
-    ap.add_argument("--generator", type=Path, default=ROOT / "scripts" / "make_test_mail.py")
+    ap.add_argument("--generator", type=Path, default=ROOT / "scripts" / "demo" / "make_test_mail.py")
     ap.add_argument("--today", help="YYYY-MM-DD the mail is built for (generator default 2026-11-14)")
+    ap.add_argument("--extra", action="store_true",
+                    help="also the optional demo emails (make_test_mail.build(extra=True))")
     a = ap.parse_args(argv)
 
     gen = load_generator(a.generator)
     if a.today:
         from datetime import date
         gen.TODAY = date.fromisoformat(a.today)
-    mails = [parse_mail(m) for m in gen.build()]
+    mails = [parse_mail(m) for m in (gen.build(extra=True) if a.extra else gen.build())]
     if a.n > len(mails):
         print(f"make_test_mail.py builds {len(mails)} emails; writing {len(mails)}, not {a.n}")
     mails = mails[: a.n]

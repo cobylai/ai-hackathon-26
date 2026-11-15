@@ -13,6 +13,7 @@ Thursday" event in place still sees the expected answers; --live-calendar reads 
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import tempfile
 from datetime import date, datetime
@@ -39,7 +40,13 @@ def fixture_events(day_start: date, day_end: date) -> list[dict]:
 
 
 def run(today: date, only: str | None = None, events_fn=fixture_events) -> tuple[int, int]:
-    from bank import store
+    # The check is a demo scenario: the demo bank and the fixed demo calendar fixture below, whose
+    # examples name the "Flux demo" calendar. Live is the default when this Mac has no ~/.flux/mode
+    # yet (bank/mode.py), and live names no calendar until one is chosen, so read as demo unless a
+    # mode was chosen on purpose (FLUX_MODE or the file).
+    from bank import mode, store
+    if not os.environ.get("FLUX_MODE") and not mode.mode_file().exists():
+        os.environ["FLUX_MODE"] = "demo"
     from .answer import answer
     from .session import Session
 

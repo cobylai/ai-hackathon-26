@@ -9,12 +9,14 @@ Reads (the page, /status, /bank, /chats) are served in parallel, so a slow web s
 does not freeze the window. See finding 18 in docs/test-results/antranig-full.md.
 
     GET  /        the page
-    GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None, "model": bool, "send": bool}
+    GET  /status  {"online": bool, "items": int, "voice": bool, "voice_why": str | None, "model": bool,
+                   "send": bool, "mode": "demo" | "live", "mode_label": "Demo data" | "Your data"}
     GET  /bank    [{"date", "sender", "subject", "summary", "ask", "deadlines", "folder", "id"}], newest first
     POST /ask     {"question": str, "speak": bool} -> {"text", "route", "sources", "seconds", "pending"}
                   speak: read the answer aloud with the Mac's `say` (the Speak switch in the bar)
                   pending: an action is held for a yes; the page shows Yes / Cancel
-                  choices: [[label, word]] when a discovery question is held; the page shows
+                  choices: [[label, word]] when a discovery question is held, or the tour's buttons
+                  (reason/tour.py: overview examples, Next / Back / Stop); the page shows
                   those buttons instead (Yes / No / Skip / Stop), each reply as a new turn
                   suggestions: [{"id", "line", "button", "kind"}], at most 2 (playbooks/suggest.md)
                   draft: {"id", "to", "to_name", "subject", "body", "used", "kind"} for the draft box
@@ -44,6 +46,7 @@ Any /ask and /listen/start stop the spoken answer first, so talking cuts it off.
 """
 from __future__ import annotations
 
+from bank import mode as _mode
 import argparse
 import json
 import os
@@ -315,7 +318,7 @@ let sendOn = false;  // /status "send": FLUX_ALLOW_SEND=1 on the server; off by 
 const MIC = '<svg width="12" height="16" viewBox="0 0 12 16"><rect x="3.25" y=".75" width="5.5" height="9.5" rx="2.75" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1 7.5a5 5 0 0 0 10 0M6 12.5V15" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
 const CHEV = '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
 // From the playbooks' Examples tables (due.md, calendar.md, person.md).
-const EXAMPLES = ["What's due tomorrow?", "When is my next meeting?", "What did Felix ask me?"];
+const EXAMPLES = ["What's Flux?", "What's due tomorrow?", "When is my next meeting?", "What did everyone ask me?"];
 const ASK_YES = /^say or type yes/i;
 let rows = [], busy = false, recording = false, voiceOk = false, pending = null;
 
@@ -409,7 +412,7 @@ function confirmRow(t, what) {
   pending = { cancel: () => no.click() };
 }
 
-// Discovery: one button per answer; the reply (and the next question) is a new turn.
+// Discovery and the tour: one button per answer; the reply (and the next question) is a new turn.
 function choiceRow(t, choices) {
   const c = el('div', 'confirm');
   const choose = (word) => { if (busy) return; pending = null; c.remove(); ask(word, false); };
@@ -418,7 +421,9 @@ function choiceRow(t, choices) {
     b.onclick = () => choose(word); c.appendChild(b);
   });
   t.appendChild(c);
-  pending = { cancel: () => choose('stop'), row: c };
+  // Escape: "stop" where Stop is a choice (discovery, the tour); else it just puts the buttons away.
+  const stops = choices.some(([, w]) => w === 'stop');
+  pending = { cancel: stops ? () => choose('stop') : () => { pending = null; c.remove(); }, row: c };
 }
 
 function showAnswer(t, r) {
@@ -610,7 +615,7 @@ async function refresh() {
     const modelOk = r.model !== false;  // Bonsai answers; online alone is just the internet
     statusEl.className = r.online && modelOk ? 'on' : '';
     statusEl.innerHTML = '<span class="dot"></span>';
-    statusEl.appendChild(document.createTextNode((r.online ? 'Online' : 'Offline') + ' · ' + r.items + (r.items === 1 ? ' item' : ' items') + ' in the bank' + (modelOk ? '' : ' · model down')));
+    statusEl.appendChild(document.createTextNode((r.mode_label ? r.mode_label + ' · ' : '') + (r.online ? 'Online' : 'Offline') + ' · ' + r.items + (r.items === 1 ? ' item' : ' items') + ' in the bank' + (modelOk ? '' : ' · model down')));
     statusEl.title = modelOk ? 'Show what is in the bank' : 'The Bonsai model server is not answering; start it with scripts/serve_bonsai.sh 4B';
     voiceOk = !!r.voice;
     sendOn = !!r.send;
@@ -997,7 +1002,8 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                 self._send(200, PAGE, "text/html; charset=utf-8")
             elif self.path == "/status":
                 self._json({"online": online_fn(), "items": count_fn(), "voice": talk is not None,
-                            "voice_why": voice_why, "model": model_fn(), "send": sendgate.enabled()})
+                            "voice_why": voice_why, "model": model_fn(), "send": sendgate.enabled(),
+                            "mode": _mode.current(), "mode_label": _mode.label()})
             elif self.path == "/sync/status":
                 self._json(last_sync)
             elif self.path == "/bank":
@@ -1068,7 +1074,7 @@ def make_handler(today=None, answer_fn=None, online_fn=None, count_fn=None, talk
                             "seconds": a.seconds,
                             "pending": held or (a.route in ("act", "agent") and act.waiting()),
                             "trace": agent.trace_lines(getattr(a, "trace", None) or []),
-                            "choices": DISCOVER_CHOICES if held else None,
+                            "choices": DISCOVER_CHOICES if held else getattr(a, "choices", None),
                             "suggestions": suggest.public(a.suggestions), "draft": a.draft,
                             "send": getattr(a, "send", None)})
             except Exception as e:  # show it in the window; keep serving
