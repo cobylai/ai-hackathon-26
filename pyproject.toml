@@ -13,6 +13,18 @@ dependencies = [
     "pytest",
 ]
 
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# `harness/browser/elements.py` reads `elements.js` at import time. Without this
+# the wheel ships only .py files and `import harness` fails once installed.
+[tool.setuptools.packages.find]
+include = ["harness*"]
+
+[tool.setuptools.package-data]
+"harness.browser" = ["*.js"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
