@@ -34,7 +34,8 @@ Keyboard focus goes back to the text field after every action, except while list
 ### Sizes
 
 - **Wider than 760 px:** the sidebar sits beside the conversation. The sidebar button hides it, and the window remembers that.
-- **760 px or narrower** (the ~640 pt hotkey panel): the sidebar slides over the conversation. The page background is transparent, so the panel's system material shows through.
+- **760 px or narrower** (the ~640 pt hotkey panel): the sidebar starts collapsed. When it's open, the bank covers the whole panel with a **Done** button, and Escape also closes it, so it never hides part of an answer or the input. Asking a question, or clicking a person, closes it. The page background is transparent, so the panel's system material shows through.
+- **480 px or narrower:** each table row puts its date above the item.
 - The conversation column is at most 680 px wide and centred at full screen.
 
 Colours follow the system's light and dark modes. The only accent is system blue, used for the Yes button, a selected bank item and the focus ring.
@@ -59,6 +60,10 @@ At the 640 pt panel size, light and dark (the before shots are from before the r
 | before | ![](window/before-panel-light.png) | ![](window/before-panel-dark.png) |
 | after | ![](window/after-panel-light.png) | ![](window/after-panel-dark.png) |
 | after, empty | ![](window/after-panel-empty-light.png) | ![](window/after-panel-empty-dark.png) |
+| after, long due list | ![](window/after-panel-list-light.png) | ![](window/after-panel-list-dark.png) |
+| after, bank open | ![](window/after-panel-bank-light.png) | ![](window/after-panel-bank-dark.png) |
+
+At 420 px, rows stack: ![](window/after-narrow-light.png)
 
 Full width, with the bank sidebar:
 
