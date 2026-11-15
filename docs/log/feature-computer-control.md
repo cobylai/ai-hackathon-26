@@ -112,3 +112,8 @@
 - Kept the branch current with browser-core's CLI/error-path tests. Conflict: tests/test_state.py, union of both sides' new tests (same as before).
 - Dropped their committed .coverage artifact from the merge and gitignored it; flagged for the browser teammate to remove on their branch.
 - Full suite after merge: 335 passed / 4 skipped.
+
+## browser-core B7 + coverage cleanup merged in (2026-11-15)
+- Picked up 0caba4a (B7: only web URLs reach the browser) and a4a7932 (teammate removed .coverage themselves).
+- .gitignore conflict resolved as a union (one coverage section: .coverage + htmlcov/).
+- Post-merge suite: first run 1 flaky failure under fleet load (name not captured), immediate full re-run green: 338 passed / 4 skipped.
