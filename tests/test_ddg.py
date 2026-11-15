@@ -195,9 +195,11 @@ def test_walled_ddg_fallback_is_reported_as_blocked():
     assert engine.last_status == "BLOCKED"
     # Both engines failed, so nothing is remembered: the next query tries Google again.
     assert not engine.in_fallback()
-    assert len(page_.visited) == 2
+    # Bing is tried last (integration); its empty page keeps DDG's BLOCKED word.
+    assert len(page_.visited) == 3
+    assert "bing.com/search" in page_.visited[2]
     engine.search("python", page=page_)
-    assert "google.com/search" in page_.visited[2]
+    assert "google.com/search" in page_.visited[3]
 
 
 def test_fallback_is_dropped_when_ddg_stops_working():
