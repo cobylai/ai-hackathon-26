@@ -1,6 +1,7 @@
 """Routing in code: which route a question takes, and the date range for due questions.
 
 Pure functions, no model, no network, no bank reads (the sender list is passed in).
+Trigger words come from playbooks/<route>.md (reason/playbook.py).
 """
 from __future__ import annotations
 
@@ -9,11 +10,12 @@ from datetime import date, timedelta
 
 from bank.dates import resolve_date
 
+from . import playbook
+
 WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 _WD = {d: i for i, d in enumerate(WEEKDAYS)}
 _WD_RE = r"(" + "|".join(WEEKDAYS) + r")"
 
-_DUE = re.compile(r"\b(due|deadlines?)\b", re.I)
 
 # Title words and automated-sender words never count as a person's name.
 TITLES = set("prof professor dr mr mrs ms mx sir dean".split())
@@ -32,7 +34,7 @@ _WORD = re.compile(r"[A-Za-z][A-Za-z'\-]*")
 
 
 def is_due(question: str) -> bool:
-    return bool(_DUE.search(question or ""))
+    return bool(playbook.trigger("due", "due").search(question or ""))
 
 
 def _monday(d: date) -> date:
@@ -76,11 +78,6 @@ def due_range(question: str, today: date) -> tuple[date, date, str]:
     return today, today + timedelta(days=6), "in the next 7 days"
 
 
-_CAL = re.compile(r"\b(calendar|schedule)\b"
-                  r"|\b(?:my|any) (?:next |upcoming |first )?(?:meetings?|events?|appointments?)\b"
-                  r"|\bwhat do i have\b|\bwhat am i doing\b|\bam i (?:busy|free)\b", re.I)
-_NEXT_EVENT = re.compile(r"\b(next|upcoming)\s+(meeting|event|appointment|thing)s?\b"
-                         r"|\bwhen is my next\b", re.I)
 
 
 def is_calendar(question: str) -> bool:
@@ -88,12 +85,13 @@ def is_calendar(question: str) -> bool:
     'what do I have this week'. Checked after due and before person. 'What did <name>
     say about the meeting' stays a person question."""
     q = question or ""
-    return bool(_CAL.search(q) or _NEXT_EVENT.search(q)) and not asked_name(q)
+    return bool(playbook.trigger("calendar", "calendar").search(q)
+                or playbook.trigger("calendar", "next_event").search(q)) and not asked_name(q)
 
 
 def is_next_event(question: str) -> bool:
     """'When is my next meeting' / 'next event': the first upcoming event."""
-    return bool(_NEXT_EVENT.search(question or ""))
+    return bool(playbook.trigger("calendar", "next_event").search(question or ""))
 
 
 def _day(d: date) -> str:
@@ -110,22 +108,17 @@ def name_words(sender_name: str | None, sender_address: str | None) -> set[str]:
     return {w.lower() for w in words if len(w) >= 3 and w.lower() not in TITLES}
 
 
-_ASKED = re.compile(r"\bwhat\s+(?:did|has|does|do)\s+([A-Za-z][A-Za-z'\-]*)\s+(?:ever\s+|just\s+)?"
-                    r"(?:ask|asked|say|said|send|sent|want|wanted)\b", re.I)
 _PRONOUNS = set("i you he she they we it someone anyone everyone people that this".split())
-
-
-_ASK_VERB = re.compile(r"\b(ask|asks|asked|asking|want|wants|wanted|need|needs|needed)\b", re.I)
 
 
 def is_ask_question(question: str) -> bool:
     """'What did Emily ask / want / need': answered as a code-written list of asks."""
-    return bool(_ASK_VERB.search(question or ""))
+    return bool(playbook.trigger("person", "ask").search(question or ""))
 
 
 def asked_name(question: str) -> str | None:
     """The name in "what did <name> ask/say/send/want", or None (pronouns don't count)."""
-    m = _ASKED.search(question or "")
+    m = playbook.trigger("person", "asked_name").search(question or "")
     if not m:
         return None
     name = re.sub(r"'s$|'$", "", m.group(1))

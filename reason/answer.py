@@ -18,24 +18,20 @@ from pathlib import Path
 import bank
 from bank import store
 
-from . import route
+from . import playbook, route
+from .playbook import say
 
-OFFLINE_TEXT = "I don't have that saved, and the Mac is offline, so I can't look it up."
+OFFLINE_TEXT = say("web", "offline")
 PERSON_LIMIT = 8
 SEARCH_LIMIT = 5
 GATHER_SECONDS = 60
 
-PERSON_SYSTEM = ("You answer a student's questions using only the email notes you are given. "
-                 "You never use outside knowledge and never guess.")
-PERSON_PROMPT = """Today is {today}.
-
-QUESTION: {question}
-
-EMAIL NOTES FROM {who}:
-{notes}
-
-Answer the question in one to three sentences using only these notes. If the notes do not answer it, say that the saved emails from {who} don't say. List the numbers of the notes you used."""
-PERSON_HINT = '{"answer": "your answer", "used": [1]}'
+# Wording and prompts come from playbooks/<route>.md. STEPS is how many numbered steps
+# each playbook lists; the code below runs them in that order (a test checks the count).
+STEPS = {"due": 5, "calendar": 4, "person": 4, "bank": 4, "web": 5}
+PERSON_SYSTEM = playbook.prompt("person", "person_system")
+PERSON_PROMPT = playbook.prompt("person", "person_prompt")
+PERSON_HINT = playbook.prompt("person", "person_hint")
 
 
 @dataclass
@@ -74,7 +70,7 @@ def source_label(e: dict) -> str:
 
 def _with_source(text: str, entries: list[dict]) -> str:
     labels = list(dict.fromkeys(source_label(e) for e in entries))
-    return f"{text.strip()}\nSource: {'; '.join(labels)}" if labels else text.strip()
+    return f"{text.strip()}\n{say('RULES', 'source', labels='; '.join(labels))}" if labels else text.strip()
 
 
 def note_block(i: int, e: dict) -> str:
@@ -101,18 +97,20 @@ def note_block(i: int, e: dict) -> str:
 def _due(question: str, today: date, root) -> Answer:
     start, end, label = route.due_range(question, today)
     rows = bank.due(start, end, root=root)
-    head = f"Due {label}" if start == end else (
-        f"Due {label} ({_short_date(start.isoformat())} to {_short_date(end.isoformat())})")
+    head = say("due", "head_day", label=label) if start == end else say(
+        "due", "head_range", label=label, start=_short_date(start.isoformat()),
+        end=_short_date(end.isoformat()))
     if not rows:
-        return Answer(f"Nothing due {label} in your saved mail.", "due")
-    lines = [head + ":"]
+        return Answer(say("due", "nothing_due", label=label), "due")
+    lines = [head]
     for r in rows:
         e = r["entry"]
         what = (e.get("ask") or e.get("body") or e.get("subject") or "").strip().rstrip(".")
         when = route._day(date.fromisoformat(r["date"])) if start != end else ""
         t = _time(r.get("time"))
         stamp = " ".join(x for x in (when, t) if x)
-        lines.append(f"- {stamp + '  ' if stamp else ''}{what} ({source_label(e)})")
+        lines.append(say("due", "row", when=stamp + "  " if stamp else "", what=what,
+                         source=source_label(e)))
         summary = (e.get("body") or "").strip()
         if summary and summary.rstrip(".") != what:  # the summary carries amounts etc.
             lines.append(f"    {summary}")
@@ -132,31 +130,32 @@ def _event_line(e: dict, with_day: bool) -> str:
         if e.get("end") and e["end"] > e["start"]:
             when += "\u2013" + _time(f"{e['end']:%H:%M}")
     where = f" ({e['location']})" if e.get("location") else ""
-    return f"- {' '.join(x for x in (day, when) if x)}  {e.get('title') or '(no title)'}{where}"
+    return say("calendar", "row", when=" ".join(x for x in (day, when) if x),
+               title=e.get("title") or "(no title)", where=where)
 
 
 def _calendar(question: str, today: date, now: datetime, events_fn) -> Answer:
     """Apple Calendar events, listed by code. No model call."""
     import applecal
     events_fn = events_fn or applecal.events
-    src = f"Source: Apple Calendar ({applecal.calendar_name()})"
+    src = say("calendar", "source", calendar=applecal.calendar_name())
     try:
         if route.is_next_event(question):
             evs = [e for e in events_fn(today, today + timedelta(days=NEXT_EVENT_DAYS))
                    if (e["start"] >= now if not e.get("all_day") else e["start"].date() >= now.date())]
             if not evs:
-                return Answer(f"Nothing coming up on your calendar in the next {NEXT_EVENT_DAYS} days.\n{src}",
-                              "calendar")
-            return Answer(f"Your next event:\n{_event_line(evs[0], True)}\n{src}", "calendar")
+                return Answer(f"{say('calendar', 'none_next', days=NEXT_EVENT_DAYS)}\n{src}", "calendar")
+            return Answer(f"{say('calendar', 'next_head')}\n{_event_line(evs[0], True)}\n{src}", "calendar")
         start, end, label = route.due_range(question, today)
         evs = events_fn(start, end)
     except applecal.CalendarError as e:
-        return Answer(f"I couldn't read Apple Calendar ({e}).", "calendar")
+        return Answer(say("calendar", "error", error=e), "calendar")
     if not evs:
-        return Answer(f"Nothing on your calendar {label}.\n{src}", "calendar")
-    head = (f"On your calendar {label}" if start == end else
-            f"On your calendar {label} ({_short_date(start.isoformat())} to {_short_date(end.isoformat())})")
-    lines = [head + ":"] + [_event_line(e, start != end) for e in evs]
+        return Answer(f"{say('calendar', 'nothing', label=label)}\n{src}", "calendar")
+    head = (say("calendar", "head_day", label=label) if start == end else
+            say("calendar", "head_range", label=label, start=_short_date(start.isoformat()),
+                end=_short_date(end.isoformat())))
+    lines = [head] + [_event_line(e, start != end) for e in evs]
     return Answer("\n".join(lines) + "\n" + src, "calendar")
 
 
@@ -180,14 +179,15 @@ def _person_asks(question: str, who: str, root) -> Answer:
     lines = []
     for e in entries:
         who_ = f"{e.get('sender_name') or e.get('sender_address')}, " if many else ""
-        head = f"- {who_}{_short_date(e.get('sent_date'))}  {e.get('subject') or '(no subject)'}: "
+        row = dict(who=who_, date=_short_date(e.get("sent_date")), subject=e.get("subject") or "(no subject)")
         ask = (e.get("ask") or "").strip()
         if ask:
-            lines.append(head + ask)
+            lines.append(say("person", "ask_row", ask=ask, **row))
         else:
-            lines.append(head + "no ask. " + (e.get("body") or "").strip())
+            lines.append(say("person", "no_ask_row", summary=(e.get("body") or "").strip(), **row))
     name = entries[0].get("sender_name") or who.title()
-    top = "From " + (" / ".join(dict.fromkeys(e.get("sender_name") or "" for e in entries)) if many else name) + ":"
+    top = say("person", "ask_head",
+              name=" / ".join(dict.fromkeys(e.get("sender_name") or "" for e in entries)) if many else name)
     return Answer(_with_source("\n".join([top] + lines), entries), "person", [e["path"] for e in entries])
 
 
@@ -215,7 +215,7 @@ def _person(question: str, who: str, today: date, root) -> Answer:
                 used.append(entries[k - 1])
     used = used or entries
     if not text:
-        text = f"The saved emails from {display} don't say."
+        text = say("person", "model_empty", name=display)
     return Answer(_with_source(text, used), "person", [e["path"] for e in used])
 
 
@@ -251,7 +251,7 @@ def _web(question: str, today: date, root, search_fn=None, open_fn=None, ingest_
     ingest_fn = ingest_fn or bank.ingest
     r = gather(question, search_fn, open_fn, today=today, max_seconds=GATHER_SECONDS)
     if not r.found or not r.source:
-        return Answer(r.message or "I couldn't find that on the web.", "not_found",
+        return Answer(r.message or say("web", "not_found"), "not_found",
                       list(r.opened))
     url = r.source.url
     ans = (r.answer or "").strip()
@@ -260,10 +260,10 @@ def _web(question: str, today: date, root, search_fn=None, open_fn=None, ingest_
     try:
         got = ingest_fn(saved_page(question, ans, quote, url), source=url, kind="page",
                         subject=f"{question} {ans}"[:200], root=root)
-        note = "Saved to your notes." if got.get("status") == "added" else "Already in your notes."
+        note = say("web", "saved") if got.get("status") == "added" else say("web", "already_saved")
     except Exception as ex:  # the answer still stands
-        note = f"(Could not save the page: {type(ex).__name__}.)"
-    return Answer(f"{text}\nSource: {url}\n{note}", "web", [url])
+        note = say("web", "save_failed", error=type(ex).__name__)
+    return Answer(f"{text}\n{say('RULES', 'source', labels=url)}\n{note}", "web", [url])
 
 
 def saved_page(question: str, ans: str, quote: str, url: str) -> str:
@@ -290,7 +290,7 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
     today = today or date.today()
     q = (question or "").strip()
     if not q:
-        return Answer("Ask me something.", "none", [], 0.0)
+        return Answer(say("RULES", "empty_question"), "none", [], 0.0)
 
     from . import act  # actions first: "draft a reply to Felix" names a sender
     if (a := act.handle(q, today, root)) is not None:
@@ -307,7 +307,7 @@ def answer(question: str, today: date | str | None = None, *, root: Path | None 
     elif (name := route.asked_name(q)):
         # Shaped like a person question but nobody by that name is a sender: stop here.
         # A wrong answer about a person is worse than none (thinker ruling).
-        a = Answer(f"I have nothing from {name[:1].upper() + name[1:]}.", "person")
+        a = Answer(say("person", "no_sender", name=name[:1].upper() + name[1:]), "person")
     else:
         a = _bank(q, today, root)
         if a is None:

@@ -41,6 +41,15 @@ MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.web [--today YYYY-MM-DD] 
 - If voice can't start (no key, no binary, mic denied), both front ends say "Voice is unavailable (<reason>)" and typing still works. The window's button stays disabled, and its tooltip gives the reason.
 - **Use easy names when speaking.** The person route needs the spoken name to come back spelled like the sender's name. Whisper heard "Coby" as "Kobe". Names that worked in the demo checks: Felix, Hugo, Ivy, Jonah, Greta, Omar, Lena, Milo. Avoid Nina (two senders), Tess, Kiri and Rafe.
 
+## Playbooks (how each route answers, in markdown)
+
+`playbooks/` holds one file per route plus `RULES.md` (the rules for every route, the shared wording, the file layout and the keep rule). Each file has the same sections: For, Triggers, Steps, May look, May not look, Wording, Not found, Never, Prompt, Examples.
+
+- Code reads the Triggers patterns, the Wording and Not found lines, and the Prompt blocks (`reason/playbook.py`). Edit a file and restart Muse to change how a route answers. Code keeps no second copy of the wording.
+- The steps' order is code. `STEPS` in `reason/answer.py` must match each file's numbered steps (`reason/tests/test_playbooks.py`).
+- The bank/web judge and rephrase prompts live in `sufficiency/prompts.py`; `bank.md` and `web.md` hold copies, and a test fails if they drift.
+- Checker: `MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check` runs every Examples table on a temporary copy of the bank with the network blocked. 14/14 on 2026-11-15. Brief M's check gave the same output line for line before and after the move (37/38).
+
 ## Routes, checked in this order
 
 1. **Due.** The question contains the word `due`, `deadline` or `deadlines`. Code works out the date range, calls `bank.due`, and writes the list itself, with no model call. Each line carries its own source (sender, sent date), and the entry's one-line summary goes under it, indented, so details like a bill amount come along without a model call (thinker ruling).
@@ -123,7 +132,7 @@ The web seconds include gather (the partner's engine.search and open_page) and t
 uv run python -m unittest discover -s reason/tests -t .
 ```
 
-30 pass. They cover:
+52 pass (`test_playbooks.py` adds the playbook checks: sections, step counts, every wording key code uses and its placeholders, the sufficiency prompt copies). They cover:
 - every row of the date table, plus Sunday "this weekend"
 - the due words
 - person matching: capitals, lowercase, `'s`, "will it rain" and "Will it rain in Ithaca?" against a sender named Will, titles and automated senders

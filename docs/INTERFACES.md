@@ -194,6 +194,8 @@ answer(question, today=None) -> Answer
 - **Chat loop:** `python -m reason [--today YYYY-MM-DD]`. An empty line records voice; the next Enter stops it.
 - **Chat window:** `python -m reason.web [--today] [--port 8765]` serves one local page from the standard library, with no remote assets. It has a type box, hold-to-talk, a source line under each answer, and an "online/offline · N items in bank" label. Clicking the label lists the bank (`GET /bank`).
 - **Bank to use:** set `MUSE_BANK_DIR`. The demo uses `~/muse-demo-bank` (sample mail, see `docs/integration.md`).
+- **Playbooks** (`playbooks/`): one markdown file per route (`due`, `calendar`, `person`, `bank`, `web`) plus `RULES.md` for every route. Code reads each route's trigger patterns, reply wording, not-found lines and prompt text from its file (`reason/playbook.py`: `say(book, key, **values)`, `prompt(book, key)`, `trigger(book, key)`), read once per start. The order of steps stays in code; `STEPS` in `reason/answer.py` must match each file's numbered steps (a test checks it). **A new route adds its own `playbooks/<route>.md`** in the same sections (listed in `RULES.md`), with examples, and its count in `STEPS`.
+- **Checker:** `MUSE_BANK_DIR=~/muse-demo-bank uv run python -m reason.playbook_check [--today 2026-11-15] [--only due]` runs every playbook's examples on a temporary copy of the bank, network blocked. Keep a playbook or prompt change only if it passes and brief M's score (`scripts/make_test_mail.py check`) doesn't drop.
 
 ## 7. Voice input — **built** (`voice/`, on `main`)
 
